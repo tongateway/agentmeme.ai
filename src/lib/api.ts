@@ -1,0 +1,876 @@
+export type BackendConfig = {
+  baseUrl: string;
+  bearerToken?: string;
+};
+
+function headers(cfg: BackendConfig): HeadersInit {
+  const h: Record<string, string> = {
+    'content-type': 'application/json',
+  };
+  if (cfg.bearerToken) {
+    h.authorization = `Bearer ${cfg.bearerToken}`;
+  }
+  return h;
+}
+
+export type PublicApiConfig = {
+  baseUrl: string;
+  jwtToken?: string | null;
+};
+
+function raceUrl(cfg: PublicApiConfig, path: string): string | URL {
+  const base = (cfg.baseUrl || '').trim();
+  if (!base) return path;
+  return new URL(path, base);
+}
+
+function publicGetHeaders(cfg?: PublicApiConfig): HeadersInit {
+  const h: Record<string, string> = {};
+  if (cfg?.jwtToken) h.authorization = `Bearer ${cfg.jwtToken}`;
+  return h;
+}
+
+function publicPostHeaders(cfg?: PublicApiConfig): HeadersInit {
+  const h: Record<string, string> = { 'content-type': 'application/json' };
+  if (cfg?.jwtToken) h.authorization = `Bearer ${cfg.jwtToken}`;
+  return h;
+}
+
+async function jsonOrThrow(res: Response) {
+  const text = await res.text();
+  const data = text ? JSON.parse(text) : null;
+  if (!res.ok) {
+    const msg = data?.error || data?.message || data?.status || `${res.status} ${res.statusText}`;
+    throw new Error(msg);
+  }
+  return data;
+}
+
+// --- Types ---
+
+export type ContractListItem = {
+  id: string;
+  address: string;
+  name?: string | null;
+  owner_address: string;
+  is_active: boolean;
+  status?: string;
+  created_at: string;
+  updated_at: string;
+  total_decisions?: number | null;
+};
+
+export type ContractDetail = {
+  id: string;
+  address: string;
+  name?: string | null;
+  public_key: string;
+  wallet_id: number;
+  prompt: string;
+  is_active: boolean;
+  status?: string;
+  ai_model: string;
+  owner_address: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type RegisterContractRequest = {
+  address: string;
+  public_key?: string;
+  secret_key?: string;
+  wallet_id: number;
+  prompt: string;
+  is_active?: boolean;
+  owner_address: string;
+};
+
+export type RegisterRaceContractRequest = {
+  address: string;
+  public_key: string;
+  secret_key: string;
+  wallet_id: number;
+  prompt: string;
+  owner_address: string;
+  is_active?: boolean;
+  ai_model?: string;
+  name?: string;
+};
+
+export type UpdateContractRequest = {
+  name?: string;
+  prompt?: string;
+  is_active?: boolean;
+};
+
+export type AiHistoryItem = {
+  id: string;
+  smart_contract_id: string;
+  request_prompt: string;
+  response_raw: string;
+  action: string;
+  parsed_params: Record<string, unknown> | null;
+  order_id: string | null;
+  created_at: string;
+};
+
+export type OrderAction = {
+  id: string;
+  order_id: string;
+  action: string;
+  status: string;
+  tx_hash: string | null;
+  error_message: string | null;
+  created_at: string;
+};
+
+export type OrderItem = {
+  id: string;
+  smart_contract_id: string;
+  address: string | null;
+  amount: string;
+  initial_amount: string | null;
+  price_rate: number | null;
+  slippage: number | null;
+  status: string;
+  ai_short_reason: string | null;
+  created_at: string;
+  updated_at: string;
+  actions: OrderAction[];
+};
+
+export type LeaderboardEntry = {
+  rank: number;
+  smart_contract_id: string;
+  address: string;
+  name?: string | null;
+  owner_address: string;
+  ai_model: string;
+  is_active: boolean;
+  status?: string;
+  start_balance_usd: number | null;
+  current_balance_usd: number | null;
+  profit_usd: number | null;
+  profit_pct: number | null;
+  total_orders: number | null;
+  total_decisions: number | null;
+  created_at: string;
+};
+
+export type AiResponse = {
+  id: string;
+  smart_contract_id: string;
+  action: string;
+  parsed_params: Record<string, unknown> | null;
+  order_id: string | null;
+  balance_usd: number | null;
+  bullish_count: number;
+  bearish_count: number;
+  created_at: string;
+};
+
+export type ReactionResponse = {
+  ai_response_id: string;
+  reaction: 'bullish' | 'bearish';
+  bullish_count: number;
+  bearish_count: number;
+};
+
+export type AiModelOption = {
+  id: string;
+  name: string;
+  description?: string | null;
+};
+
+export type AiModelsByProvider = {
+  provider: string;
+  models: AiModelOption[];
+};
+
+function toIsActive(value: unknown): boolean {
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'string') return value.toLowerCase() === 'active';
+  return false;
+}
+
+function normalizeContract(item: Record<string, unknown>): ContractListItem {
+  return {
+    id: String(item.id ?? ''),
+    address: String(item.address ?? ''),
+    name: typeof item.name === 'string' ? item.name : null,
+    owner_address: String(item.owner_address ?? ''),
+    is_active: toIsActive(item.is_active ?? item.status),
+    status: typeof item.status === 'string' ? item.status : undefined,
+    created_at: String(item.created_at ?? ''),
+    updated_at: String(item.updated_at ?? ''),
+    total_decisions: typeof item.total_decisions === 'number' ? item.total_decisions : null,
+  };
+}
+
+function normalizeContractDetail(item: Record<string, unknown>): ContractDetail {
+  return {
+    id: String(item.id ?? ''),
+    address: String(item.address ?? ''),
+    name: typeof item.name === 'string' ? item.name : null,
+    public_key: String(item.public_key ?? ''),
+    wallet_id: Number(item.wallet_id ?? 0),
+    prompt: String(item.prompt ?? ''),
+    is_active: toIsActive(item.is_active ?? item.status),
+    status: typeof item.status === 'string' ? item.status : undefined,
+    ai_model: String(item.ai_model ?? ''),
+    owner_address: String(item.owner_address ?? ''),
+    created_at: String(item.created_at ?? ''),
+    updated_at: String(item.updated_at ?? ''),
+  };
+}
+
+function normalizeLeaderboardEntry(item: Record<string, unknown>): LeaderboardEntry {
+  return {
+    rank: Number(item.rank ?? 0),
+    smart_contract_id: String(item.smart_contract_id ?? ''),
+    address: String(item.address ?? ''),
+    name: typeof item.name === 'string' ? item.name : null,
+    owner_address: String(item.owner_address ?? ''),
+    ai_model: String(item.ai_model ?? ''),
+    is_active: toIsActive(item.is_active ?? item.status),
+    status: typeof item.status === 'string' ? item.status : undefined,
+    start_balance_usd: typeof item.start_balance_usd === 'number' ? item.start_balance_usd : null,
+    current_balance_usd: typeof item.current_balance_usd === 'number' ? item.current_balance_usd : null,
+    profit_usd: typeof item.profit_usd === 'number' ? item.profit_usd : null,
+    profit_pct: typeof item.profit_pct === 'number' ? item.profit_pct : null,
+    total_orders: typeof item.total_orders === 'number' ? item.total_orders : null,
+    total_decisions: typeof item.total_decisions === 'number' ? item.total_decisions : null,
+    created_at: String(item.created_at ?? ''),
+  };
+}
+
+function normalizeAiModelOption(item: Record<string, unknown>): AiModelOption | null {
+  const isActiveRaw = item.is_active;
+  if (typeof isActiveRaw === 'boolean' && !isActiveRaw) return null;
+
+  // Backend returns UUID in "id" and model slug in "name".
+  // We must send slug in register payload as ai_model.
+  const idRaw = item.name ?? item.model ?? item.slug ?? item.key ?? item.id;
+  const id = typeof idRaw === 'string' ? idRaw.trim() : '';
+  if (!id) return null;
+
+  const nameRaw = item.description ?? item.display_name ?? item.label ?? item.name ?? item.model;
+  const name = typeof nameRaw === 'string' && nameRaw.trim() ? nameRaw.trim() : id;
+  const descriptionRaw = item.description ?? item.desc ?? item.details;
+  const description = typeof descriptionRaw === 'string' && descriptionRaw.trim() ? descriptionRaw.trim() : null;
+
+  return { id, name, description };
+}
+
+function normalizeAiModelsGroup(item: Record<string, unknown>): AiModelsByProvider | null {
+  const providerRaw = item.provider;
+  const provider = typeof providerRaw === 'string' && providerRaw.trim() ? providerRaw.trim() : 'Other';
+  const modelsRaw = Array.isArray(item.models) ? item.models : [];
+  const models = modelsRaw
+    .map((m) => (m && typeof m === 'object' ? normalizeAiModelOption(m as Record<string, unknown>) : null))
+    .filter((m): m is AiModelOption => !!m);
+  if (models.length === 0) return null;
+  return { provider, models };
+}
+
+// --- Backend (auth) API ---
+
+export async function listContracts(cfg: BackendConfig): Promise<ContractListItem[]> {
+  const res = await fetch(`${cfg.baseUrl}/api/contracts`, {
+    method: 'GET',
+    headers: headers(cfg),
+  });
+  return jsonOrThrow(res);
+}
+
+export async function registerContract(cfg: BackendConfig, body: RegisterContractRequest): Promise<ContractListItem> {
+  const res = await fetch(`${cfg.baseUrl}/api/contracts`, {
+    method: 'POST',
+    headers: headers(cfg),
+    body: JSON.stringify(body),
+  });
+  return jsonOrThrow(res);
+}
+
+export async function getAiHistory(cfg: BackendConfig, contractId: string, limit = 25): Promise<AiHistoryItem[]> {
+  const res = await fetch(`${cfg.baseUrl}/api/contracts/${contractId}/ai-history?limit=${limit}`, {
+    method: 'GET',
+    headers: headers(cfg),
+  });
+  return jsonOrThrow(res);
+}
+
+export async function getOrders(cfg: BackendConfig, contractId: string, limit = 25): Promise<OrderItem[]> {
+  const res = await fetch(`${cfg.baseUrl}/api/contracts/${contractId}/orders?limit=${limit}`, {
+    method: 'GET',
+    headers: headers(cfg),
+  });
+  return jsonOrThrow(res);
+}
+
+// --- Public (no auth) API ---
+
+export async function listRaceContracts(cfg: PublicApiConfig): Promise<ContractListItem[]> {
+  const res = await fetch(raceUrl(cfg, '/api/contracts'), {
+    method: 'GET',
+    headers: publicGetHeaders(cfg),
+  });
+  const data = await jsonOrThrow(res);
+  return Array.isArray(data) ? data.map((i) => normalizeContract(i as Record<string, unknown>)) : [];
+}
+
+export async function registerRaceContract(cfg: PublicApiConfig, body: RegisterRaceContractRequest): Promise<ContractListItem> {
+  const res = await fetch(raceUrl(cfg, '/api/contracts'), {
+    method: 'POST',
+    headers: publicPostHeaders(cfg),
+    body: JSON.stringify(body),
+  });
+  const data = await jsonOrThrow(res);
+  return normalizeContract(data as Record<string, unknown>);
+}
+
+export async function getRaceContractDetail(cfg: PublicApiConfig, contractId: string): Promise<ContractDetail> {
+  const res = await fetch(raceUrl(cfg, `/api/contracts/${contractId}`), {
+    method: 'GET',
+    headers: publicGetHeaders(cfg),
+  });
+  const data = await jsonOrThrow(res);
+  return normalizeContractDetail(data as Record<string, unknown>);
+}
+
+export async function updateRaceContract(cfg: PublicApiConfig, contractId: string, body: UpdateContractRequest): Promise<ContractDetail> {
+  const res = await fetch(raceUrl(cfg, `/api/contracts/${contractId}`), {
+    method: 'PATCH',
+    headers: publicPostHeaders(cfg),
+    body: JSON.stringify(body),
+  });
+  const data = await jsonOrThrow(res);
+  return normalizeContractDetail(data as Record<string, unknown>);
+}
+
+export async function deleteRaceContract(cfg: PublicApiConfig, contractId: string): Promise<void> {
+  const res = await fetch(raceUrl(cfg, `/api/contracts/${contractId}`), {
+    method: 'DELETE',
+    headers: publicGetHeaders(cfg),
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    const data = text ? JSON.parse(text) : null;
+    const msg = data?.error || data?.message || `${res.status} ${res.statusText}`;
+    throw new Error(msg);
+  }
+}
+
+export type WithdrawJettonResult = {
+  body_hex: string;
+  jetton_count: number;
+  jettons: { balance: number; decimals: number; symbol: string; wallet_address: string }[];
+};
+
+export type WithdrawTonResult = {
+  body_hex: string;
+};
+
+export type CloseAllOrdersResult = {
+  closed_count: number;
+  order_ids: string[];
+  body_hex: string;
+};
+
+export async function withdrawJetton(cfg: PublicApiConfig, contractId: string): Promise<WithdrawJettonResult> {
+  const res = await fetch(raceUrl(cfg, `/api/contracts/${contractId}/withdraw-jetton`), {
+    method: 'POST',
+    headers: publicPostHeaders(cfg),
+  });
+  return jsonOrThrow(res);
+}
+
+export async function withdrawTon(cfg: PublicApiConfig, contractId: string): Promise<WithdrawTonResult> {
+  const res = await fetch(raceUrl(cfg, `/api/contracts/${contractId}/withdraw-ton`), {
+    method: 'POST',
+    headers: publicPostHeaders(cfg),
+  });
+  return jsonOrThrow(res);
+}
+
+export async function closeAllOrders(cfg: PublicApiConfig, contractId: string): Promise<CloseAllOrdersResult> {
+  const res = await fetch(raceUrl(cfg, `/api/contracts/${contractId}/close-all-orders`), {
+    method: 'POST',
+    headers: publicPostHeaders(cfg),
+  });
+  return jsonOrThrow(res);
+}
+
+/** Convert a hex-encoded BOC to base64 for TonConnect payload. */
+export function hexBocToBase64(hex: string): string {
+  const bytes = new Uint8Array(hex.match(/.{1,2}/g)!.map((b) => parseInt(b, 16)));
+  let binary = '';
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary);
+}
+
+export async function getRaceAiHistory(cfg: PublicApiConfig, contractId: string, limit = 25): Promise<AiHistoryItem[]> {
+  const res = await fetch(raceUrl(cfg, `/api/contracts/${contractId}/ai-history?limit=${limit}`), {
+    method: 'GET',
+    headers: publicGetHeaders(cfg),
+  });
+  return jsonOrThrow(res);
+}
+
+export async function getRaceOrders(cfg: PublicApiConfig, contractId: string, limit = 25): Promise<OrderItem[]> {
+  const res = await fetch(raceUrl(cfg, `/api/contracts/${contractId}/orders?limit=${limit}`), {
+    method: 'GET',
+    headers: publicGetHeaders(cfg),
+  });
+  return jsonOrThrow(res);
+}
+
+export async function getRaceLeaderboard(
+  cfg: PublicApiConfig,
+  opts?: { limit?: number; offset?: number; sortBy?: string },
+): Promise<LeaderboardEntry[]> {
+  const params = new URLSearchParams();
+  if (opts?.limit != null) params.set('limit', String(opts.limit));
+  if (opts?.offset != null) params.set('offset', String(opts.offset));
+  if (opts?.sortBy) params.set('sort_by', opts.sortBy);
+  const qs = params.toString();
+  const res = await fetch(raceUrl(cfg, `/api/leaderboard${qs ? `?${qs}` : ''}`), {
+    method: 'GET',
+    headers: publicGetHeaders(cfg),
+  });
+  const data = await jsonOrThrow(res);
+  return Array.isArray(data) ? data.map((i) => normalizeLeaderboardEntry(i as Record<string, unknown>)) : [];
+}
+
+/**
+ * Fetch all contracts by converting leaderboard entries to ContractListItem.
+ * Used as a fallback because /api/contracts returns empty.
+ */
+export async function listContractsFromLeaderboard(cfg: PublicApiConfig): Promise<ContractListItem[]> {
+  const entries = await getRaceLeaderboard(cfg, { limit: 200 });
+  return entries.map((e) => ({
+    id: e.smart_contract_id,
+    address: e.address,
+    name: e.name ?? null,
+    owner_address: e.owner_address,
+    is_active: e.is_active,
+    status: e.status,
+    created_at: e.created_at,
+    updated_at: e.created_at, // leaderboard doesn't have updated_at
+    total_decisions: e.total_decisions ?? null,
+  }));
+}
+
+export async function getRaceAiResponses(
+  cfg: PublicApiConfig,
+  opts?: { smartContractId?: string; limit?: number; offset?: number },
+): Promise<AiResponse[]> {
+  const params = new URLSearchParams();
+  if (opts?.smartContractId) params.set('smart_contract_id', opts.smartContractId);
+  if (opts?.limit != null) params.set('limit', String(opts.limit));
+  if (opts?.offset != null) params.set('offset', String(opts.offset));
+  const qs = params.toString();
+  const res = await fetch(raceUrl(cfg, `/api/ai-responses${qs ? `?${qs}` : ''}`), {
+    method: 'GET',
+    headers: publicGetHeaders(cfg),
+  });
+  return jsonOrThrow(res);
+}
+
+/** Fetch a single AI response by ID (includes live bullish/bearish counts). */
+export async function getAiResponse(
+  cfg: PublicApiConfig,
+  responseId: string,
+): Promise<AiResponse> {
+  const res = await fetch(raceUrl(cfg, `/api/ai-responses/${responseId}`), {
+    method: 'GET',
+    headers: publicGetHeaders(cfg),
+  });
+  return jsonOrThrow(res);
+}
+
+export async function postReaction(
+  cfg: PublicApiConfig,
+  responseId: string,
+  reaction: 'bullish' | 'bearish',
+): Promise<ReactionResponse> {
+  const res = await fetch(raceUrl(cfg, `/api/ai-responses/${responseId}/reaction`), {
+    method: 'POST',
+    headers: publicPostHeaders(cfg),
+    body: JSON.stringify({ reaction }),
+  });
+  return jsonOrThrow(res);
+}
+
+export async function getRaceAiModels(cfg: PublicApiConfig): Promise<AiModelsByProvider[]> {
+  const paths = ['/api/ai-models', '/ai-models'];
+
+  for (const path of paths) {
+    try {
+      const res = await fetch(raceUrl(cfg, path), {
+        method: 'GET',
+        headers: publicGetHeaders(cfg),
+      });
+      const data = await jsonOrThrow(res);
+      if (!Array.isArray(data)) return [];
+      return data
+        .map((g) => (g && typeof g === 'object' ? normalizeAiModelsGroup(g as Record<string, unknown>) : null))
+        .filter((g): g is AiModelsByProvider => !!g);
+    } catch {
+      // try next path
+    }
+  }
+
+  return [];
+}
+
+/* ==========================================================================
+ * Race API — prompt variables
+ * ========================================================================== */
+
+export type PromptVariable = {
+  key: string;
+  name: string;
+  description: string;
+  example: string;
+  prompt_section: string;
+};
+
+let _promptVarsCache: PromptVariable[] | null = null;
+let _promptVarsFetchedAt = 0;
+const PROMPT_VARS_TTL = 300_000; // 5 min
+
+/** Fetch available prompt variables (cached 5 min). */
+export async function getPromptVariables(cfg: PublicApiConfig): Promise<PromptVariable[]> {
+  if (_promptVarsCache && Date.now() - _promptVarsFetchedAt < PROMPT_VARS_TTL) {
+    return _promptVarsCache;
+  }
+  try {
+    const res = await fetch(raceUrl(cfg, '/api/prompt-variables'), {
+      method: 'GET',
+      headers: publicGetHeaders(cfg),
+    });
+    const data = await jsonOrThrow(res);
+    const vars = Array.isArray(data)
+      ? data.map((v: Record<string, unknown>) => ({
+          key: String(v.key ?? ''),
+          name: String(v.name ?? ''),
+          description: String(v.description ?? ''),
+          example: String(v.example ?? ''),
+          prompt_section: String(v.prompt_section ?? ''),
+        }))
+      : [];
+    _promptVarsCache = vars;
+    _promptVarsFetchedAt = Date.now();
+    return vars;
+  } catch {
+    return _promptVarsCache ?? [];
+  }
+}
+
+/* ==========================================================================
+ * Race API — token list (for prices & metadata)
+ * ========================================================================== */
+
+export type RaceToken = {
+  id: string;
+  address: string;
+  name: string;
+  symbol: string;
+  decimals: number;
+  price_usd: number;
+};
+
+let _raceTokensCache: RaceToken[] | null = null;
+let _raceTokensFetchedAt = 0;
+const RACE_TOKENS_TTL = 120_000; // 2 min
+
+/** Fetch all tokens from race API (cached 2 min). */
+export async function getRaceTokens(cfg: PublicApiConfig): Promise<RaceToken[]> {
+  if (_raceTokensCache && Date.now() - _raceTokensFetchedAt < RACE_TOKENS_TTL) {
+    return _raceTokensCache;
+  }
+  const res = await fetch(raceUrl(cfg, '/api/tokens'), {
+    method: 'GET',
+    headers: publicGetHeaders(cfg),
+  });
+  const data = await jsonOrThrow(res);
+  const tokens = (Array.isArray(data) ? data : []).map((t: Record<string, unknown>) => ({
+    id: String(t.id ?? ''),
+    address: String(t.address ?? ''),
+    name: String(t.name ?? ''),
+    symbol: String(t.symbol ?? ''),
+    decimals: Number(t.decimals ?? 9),
+    price_usd: Number(t.price_usd ?? 0),
+  }));
+  _raceTokensCache = tokens;
+  _raceTokensFetchedAt = Date.now();
+  return tokens;
+}
+
+/* ==========================================================================
+ * toncenter — jetton wallet balances
+ * ========================================================================== */
+
+export type JettonBalance = {
+  jettonAddress: string; // master contract raw address
+  balance: string;       // raw balance string (before decimals)
+};
+
+/** Fetch jetton wallet balances for an address from toncenter v3. */
+export async function getJettonBalances(ownerAddress: string): Promise<JettonBalance[]> {
+  const res = await fetch(
+    `https://toncenter.com/api/v3/jetton/wallets?owner_address=${encodeURIComponent(ownerAddress)}&limit=50`,
+  );
+  const data = (await res.json()) as { jetton_wallets?: { jetton: string; balance: string }[] };
+  return (data.jetton_wallets ?? [])
+    .filter((w) => w.balance && w.balance !== '0')
+    .map((w) => ({
+      jettonAddress: w.jetton,
+      balance: w.balance,
+    }));
+}
+
+/* ==========================================================================
+ * open4dev DEX API — orders & coins
+ * Base: https://api.open4dev.xyz/api/v1
+ * Rate limit: 1 RPS
+ * ========================================================================== */
+
+const OPEN4DEV_BASE = 'https://api.open4dev.xyz/api/v1';
+
+export type DexOrder = {
+  id: number;
+  raw_address: string;
+  created_at: string;
+  status: string; // created | deployed | cancelled | completed | failed | pending_match | closed
+  amount: number;
+  initial_amount: number;
+  price_rate: number;
+  slippage: number;
+  from_coin_id: number;
+  to_coin_id: number;
+};
+
+export type DexOrderStats = {
+  wallet_address: string;
+  total: number;
+  open: number;
+  closed: number;
+  by_status: Record<string, number>;
+};
+
+/** Fetch orders from open4dev for a given contract raw address (0:hex format). */
+export async function getDexOrders(
+  ownerRawAddress: string,
+  opts?: { status?: string; limit?: number; offset?: number },
+): Promise<DexOrder[]> {
+  const params = new URLSearchParams();
+  params.set('owner_raw_address', ownerRawAddress);
+  if (opts?.status) params.set('status', opts.status);
+  params.set('limit', String(opts?.limit ?? 50));
+  if (opts?.offset != null) params.set('offset', String(opts.offset));
+  const res = await fetch(`${OPEN4DEV_BASE}/orders?${params}`);
+  const data = await res.json();
+  const orders = (data as Record<string, unknown>).orders;
+  if (!Array.isArray(orders)) return [];
+  return orders.map((o: Record<string, unknown>) => ({
+    id: Number(o.id ?? 0),
+    raw_address: String(o.raw_address ?? ''),
+    created_at: String(o.created_at ?? ''),
+    status: String(o.status ?? ''),
+    amount: Number(o.amount ?? 0),
+    initial_amount: Number(o.initial_amount ?? 0),
+    price_rate: Number(o.price_rate ?? 0),
+    slippage: Number(o.slippage ?? 0),
+    from_coin_id: Number(o.from_coin_id ?? 0),
+    to_coin_id: Number(o.to_coin_id ?? 0),
+  }));
+}
+
+export type DexCoin = {
+  id: number;
+  name: string;
+  symbol: string;
+};
+
+/** Fetch a single coin by ID from open4dev. */
+export async function getDexCoin(coinId: number): Promise<DexCoin | null> {
+  try {
+    const res = await fetch(`${OPEN4DEV_BASE}/coins/${coinId}`);
+    if (!res.ok) return null;
+    const data = (await res.json()) as Record<string, unknown>;
+    return {
+      id: Number(data.id ?? coinId),
+      name: String(data.name ?? ''),
+      symbol: String(data.symbol ?? ''),
+    };
+  } catch {
+    return null;
+  }
+}
+
+// In-memory cache for coin symbols — survives re-renders but not page reloads.
+const _coinCache = new Map<number, string>();
+_coinCache.set(0, 'TON'); // TON is always coin ID 0
+
+/** Resolve coin IDs to symbols. Fetches missing ones from the API (1 RPS). */
+export async function resolveCoinSymbols(coinIds: number[]): Promise<Map<number, string>> {
+  const unique = [...new Set(coinIds)].filter((id) => !_coinCache.has(id));
+  for (const id of unique) {
+    const coin = await getDexCoin(id);
+    _coinCache.set(id, coin?.symbol?.toUpperCase() || `#${id}`);
+    // Respect 1 RPS rate limit between fetches
+    if (unique.indexOf(id) < unique.length - 1) {
+      await new Promise((r) => setTimeout(r, 1100));
+    }
+  }
+  return new Map(_coinCache);
+}
+
+/* ==========================================================================
+ * TON price via CoinGecko (free, no auth)
+ * ========================================================================== */
+
+let _tonPriceUsd: number | null = null;
+let _tonPriceFetchedAt = 0;
+const TON_PRICE_TTL = 60_000; // cache for 1 minute
+
+/** Fetch current TON/USD price. Cached for 1 min. */
+export async function getTonPriceUsd(): Promise<number | null> {
+  if (_tonPriceUsd !== null && Date.now() - _tonPriceFetchedAt < TON_PRICE_TTL) {
+    return _tonPriceUsd;
+  }
+  try {
+    const res = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=the-open-network&vs_currencies=usd');
+    const data = (await res.json()) as Record<string, Record<string, number>>;
+    const price = data?.['the-open-network']?.usd ?? null;
+    if (price != null) {
+      _tonPriceUsd = price;
+      _tonPriceFetchedAt = Date.now();
+    }
+    return price;
+  } catch {
+    return _tonPriceUsd; // return stale cache on error
+  }
+}
+
+/* ==========================================================================
+ * open4dev DEX API — Order Book
+ * ========================================================================== */
+
+export type OrderBookLevel = {
+  price_rate: number;
+  total_amount: number;
+  order_count: number;
+};
+
+export type OrderBookResponse = {
+  from_symbol: string;
+  to_symbol: string;
+  asks: OrderBookLevel[];
+  bids: OrderBookLevel[];
+};
+
+/** Fetch aggregated order book (asks + bids) for a trading pair. */
+export async function getDexOrderBook(opts: {
+  fromSymbol: string;
+  toSymbol: string;
+  limit?: number;
+}): Promise<OrderBookResponse> {
+  const params = new URLSearchParams();
+  params.set('from_symbol', opts.fromSymbol);
+  params.set('to_symbol', opts.toSymbol);
+  if (opts.limit) params.set('limit', String(opts.limit));
+  const res = await fetch(`${OPEN4DEV_BASE}/orders/book?${params}`);
+  const data = (await res.json()) as Record<string, unknown>;
+  const parseLevel = (l: Record<string, unknown>): OrderBookLevel => ({
+    price_rate: Number(l.price_rate ?? 0),
+    total_amount: Number(l.total_amount ?? 0),
+    order_count: Number(l.order_count ?? 0),
+  });
+  return {
+    from_symbol: String(data.from_symbol ?? opts.fromSymbol),
+    to_symbol: String(data.to_symbol ?? opts.toSymbol),
+    asks: Array.isArray(data.asks) ? data.asks.map((a: Record<string, unknown>) => parseLevel(a)) : [],
+    bids: Array.isArray(data.bids) ? data.bids.map((b: Record<string, unknown>) => parseLevel(b)) : [],
+  };
+}
+
+export type DexCoinFull = {
+  id: number;
+  name: string;
+  symbol: string;
+};
+
+/** Fetch all coins from open4dev (paginated, returns all). */
+export async function getDexCoins(): Promise<DexCoinFull[]> {
+  const res = await fetch(`${OPEN4DEV_BASE}/coins?limit=200`);
+  const data = (await res.json()) as Record<string, unknown>;
+  const coins = (data as Record<string, unknown>).coins;
+  if (!Array.isArray(coins)) return [];
+  return coins.map((c: Record<string, unknown>) => ({
+    id: Number(c.id ?? 0),
+    name: String(c.name ?? ''),
+    symbol: String(c.symbol ?? ''),
+  }));
+}
+
+/** Fetch order stats from open4dev. */
+export async function getDexOrderStats(walletRawAddress: string): Promise<DexOrderStats> {
+  const res = await fetch(`${OPEN4DEV_BASE}/orders/stats?wallet_address=${encodeURIComponent(walletRawAddress)}`);
+  const data = (await res.json()) as Record<string, unknown>;
+  return {
+    wallet_address: String(data.wallet_address ?? ''),
+    total: Number(data.total ?? 0),
+    open: Number(data.open ?? 0),
+    closed: Number(data.closed ?? 0),
+    by_status: (data.by_status as Record<string, number>) ?? {},
+  };
+}
+
+/* ==========================================================================
+ * TonConnect Auth — JWT
+ * ========================================================================== */
+
+export type AuthPayloadResponse = {
+  payload: string;
+};
+
+export type CheckProofRequest = {
+  address: string;
+  proof: {
+    timestamp: number;
+    domain: { lengthBytes: number; value: string };
+    payload: string;
+    signature: string;
+    state_init?: string;
+  };
+  state_init: string;
+};
+
+export type CheckProofResponse = {
+  token: string;
+};
+
+/** Get a random payload for TonConnect proof. */
+export async function getAuthPayload(cfg: PublicApiConfig): Promise<string> {
+  const res = await fetch(raceUrl(cfg, '/api/auth/payload'), {
+    method: 'GET',
+    headers: publicGetHeaders(),
+  });
+  const data = (await jsonOrThrow(res)) as AuthPayloadResponse;
+  return data.payload;
+}
+
+/** Verify TonConnect proof and get a JWT token. */
+export async function checkProof(cfg: PublicApiConfig, body: CheckProofRequest): Promise<string> {
+  const res = await fetch(raceUrl(cfg, '/api/auth/check-proof'), {
+    method: 'POST',
+    headers: publicPostHeaders(),
+    body: JSON.stringify(body),
+  });
+  const data = (await jsonOrThrow(res)) as CheckProofResponse;
+  return data.token;
+}
+
