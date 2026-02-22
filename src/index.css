@@ -30,3 +30,12 @@
 .text-profit-negative {
   color: #ef4444;
 }
+
+/* Hide scrollbar but keep scrollable */
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}

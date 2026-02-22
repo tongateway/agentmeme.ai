@@ -329,7 +329,7 @@ export default function App() {
 
   return (
     <div className="min-h-dvh">
-      <header className="navbar mx-auto max-w-6xl px-6 pt-6 flex-col gap-4 sm:flex-row">
+      <header className="navbar mx-auto max-w-6xl px-4 sm:px-6 pt-6 flex-col gap-3 sm:flex-row">
         <div className="flex-1">
           <div className="flex items-center gap-2 cursor-pointer" onClick={() => setPage('home')}>
             <h1 className="text-2xl font-semibold tracking-tight">AI Trader Race</h1>
@@ -337,45 +337,47 @@ export default function App() {
           </div>
         </div>
 
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 overflow-x-auto scrollbar-none max-w-full">
           <button
-            className={`btn btn-sm ${page === 'home' ? 'btn-active' : 'btn-ghost'}`}
+            className={`btn btn-sm shrink-0 ${page === 'home' ? 'btn-active' : 'btn-ghost'}`}
             onClick={() => setPage('home')}
             type="button"
           >
             Home
           </button>
           <button
-            className={`btn btn-sm ${page === 'leaderboard' ? 'btn-active' : 'btn-ghost'}`}
+            className={`btn btn-sm shrink-0 ${page === 'leaderboard' ? 'btn-active' : 'btn-ghost'}`}
             onClick={() => setPage('leaderboard')}
             type="button"
           >
             Leaderboard
           </button>
           <button
-            className={`btn btn-sm ${page === 'stats' ? 'btn-active' : 'btn-ghost'}`}
+            className={`btn btn-sm shrink-0 ${page === 'stats' ? 'btn-active' : 'btn-ghost'}`}
             onClick={() => setPage('stats')}
             type="button"
           >
             Stats
           </button>
           <button
-            className={`btn btn-sm ${page === 'trader' ? 'btn-active' : 'btn-ghost'}`}
+            className={`btn btn-sm shrink-0 ${page === 'trader' ? 'btn-active' : 'btn-ghost'}`}
             onClick={openTraderFromNav}
             type="button"
           >
             {isConnected ? 'My Agents' : 'Deploy agent'}
           </button>
-          <label className="swap swap-rotate btn btn-ghost btn-sm btn-circle" aria-label="Toggle theme">
+          <label className="swap swap-rotate btn btn-ghost btn-sm btn-circle shrink-0" aria-label="Toggle theme">
             <input type="checkbox" checked={theme === 'dark'} onChange={toggleTheme} />
             <Sun className="swap-off h-4 w-4" />
             <Moon className="swap-on h-4 w-4" />
           </label>
-          <TonConnectButton />
+          <div className="shrink-0">
+            <TonConnectButton />
+          </div>
         </div>
       </header>
 
-      <main className="mx-auto max-w-6xl px-6 pb-10 pt-6">
+      <main className="mx-auto max-w-6xl px-4 sm:px-6 pb-10 pt-6">
         {page === 'home' ? (
           <HomePage onNavigate={setPage} />
         ) : page === 'leaderboard' ? (

@@ -27,6 +27,13 @@ function pairIdxFromSlug(slug: string | null): number {
   return idx >= 0 ? idx : 0;
 }
 
+/** Map API symbols to display-friendly names (e.g. jUSDT → USDT) */
+const DISPLAY_SYMBOL: Record<string, string> = { JUSDT: 'USDT' };
+function displaySym(sym: string): string {
+  const u = sym.toUpperCase();
+  return DISPLAY_SYMBOL[u] ?? u;
+}
+
 /* ---------- helpers ---------- */
 
 function fmtRate(n: number): string {
@@ -124,7 +131,7 @@ export function StatsPage({ raceCfg, pairSlug, onPairChange }: StatsPageProps) {
     if (!reversed) return currentPair;
     return {
       ...currentPair,
-      label: `${currentPair.toSymbol.toUpperCase()} / ${currentPair.fromSymbol.toUpperCase()}`,
+      label: `${displaySym(currentPair.toSymbol)} / ${displaySym(currentPair.fromSymbol)}`,
       fromSymbol: currentPair.toSymbol,
       toSymbol: currentPair.fromSymbol,
     };
@@ -217,8 +224,8 @@ export function StatsPage({ raceCfg, pairSlug, onPairChange }: StatsPageProps) {
 
   // Amount is always in toSymbol now
   const amountPriceUsd = priceOf(effectivePair.toSymbol);
-  const fromUpper = effectivePair.fromSymbol.toUpperCase();
-  const toUpper = effectivePair.toSymbol.toUpperCase();
+  const fromUpper = displaySym(effectivePair.fromSymbol);
+  const toUpper = displaySym(effectivePair.toSymbol);
 
   return (
     <div className="space-y-4">
