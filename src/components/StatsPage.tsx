@@ -47,6 +47,52 @@ function fmtUsd(n: number): string {
   return `$${n.toFixed(4)}`;
 }
 
+/* ---------- normalized level ---------- */
+
+/**
+ * The API returns asks and bids with different price directions:
+ * - Bids: price_rate = fromSymbol per toSymbol (e.g. 0.000290 TON per NOT), amount in toSymbol
+ * - Asks: price_rate = toSymbol per fromSymbol (e.g. 3,544 NOT per TON), amount in fromSymbol
+ *
+ * We normalize everything so:
+ * - price = fromSymbol per toSymbol (same as bids)
+ * - amount = in toSymbol for bids, in fromSymbol for asks (converted to toSymbol via price)
+ */
+type NormalizedLevel = {
+  price: number;       // always fromSymbol per toSymbol
+  amount: number;      // always in toSymbol
+  orderCount: number;
+};
+
+function normalizeBook(book: OrderBookResponse): {
+  asks: NormalizedLevel[];
+  bids: NormalizedLevel[];
+} {
+  // Bids are already in the right format: price = from/to, amount = toSymbol
+  const bids: NormalizedLevel[] = book.bids.map((b) => ({
+    price: b.price_rate,
+    amount: b.total_amount,
+    orderCount: b.order_count,
+  }));
+
+  // Asks: price_rate is inverted (to/from), amount is in fromSymbol
+  // Convert: price = 1/ask.price_rate, amount = ask.total_amount * ask.price_rate (from→to)
+  const asks: NormalizedLevel[] = book.asks
+    .filter((a) => a.price_rate > 0)
+    .map((a) => ({
+      price: 1 / a.price_rate,
+      amount: a.total_amount * a.price_rate,
+      orderCount: a.order_count,
+    }));
+
+  // Sort asks: lowest price first (closest to spread)
+  asks.sort((a, b) => a.price - b.price);
+  // Sort bids: highest price first (closest to spread)
+  bids.sort((a, b) => b.price - a.price);
+
+  return { asks, bids };
+}
+
 /* ---------- main component ---------- */
 
 type StatsPageProps = {
@@ -123,36 +169,44 @@ export function StatsPage({ raceCfg }: StatsPageProps) {
     return null;
   }, [tokenPrices]);
 
-  // Compute global max for bar sizing
-  const maxAmount = useMemo(() => {
-    if (!book) return 0;
-    const maxAsk = Math.max(...book.asks.map((a) => a.total_amount), 0);
-    const maxBid = Math.max(...book.bids.map((b) => b.total_amount), 0);
-    return Math.max(maxAsk, maxBid);
-  }, [book]);
-
-  // Summary stats
-  const stats = useMemo(() => {
+  // Normalize the raw book so all prices & amounts are in the same direction
+  const normalized = useMemo(() => {
     if (!book) return null;
-    const totalAskOrders = book.asks.reduce((s, a) => s + a.order_count, 0);
-    const totalBidOrders = book.bids.reduce((s, b) => s + b.order_count, 0);
-    const totalAskAmount = book.asks.reduce((s, a) => s + a.total_amount, 0);
-    const totalBidAmount = book.bids.reduce((s, b) => s + b.total_amount, 0);
-    const bestAsk = book.asks.length > 0 ? book.asks[0].price_rate : null;
-    const bestBid = book.bids.length > 0 ? book.bids[0].price_rate : null;
+    return normalizeBook(book);
+  }, [book]);
+
+  // Compute global max for bar sizing (amounts now all in toSymbol)
+  const maxAmount = useMemo(() => {
+    if (!normalized) return 0;
+    const maxAsk = Math.max(...normalized.asks.map((a) => a.amount), 0);
+    const maxBid = Math.max(...normalized.bids.map((b) => b.amount), 0);
+    return Math.max(maxAsk, maxBid);
+  }, [normalized]);
+
+  // Summary stats (using normalized prices)
+  const stats = useMemo(() => {
+    if (!normalized) return null;
+    const totalAskOrders = normalized.asks.reduce((s, a) => s + a.orderCount, 0);
+    const totalBidOrders = normalized.bids.reduce((s, b) => s + b.orderCount, 0);
+    const totalAskAmount = normalized.asks.reduce((s, a) => s + a.amount, 0);
+    const totalBidAmount = normalized.bids.reduce((s, b) => s + b.amount, 0);
+    const bestAsk = normalized.asks.length > 0 ? normalized.asks[0].price : null;
+    const bestBid = normalized.bids.length > 0 ? normalized.bids[0].price : null;
     const spread = bestAsk != null && bestBid != null ? bestAsk - bestBid : null;
-    const spreadPct = spread != null && bestAsk != null && bestAsk > 0 ? (spread / bestAsk) * 100 : null;
+    const spreadPct = spread != null && bestBid != null && bestBid > 0
+      ? (spread / ((bestAsk! + bestBid) / 2)) * 100
+      : null;
     return { totalAskOrders, totalBidOrders, totalAskAmount, totalBidAmount, bestAsk, bestBid, spread, spreadPct };
-  }, [book]);
+  }, [normalized]);
 
-  // Asks reversed: lowest price at bottom (closest to spread)
+  // Asks reversed: highest price at top, lowest near spread
   const asksReversed = useMemo(() => {
-    if (!book) return [];
-    return [...book.asks].reverse();
-  }, [book]);
+    if (!normalized) return [];
+    return [...normalized.asks].reverse();
+  }, [normalized]);
 
-  const bidAmountPriceUsd = priceOf(effectivePair.toSymbol);
-  const askAmountPriceUsd = priceOf(effectivePair.fromSymbol);
+  // Amount is always in toSymbol now
+  const amountPriceUsd = priceOf(effectivePair.toSymbol);
   const fromUpper = effectivePair.fromSymbol.toUpperCase();
   const toUpper = effectivePair.toSymbol.toUpperCase();
 
@@ -207,6 +261,48 @@ export function StatsPage({ raceCfg }: StatsPageProps) {
         </button>
       </div>
 
+      {/* Compact stat row ABOVE the book */}
+      {stats && !bookLoading && (
+        <div className="flex flex-wrap gap-2">
+          {stats.bestBid != null && (
+            <div className="badge badge-lg gap-1.5 py-3">
+              <span className="text-[10px] opacity-50">Best Bid</span>
+              <span className="text-xs font-semibold mono text-success">{fmtRate(stats.bestBid)}</span>
+            </div>
+          )}
+          {stats.bestAsk != null && (
+            <div className="badge badge-lg gap-1.5 py-3">
+              <span className="text-[10px] opacity-50">Best Ask</span>
+              <span className="text-xs font-semibold mono text-error">{fmtRate(stats.bestAsk)}</span>
+            </div>
+          )}
+          {stats.spreadPct != null && (
+            <div className="badge badge-lg gap-1.5 py-3">
+              <span className="text-[10px] opacity-50">Spread</span>
+              <span className="text-xs font-semibold mono">{stats.spreadPct.toFixed(2)}%</span>
+            </div>
+          )}
+          <div className="badge badge-lg gap-1.5 py-3">
+            <span className="text-[10px] opacity-50">Bid Vol</span>
+            <span className="text-xs font-semibold mono text-success">{fmtAmount(stats.totalBidAmount)}</span>
+            <span className="text-[10px] opacity-40">{toUpper}</span>
+            {(() => {
+              const p = priceOf(effectivePair.toSymbol);
+              return p != null ? <span className="text-[10px] opacity-40 mono">~{fmtUsd(stats.totalBidAmount * p)}</span> : null;
+            })()}
+          </div>
+          <div className="badge badge-lg gap-1.5 py-3">
+            <span className="text-[10px] opacity-50">Ask Vol</span>
+            <span className="text-xs font-semibold mono text-error">{fmtAmount(stats.totalAskAmount)}</span>
+            <span className="text-[10px] opacity-40">{toUpper}</span>
+            {(() => {
+              const p = priceOf(effectivePair.toSymbol);
+              return p != null ? <span className="text-[10px] opacity-40 mono">~{fmtUsd(stats.totalAskAmount * p)}</span> : null;
+            })()}
+          </div>
+        </div>
+      )}
+
       {/* Order Book Card — single column exchange style */}
       {bookError ? (
         <div className="card bg-base-200 shadow-md">
@@ -222,13 +318,13 @@ export function StatsPage({ raceCfg }: StatsPageProps) {
             </div>
           </div>
         </div>
-      ) : book ? (
+      ) : normalized ? (
         <div className="card bg-base-200 shadow-md overflow-hidden">
           <div className="card-body p-0">
             {/* Column header */}
             <div className="flex items-center gap-2 px-3 py-2 text-[10px] uppercase tracking-wider opacity-40 border-b border-base-content/5">
-              <span className="w-24 sm:w-32 text-right">Price</span>
-              <span className="flex-1 text-right">Amount</span>
+              <span className="w-28 sm:w-36 text-right">Price ({fromUpper})</span>
+              <span className="flex-1 text-right">Amount ({toUpper})</span>
               <span className="w-16 text-right hidden sm:block">USD</span>
               <span className="w-10 text-right">Qty</span>
             </div>
@@ -239,25 +335,25 @@ export function StatsPage({ raceCfg }: StatsPageProps) {
             ) : (
               <div className="flex flex-col">
                 {asksReversed.map((lvl, i) => {
-                  const pct = maxAmount > 0 ? (lvl.total_amount / maxAmount) * 100 : 0;
-                  const usdVal = askAmountPriceUsd != null ? lvl.total_amount * askAmountPriceUsd : null;
+                  const pct = maxAmount > 0 ? (lvl.amount / maxAmount) * 100 : 0;
+                  const usdVal = amountPriceUsd != null ? lvl.amount * amountPriceUsd : null;
                   return (
                     <div key={`ask-${i}`} className="relative flex items-center gap-2 px-3 py-1 text-xs mono">
                       <div
                         className="absolute inset-y-0 right-0 bg-error/10 transition-all"
                         style={{ width: `${Math.min(100, pct)}%` }}
                       />
-                      <span className="relative z-10 w-24 sm:w-32 text-right text-error font-medium">
-                        {fmtRate(lvl.price_rate)}
+                      <span className="relative z-10 w-28 sm:w-36 text-right text-error font-medium">
+                        {fmtRate(lvl.price)}
                       </span>
                       <span className="relative z-10 flex-1 text-right">
-                        {fmtAmount(lvl.total_amount)}
+                        {fmtAmount(lvl.amount)}
                       </span>
                       <span className="relative z-10 w-16 text-right opacity-40 text-[10px] hidden sm:block">
                         {usdVal != null ? fmtUsd(usdVal) : ''}
                       </span>
                       <span className="relative z-10 w-10 text-right opacity-50">
-                        {lvl.order_count}
+                        {lvl.orderCount}
                       </span>
                     </div>
                   );
@@ -286,30 +382,30 @@ export function StatsPage({ raceCfg }: StatsPageProps) {
             </div>
 
             {/* ---- BIDS (highest price at top, closest to spread) ---- */}
-            {book.bids.length === 0 ? (
+            {normalized.bids.length === 0 ? (
               <div className="text-center py-4 text-xs opacity-40">No bids</div>
             ) : (
               <div className="flex flex-col">
-                {book.bids.map((lvl, i) => {
-                  const pct = maxAmount > 0 ? (lvl.total_amount / maxAmount) * 100 : 0;
-                  const usdVal = bidAmountPriceUsd != null ? lvl.total_amount * bidAmountPriceUsd : null;
+                {normalized.bids.map((lvl, i) => {
+                  const pct = maxAmount > 0 ? (lvl.amount / maxAmount) * 100 : 0;
+                  const usdVal = amountPriceUsd != null ? lvl.amount * amountPriceUsd : null;
                   return (
                     <div key={`bid-${i}`} className="relative flex items-center gap-2 px-3 py-1 text-xs mono">
                       <div
                         className="absolute inset-y-0 right-0 bg-success/10 transition-all"
                         style={{ width: `${Math.min(100, pct)}%` }}
                       />
-                      <span className="relative z-10 w-24 sm:w-32 text-right text-success font-medium">
-                        {fmtRate(lvl.price_rate)}
+                      <span className="relative z-10 w-28 sm:w-36 text-right text-success font-medium">
+                        {fmtRate(lvl.price)}
                       </span>
                       <span className="relative z-10 flex-1 text-right">
-                        {fmtAmount(lvl.total_amount)}
+                        {fmtAmount(lvl.amount)}
                       </span>
                       <span className="relative z-10 w-16 text-right opacity-40 text-[10px] hidden sm:block">
                         {usdVal != null ? fmtUsd(usdVal) : ''}
                       </span>
                       <span className="relative z-10 w-10 text-right opacity-50">
-                        {lvl.order_count}
+                        {lvl.orderCount}
                       </span>
                     </div>
                   );
@@ -319,42 +415,6 @@ export function StatsPage({ raceCfg }: StatsPageProps) {
           </div>
         </div>
       ) : null}
-
-      {/* Compact stat row below the book */}
-      {stats && !bookLoading && (
-        <div className="flex flex-wrap gap-2">
-          <div className="badge badge-lg gap-1.5 py-3">
-            <span className="text-[10px] opacity-50">Bid Vol</span>
-            <span className="text-xs font-semibold mono text-success">{fmtAmount(stats.totalBidAmount)}</span>
-            <span className="text-[10px] opacity-40">{toUpper}</span>
-            {(() => {
-              const p = priceOf(effectivePair.toSymbol);
-              return p != null ? <span className="text-[10px] opacity-40 mono">~{fmtUsd(stats.totalBidAmount * p)}</span> : null;
-            })()}
-          </div>
-          <div className="badge badge-lg gap-1.5 py-3">
-            <span className="text-[10px] opacity-50">Ask Vol</span>
-            <span className="text-xs font-semibold mono text-error">{fmtAmount(stats.totalAskAmount)}</span>
-            <span className="text-[10px] opacity-40">{fromUpper}</span>
-            {(() => {
-              const p = priceOf(effectivePair.fromSymbol);
-              return p != null ? <span className="text-[10px] opacity-40 mono">~{fmtUsd(stats.totalAskAmount * p)}</span> : null;
-            })()}
-          </div>
-          {stats.bestBid != null && (
-            <div className="badge badge-lg gap-1.5 py-3">
-              <span className="text-[10px] opacity-50">Best Bid</span>
-              <span className="text-xs font-semibold mono text-success">{fmtRate(stats.bestBid)}</span>
-            </div>
-          )}
-          {stats.bestAsk != null && (
-            <div className="badge badge-lg gap-1.5 py-3">
-              <span className="text-[10px] opacity-50">Best Ask</span>
-              <span className="text-xs font-semibold mono text-error">{fmtRate(stats.bestAsk)}</span>
-            </div>
-          )}
-        </div>
-      )}
     </div>
   );
 }
