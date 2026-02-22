@@ -25,6 +25,7 @@ import { OrdersPanel } from './OrdersPanel';
 import {
   Trash2, ArrowDownToLine, ArrowUpFromLine, Coins, XCircle,
   Share2, Check, Pause, Play, Wallet, AlertTriangle, ChevronDown, RefreshCw,
+  FileText, Copy,
 } from 'lucide-react';
 import { buildShareUrl } from './ShareCard';
 import { nanoFromTon } from '@/lib/ton/agentWalletV5';
@@ -181,6 +182,9 @@ export function ContractDetailPanel({ contract, raceCfg, theme, onDeleted }: Con
   const [error, setError] = useState<string | null>(null);
 
   const [aiModel, setAiModel] = useState<string | null>(null);
+  const [prompt, setPrompt] = useState<string | null>(null);
+  const [promptOpen, setPromptOpen] = useState(false);
+  const [promptCopied, setPromptCopied] = useState(false);
 
   // AI responses: load from cache first, then refresh
   const aiCacheKey = aiResponsesCacheKey(contract.id);
@@ -210,12 +214,13 @@ export function ContractDetailPanel({ contract, raceCfg, theme, onDeleted }: Con
   const [jettonInfo, setJettonInfo] = useState<WithdrawJettonResult | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
-  // Fetch contract detail for ai_model
+  // Fetch contract detail for ai_model + prompt
   useEffect(() => {
     getRaceContractDetail(raceCfg, contract.id)
       .then((detail) => {
         setAiModel(detail.ai_model || null);
         setIsActive(detail.is_active);
+        setPrompt(detail.prompt || null);
       })
       .catch(() => setAiModel(null));
   }, [raceCfg, contract.id]);
@@ -499,6 +504,19 @@ export function ContractDetailPanel({ contract, raceCfg, theme, onDeleted }: Con
                 <span className="opacity-40">—</span>
               )}
             </div>
+          </div>
+          <div className="divider my-0" />
+          <div className="flex items-center justify-between gap-4">
+            <div className="text-sm opacity-60">Prompt</div>
+            <button
+              className="btn btn-ghost btn-xs gap-1"
+              onClick={() => setPromptOpen(true)}
+              disabled={!prompt}
+              type="button"
+            >
+              <FileText className="h-3 w-3" />
+              {prompt ? 'View Prompt' : '—'}
+            </button>
           </div>
           <div className="divider my-0" />
           <div className="flex items-center justify-between gap-4">
@@ -826,6 +844,34 @@ export function ContractDetailPanel({ contract, raceCfg, theme, onDeleted }: Con
           </div>
         </div>
       ) : null}
+
+      {/* Prompt Modal */}
+      {promptOpen && prompt && (
+        <dialog className="modal modal-open" onClick={() => setPromptOpen(false)}>
+          <div className="modal-box max-w-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-bold text-lg">Agent Prompt</h3>
+              <button
+                className={`btn btn-sm btn-ghost gap-1.5 ${promptCopied ? 'text-success' : ''}`}
+                onClick={() => {
+                  void navigator.clipboard.writeText(prompt).then(() => {
+                    setPromptCopied(true);
+                    setTimeout(() => setPromptCopied(false), 2000);
+                  });
+                }}
+                type="button"
+              >
+                {promptCopied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                {promptCopied ? 'Copied' : 'Copy'}
+              </button>
+            </div>
+            <pre className="whitespace-pre-wrap text-sm bg-base-300 rounded-lg p-4 max-h-[60vh] overflow-y-auto mono">{prompt}</pre>
+            <div className="modal-action">
+              <button className="btn btn-sm" onClick={() => setPromptOpen(false)} type="button">Close</button>
+            </div>
+          </div>
+        </dialog>
+      )}
     </div>
   );
 }
