@@ -31,22 +31,26 @@ function tabFromHashParts(parts: string[]): TabKey {
   return { kind: 'overview' };
 }
 
-function routeFromHash(): { page: Page; tab: TabKey } {
+function routeFromHash(): { page: Page; tab: TabKey; statsPair: string | null } {
   const raw = window.location.hash.replace(/^#\/?/, '');
   const parts = raw.split('/').filter(Boolean);
   const first = parts[0]?.toLowerCase();
-  if (!first) return { page: 'home', tab: { kind: 'overview' } };
-  if (first === 'share') return { page: 'share', tab: { kind: 'overview' } };
-  if (first === 'trader') return { page: 'trader', tab: tabFromHashParts(parts) };
-  if (VALID_PAGES.has(first as Page)) return { page: first as Page, tab: { kind: 'overview' } };
-  return { page: 'home', tab: { kind: 'overview' } };
+  if (!first) return { page: 'home', tab: { kind: 'overview' }, statsPair: null };
+  if (first === 'share') return { page: 'share', tab: { kind: 'overview' }, statsPair: null };
+  if (first === 'stats') {
+    const pairSlug = parts[1]?.toUpperCase() || null;
+    return { page: 'stats', tab: { kind: 'overview' }, statsPair: pairSlug };
+  }
+  if (first === 'trader') return { page: 'trader', tab: tabFromHashParts(parts), statsPair: null };
+  if (VALID_PAGES.has(first as Page)) return { page: first as Page, tab: { kind: 'overview' }, statsPair: null };
+  return { page: 'home', tab: { kind: 'overview' }, statsPair: null };
 }
 
-function hashFromRoute(page: Page, tab: TabKey): string | null {
+function hashFromRoute(page: Page, tab: TabKey, statsPair?: string | null): string | null {
   if (page === 'share') return null; // don't touch hash for share pages
   if (page === 'home') return '';
   if (page === 'leaderboard') return 'leaderboard';
-  if (page === 'stats') return 'stats';
+  if (page === 'stats') return statsPair ? `stats/${statsPair}` : 'stats';
   if (tab.kind === 'overview') return 'trader/overview';
   if (tab.kind === 'deploy') return 'trader/deploy';
   return `trader/contract/${encodeURIComponent(tab.contractId)}`;
@@ -85,6 +89,7 @@ export default function App() {
 
   const initialRoute = routeFromHash();
   const [page, setPageState] = useState<Page>(initialRoute.page);
+  const [statsPairSlug, setStatsPairSlug] = useState<string | null>(initialRoute.statsPair);
 
   const setPage = useCallback((p: Page) => {
     setPageState(p);
@@ -98,6 +103,7 @@ export default function App() {
       const next = routeFromHash();
       setPageState(next.page);
       setTab(next.tab);
+      if (next.page === 'stats') setStatsPairSlug(next.statsPair);
     };
     window.addEventListener('hashchange', onHashChange);
     return () => window.removeEventListener('hashchange', onHashChange);
@@ -105,13 +111,13 @@ export default function App() {
 
   // Sync hash with in-app navigation state
   useEffect(() => {
-    const nextHashValue = hashFromRoute(page, tab);
+    const nextHashValue = hashFromRoute(page, tab, statsPairSlug);
     if (nextHashValue === null) return; // share page — don't touch hash
     const nextHash = nextHashValue ? `#${nextHashValue}` : '';
     if (window.location.hash !== nextHash) {
       window.location.hash = nextHash;
     }
-  }, [page, tab]);
+  }, [page, tab, statsPairSlug]);
 
   // Theme switcher
   const [theme, setTheme] = useLocalStorageState<'light' | 'dark'>(THEME_KEY, 'light');
@@ -375,7 +381,7 @@ export default function App() {
         ) : page === 'leaderboard' ? (
           <LeaderboardPage raceCfg={raceCfg} onOpenContract={openContractFromLeaderboard} />
         ) : page === 'stats' ? (
-          <StatsPage raceCfg={raceCfg} />
+          <StatsPage raceCfg={raceCfg} pairSlug={statsPairSlug} onPairChange={setStatsPairSlug} />
         ) : (
           <>
             <ContractTabBar

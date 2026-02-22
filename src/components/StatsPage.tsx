@@ -5,19 +5,27 @@ import { getDexOrderBook, getRaceTokens, type OrderBookResponse, type PublicApiC
 /* ---------- pair definitions ---------- */
 
 type TradingPair = {
+  slug: string;       // URL-friendly id, e.g. "TON-NOT"
   label: string;
   fromSymbol: string;
   toSymbol: string;
 };
 
 const DEFAULT_PAIRS: TradingPair[] = [
-  { label: 'TON / NOT',   fromSymbol: 'TON',   toSymbol: 'NOT' },
-  { label: 'TON / BUILD', fromSymbol: 'TON',   toSymbol: 'BUILD' },
-  { label: 'TON / USDT',  fromSymbol: 'TON',   toSymbol: 'jUSDT' },
-  { label: 'NOT / BUILD', fromSymbol: 'NOT',   toSymbol: 'BUILD' },
-  { label: 'NOT / USDT',  fromSymbol: 'NOT',   toSymbol: 'jUSDT' },
-  { label: 'BUILD / USDT', fromSymbol: 'BUILD', toSymbol: 'jUSDT' },
+  { slug: 'TON-NOT',   label: 'TON / NOT',    fromSymbol: 'TON',   toSymbol: 'NOT' },
+  { slug: 'TON-BUILD', label: 'TON / BUILD',  fromSymbol: 'TON',   toSymbol: 'BUILD' },
+  { slug: 'TON-USDT',  label: 'TON / USDT',   fromSymbol: 'TON',   toSymbol: 'jUSDT' },
+  { slug: 'NOT-BUILD', label: 'NOT / BUILD',  fromSymbol: 'NOT',   toSymbol: 'BUILD' },
+  { slug: 'NOT-USDT',  label: 'NOT / USDT',   fromSymbol: 'NOT',   toSymbol: 'jUSDT' },
+  { slug: 'BUILD-USDT', label: 'BUILD / USDT', fromSymbol: 'BUILD', toSymbol: 'jUSDT' },
 ];
+
+function pairIdxFromSlug(slug: string | null): number {
+  if (!slug) return 0;
+  const upper = slug.toUpperCase();
+  const idx = DEFAULT_PAIRS.findIndex((p) => p.slug === upper);
+  return idx >= 0 ? idx : 0;
+}
 
 /* ---------- helpers ---------- */
 
@@ -97,10 +105,12 @@ function normalizeBook(book: OrderBookResponse): {
 
 type StatsPageProps = {
   raceCfg: PublicApiConfig;
+  pairSlug?: string | null;
+  onPairChange?: (slug: string) => void;
 };
 
-export function StatsPage({ raceCfg }: StatsPageProps) {
-  const [selectedPairIdx, setSelectedPairIdx] = useState(0);
+export function StatsPage({ raceCfg, pairSlug, onPairChange }: StatsPageProps) {
+  const [selectedPairIdx, setSelectedPairIdx] = useState(() => pairIdxFromSlug(pairSlug ?? null));
   const [book, setBook] = useState<OrderBookResponse | null>(null);
   const [bookLoading, setBookLoading] = useState(false);
   const [bookError, setBookError] = useState<string | null>(null);
@@ -244,7 +254,7 @@ export function StatsPage({ raceCfg }: StatsPageProps) {
                 ? 'btn-primary'
                 : 'btn-ghost border border-base-content/10'
             }`}
-            onClick={() => { setSelectedPairIdx(idx); setReversed(false); }}
+            onClick={() => { setSelectedPairIdx(idx); setReversed(false); onPairChange?.(p.slug); }}
             type="button"
           >
             {p.label}
