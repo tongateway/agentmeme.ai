@@ -1,23 +1,31 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { BarChart3, RefreshCw, ArrowDownUp } from 'lucide-react';
-import { getDexOrderBook, getRaceTokens, type OrderBookResponse, type PublicApiConfig } from '@/lib/api';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { BarChart3, ArrowDownUp } from 'lucide-react';
+import { getOrderScannerBook, getRaceTokens, type ScannerBookResponse, type PublicApiConfig } from '@/lib/api';
+
+const AUTO_REFRESH_MS = 10_000; // 10 seconds
+
+/* ---------- vault addresses ---------- */
+
+const VAULTS: Record<string, string> = {
+  TON:   'EQAD7f1rDyPODd6XYfORpVoKP6ZgEOVKCzu4U2dws_gjR7fS',
+  NOT:   'EQA0_4nl1-biEvpzengd5M3GNTt1PRYGIIEHlfanEl3tZkRr',
+  BUILD: 'EQCB7fqENM-zRLR1d6N7a99fWKO1scE-G0wf-49H0uSFIpI-',
+};
 
 /* ---------- pair definitions ---------- */
 
 type TradingPair = {
-  slug: string;       // URL-friendly id, e.g. "TON-NOT"
+  slug: string;
   label: string;
-  fromSymbol: string;
-  toSymbol: string;
+  fromSymbol: string;  // quote symbol (price denomination, e.g. TON)
+  toSymbol: string;    // base symbol (the asset, e.g. NOT)
 };
 
+/** Only pairs whose both vaults exist */
 const DEFAULT_PAIRS: TradingPair[] = [
-  { slug: 'TON-NOT',   label: 'TON / NOT',    fromSymbol: 'TON',   toSymbol: 'NOT' },
-  { slug: 'TON-BUILD', label: 'TON / BUILD',  fromSymbol: 'TON',   toSymbol: 'BUILD' },
-  { slug: 'TON-USDT',  label: 'TON / USDT',   fromSymbol: 'TON',   toSymbol: 'jUSDT' },
-  { slug: 'NOT-BUILD', label: 'NOT / BUILD',  fromSymbol: 'NOT',   toSymbol: 'BUILD' },
-  { slug: 'NOT-USDT',  label: 'NOT / USDT',   fromSymbol: 'NOT',   toSymbol: 'jUSDT' },
-  { slug: 'BUILD-USDT', label: 'BUILD / USDT', fromSymbol: 'BUILD', toSymbol: 'jUSDT' },
+  { slug: 'TON-NOT',   label: 'TON / NOT',   fromSymbol: 'TON',   toSymbol: 'NOT' },
+  { slug: 'TON-BUILD', label: 'TON / BUILD', fromSymbol: 'TON',   toSymbol: 'BUILD' },
+  { slug: 'NOT-BUILD', label: 'NOT / BUILD', fromSymbol: 'NOT',   toSymbol: 'BUILD' },
 ];
 
 function pairIdxFromSlug(slug: string | null): number {
@@ -25,13 +33,6 @@ function pairIdxFromSlug(slug: string | null): number {
   const upper = slug.toUpperCase();
   const idx = DEFAULT_PAIRS.findIndex((p) => p.slug === upper);
   return idx >= 0 ? idx : 0;
-}
-
-/** Map API symbols to display-friendly names (e.g. jUSDT → USDT) */
-const DISPLAY_SYMBOL: Record<string, string> = { JUSDT: 'USDT' };
-function displaySym(sym: string): string {
-  const u = sym.toUpperCase();
-  return DISPLAY_SYMBOL[u] ?? u;
 }
 
 /* ---------- helpers ---------- */
@@ -65,39 +66,39 @@ function fmtUsd(n: number): string {
 /* ---------- normalized level ---------- */
 
 /**
- * The API returns asks and bids with different price directions:
- * - Bids: price_rate = fromSymbol per toSymbol (e.g. 0.000290 TON per NOT), amount in toSymbol
- * - Asks: price_rate = toSymbol per fromSymbol (e.g. 3,544 NOT per TON), amount in fromSymbol
+ * Scanner API (base=toSymbol, quote=fromSymbol):
+ *   price  = base per quote (toSymbol per fromSymbol)
+ *   size   = quote amount (fromSymbol)
+ *   total  = base amount (toSymbol)
  *
- * We normalize everything so:
- * - price = fromSymbol per toSymbol (same as bids)
- * - amount = in toSymbol for bids, in fromSymbol for asks (converted to toSymbol via price)
+ * We display:
+ *   price  = fromSymbol per toSymbol = 1 / api_price
+ *   amount = toSymbol amount = api total
  */
 type NormalizedLevel = {
-  price: number;       // always fromSymbol per toSymbol
-  amount: number;      // always in toSymbol
+  price: number;       // fromSymbol per toSymbol
+  amount: number;      // in toSymbol
   orderCount: number;
 };
 
-function normalizeBook(book: OrderBookResponse): {
+function normalizeScanner(book: ScannerBookResponse): {
   asks: NormalizedLevel[];
   bids: NormalizedLevel[];
 } {
-  // Bids are already in the right format: price = from/to, amount = toSymbol
-  const bids: NormalizedLevel[] = book.bids.map((b) => ({
-    price: b.price_rate,
-    amount: b.total_amount,
-    orderCount: b.order_count,
-  }));
-
-  // Asks: price_rate is inverted (to/from), amount is in fromSymbol
-  // Convert: price = 1/ask.price_rate, amount = ask.total_amount * ask.price_rate (from→to)
   const asks: NormalizedLevel[] = book.asks
-    .filter((a) => a.price_rate > 0)
+    .filter((a) => a.price > 0)
     .map((a) => ({
-      price: 1 / a.price_rate,
-      amount: a.total_amount * a.price_rate,
-      orderCount: a.order_count,
+      price: 1 / a.price,
+      amount: a.total,
+      orderCount: a.orderCount,
+    }));
+
+  const bids: NormalizedLevel[] = book.bids
+    .filter((b) => b.price > 0)
+    .map((b) => ({
+      price: 1 / b.price,
+      amount: b.total,
+      orderCount: b.orderCount,
     }));
 
   // Sort asks: lowest price first (closest to spread)
@@ -118,7 +119,7 @@ type StatsPageProps = {
 
 export function StatsPage({ raceCfg, pairSlug, onPairChange }: StatsPageProps) {
   const [selectedPairIdx, setSelectedPairIdx] = useState(() => pairIdxFromSlug(pairSlug ?? null));
-  const [book, setBook] = useState<OrderBookResponse | null>(null);
+  const [book, setBook] = useState<ScannerBookResponse | null>(null);
   const [bookLoading, setBookLoading] = useState(false);
   const [bookError, setBookError] = useState<string | null>(null);
   const [reversed, setReversed] = useState(false);
@@ -131,31 +132,44 @@ export function StatsPage({ raceCfg, pairSlug, onPairChange }: StatsPageProps) {
     if (!reversed) return currentPair;
     return {
       ...currentPair,
-      label: `${displaySym(currentPair.toSymbol)} / ${displaySym(currentPair.fromSymbol)}`,
+      label: `${currentPair.toSymbol} / ${currentPair.fromSymbol}`,
       fromSymbol: currentPair.toSymbol,
       toSymbol: currentPair.fromSymbol,
     };
   }, [currentPair, reversed]);
 
-  const fetchBook = useCallback(async () => {
-    setBookLoading(true);
-    setBookError(null);
+  // Track whether this is the very first load (show spinner) vs background refresh
+  const hasLoadedOnce = useRef(false);
+  // Counter bumped on every successful refresh — drives row flash animation
+  const [refreshTick, setRefreshTick] = useState(0);
+
+  const fetchBook = useCallback(async (silent = false) => {
+    // base = toSymbol (the asset), quote = fromSymbol (price denomination)
+    const baseVault = VAULTS[effectivePair.toSymbol];
+    const quoteVault = VAULTS[effectivePair.fromSymbol];
+    if (!baseVault || !quoteVault) {
+      if (!silent) setBookError(`No vault address for pair ${effectivePair.fromSymbol}/${effectivePair.toSymbol}`);
+      return;
+    }
+    if (!silent) { setBookLoading(true); setBookError(null); }
     try {
-      const data = await getDexOrderBook({
-        fromSymbol: effectivePair.fromSymbol,
-        toSymbol: effectivePair.toSymbol,
-        limit: 15,
-      });
+      const data = await getOrderScannerBook({ baseVault, quoteVault, levels: 15 });
       setBook(data);
+      setRefreshTick((t) => t + 1);
+      hasLoadedOnce.current = true;
     } catch (e) {
-      setBookError(e instanceof Error ? e.message : String(e));
+      if (!silent) setBookError(e instanceof Error ? e.message : String(e));
     } finally {
-      setBookLoading(false);
+      if (!silent) setBookLoading(false);
     }
   }, [effectivePair.fromSymbol, effectivePair.toSymbol]);
 
+  // Initial load + auto-refresh every 10s
   useEffect(() => {
+    hasLoadedOnce.current = false;
     void fetchBook();
+    const id = setInterval(() => void fetchBook(true), AUTO_REFRESH_MS);
+    return () => clearInterval(id);
   }, [fetchBook]);
 
   // Fetch token USD prices once
@@ -186,13 +200,13 @@ export function StatsPage({ raceCfg, pairSlug, onPairChange }: StatsPageProps) {
     return null;
   }, [tokenPrices]);
 
-  // Normalize the raw book so all prices & amounts are in the same direction
+  // Normalize the scanner response
   const normalized = useMemo(() => {
     if (!book) return null;
-    return normalizeBook(book);
+    return normalizeScanner(book);
   }, [book]);
 
-  // Compute global max for bar sizing (amounts now all in toSymbol)
+  // Compute global max for bar sizing (amounts in toSymbol)
   const maxAmount = useMemo(() => {
     if (!normalized) return 0;
     const maxAsk = Math.max(...normalized.asks.map((a) => a.amount), 0);
@@ -200,7 +214,7 @@ export function StatsPage({ raceCfg, pairSlug, onPairChange }: StatsPageProps) {
     return Math.max(maxAsk, maxBid);
   }, [normalized]);
 
-  // Summary stats (using normalized prices)
+  // Summary stats
   const stats = useMemo(() => {
     if (!normalized) return null;
     const totalAskOrders = normalized.asks.reduce((s, a) => s + a.orderCount, 0);
@@ -222,33 +236,28 @@ export function StatsPage({ raceCfg, pairSlug, onPairChange }: StatsPageProps) {
     return [...normalized.asks].reverse();
   }, [normalized]);
 
-  // Amount is always in toSymbol now
+  // Amount is always in toSymbol
   const amountPriceUsd = priceOf(effectivePair.toSymbol);
-  const fromUpper = displaySym(effectivePair.fromSymbol);
-  const toUpper = displaySym(effectivePair.toSymbol);
+  const fromUpper = effectivePair.fromSymbol;
+  const toUpper = effectivePair.toSymbol;
 
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
-            <BarChart3 className="h-5 w-5 text-primary" />
-          </div>
-          <div>
-            <h1 className="text-xl font-semibold tracking-tight">Order Book</h1>
+      <div className="flex items-center gap-3">
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
+          <BarChart3 className="h-5 w-5 text-primary" />
+        </div>
+        <div>
+          <h1 className="text-xl font-semibold tracking-tight">Order Book</h1>
+          <div className="flex items-center gap-1.5">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-success" />
+            </span>
             <p className="text-xs opacity-50">Live from open4dev DEX</p>
           </div>
         </div>
-
-        <button
-          className={`btn btn-ghost btn-sm gap-1.5 ${bookLoading ? 'btn-disabled' : ''}`}
-          onClick={() => void fetchBook()}
-          type="button"
-        >
-          <RefreshCw className={`h-3.5 w-3.5 ${bookLoading ? 'animate-spin' : ''}`} />
-          Refresh
-        </button>
       </div>
 
       {/* Pair Switcher — compact */}
@@ -355,9 +364,13 @@ export function StatsPage({ raceCfg, pairSlug, onPairChange }: StatsPageProps) {
                   const pct = maxAmount > 0 ? (lvl.amount / maxAmount) * 100 : 0;
                   const usdVal = amountPriceUsd != null ? lvl.amount * amountPriceUsd : null;
                   return (
-                    <div key={`ask-${i}`} className="relative flex items-center gap-2 px-3 py-1 text-xs mono">
+                    <div
+                      key={`ask-${i}-${refreshTick}`}
+                      className="relative flex items-center gap-2 px-3 py-1 text-xs mono animate-[rowFlash_0.6s_ease-out]"
+                      style={{ animationDelay: `${i * 30}ms` }}
+                    >
                       <div
-                        className="absolute inset-y-0 right-0 bg-error/10 transition-all"
+                        className="absolute inset-y-0 right-0 bg-error/10 transition-[width] duration-700 ease-out"
                         style={{ width: `${Math.min(100, pct)}%` }}
                       />
                       <span className="relative z-10 w-28 sm:w-36 text-right text-error font-medium">
@@ -407,9 +420,13 @@ export function StatsPage({ raceCfg, pairSlug, onPairChange }: StatsPageProps) {
                   const pct = maxAmount > 0 ? (lvl.amount / maxAmount) * 100 : 0;
                   const usdVal = amountPriceUsd != null ? lvl.amount * amountPriceUsd : null;
                   return (
-                    <div key={`bid-${i}`} className="relative flex items-center gap-2 px-3 py-1 text-xs mono">
+                    <div
+                      key={`bid-${i}-${refreshTick}`}
+                      className="relative flex items-center gap-2 px-3 py-1 text-xs mono animate-[rowFlash_0.6s_ease-out]"
+                      style={{ animationDelay: `${i * 30}ms` }}
+                    >
                       <div
-                        className="absolute inset-y-0 right-0 bg-success/10 transition-all"
+                        className="absolute inset-y-0 right-0 bg-success/10 transition-[width] duration-700 ease-out"
                         style={{ width: `${Math.min(100, pct)}%` }}
                       />
                       <span className="relative z-10 w-28 sm:w-36 text-right text-success font-medium">

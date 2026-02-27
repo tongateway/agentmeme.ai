@@ -207,16 +207,16 @@ export function OrdersPanel({ contractAddress }: OrdersPanelProps) {
             {tab === 'active' ? 'No active orders.' : 'No order history yet.'}
           </div>
         ) : (
-          <div className="overflow-x-auto mt-2">
-            <table className="table table-sm">
+          <div className="overflow-x-auto -mx-4 sm:mx-0 mt-2">
+            <table className="table table-sm w-full">
               <thead>
                 <tr>
                   <th>Time</th>
                   <th>Pair</th>
                   <th className="text-right">Amount</th>
-                  <th className="text-right">Rate</th>
-                  <th className="text-right">≈ Receive</th>
-                  <th>Status</th>
+                  <th className="text-right hidden sm:table-cell">Rate</th>
+                  <th className="text-right hidden sm:table-cell">≈ Receive</th>
+                  <th className="hidden sm:table-cell">Status</th>
                   <th></th>
                 </tr>
               </thead>
@@ -246,17 +246,17 @@ export function OrdersPanel({ contractAddress }: OrdersPanelProps) {
                           <div className="opacity-50 text-[10px]">~${usdValue.toFixed(2)}</div>
                         )}
                       </td>
-                      <td className="mono text-xs text-right whitespace-nowrap">
+                      <td className="mono text-xs text-right whitespace-nowrap hidden sm:table-cell">
                         {o.price_rate ? fmtAmount(o.price_rate) : '—'}
                       </td>
-                      <td className="mono text-xs text-right whitespace-nowrap">
+                      <td className="mono text-xs text-right whitespace-nowrap hidden sm:table-cell">
                         {receiveAmount != null ? (
                           <span>~{fmtAmount(receiveAmount)} {toLabel}</span>
                         ) : (
                           '—'
                         )}
                       </td>
-                      <td>
+                      <td className="hidden sm:table-cell">
                         <span className={`badge badge-outline badge-xs ${statusBadge(o.status)}`}>
                           {o.status}
                         </span>

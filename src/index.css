@@ -39,3 +39,15 @@
 .scrollbar-none::-webkit-scrollbar {
   display: none;
 }
+
+/* Order-book row flash on refresh */
+@keyframes rowFlash {
+  0% {
+    opacity: 0.4;
+    transform: translateX(4px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}

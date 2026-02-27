@@ -21,12 +21,12 @@ function explorerLink(addr: string): string {
 }
 
 const FALLBACK_AI_MODELS: AiModelOption[] = [
-  { id: 'Qwen/Qwen3-32B', name: 'Qwen3-32B' },
-  { id: 'gpt-5.2', name: 'GPT 5.2' },
-  { id: 'claude-haiku-4-5', name: 'Claude Haiku 4.5' },
-  { id: 'deepseek-chat', name: 'DeepSeek V3.2' },
-  { id: 'gemini-3.1-pro-preview', name: 'Gemini 3.1 Pro' },
-  { id: 'grok-4', name: 'Grok 4' },
+  { id: 'Qwen/Qwen3-32B', name: 'Qwen3-32B', provider: 'Qwen' },
+  { id: 'gpt-5.2', name: 'GPT 5.2', provider: 'OpenAI' },
+  { id: 'claude-haiku-4-5', name: 'Claude Haiku 4.5', provider: 'Anthropic' },
+  { id: 'deepseek-chat', name: 'DeepSeek V3.2', provider: 'DeepSeek' },
+  { id: 'gemini-3.1-pro-preview', name: 'Gemini 3.1 Pro', provider: 'Google' },
+  { id: 'grok-4', name: 'Grok 4', provider: 'xAI' },
 ];
 
 type StrategyTemplate = {
@@ -278,6 +278,7 @@ export type Persisted = {
   contractAddress: string | null;
   raceContractId: string | null;
   aiModel?: string;
+  aiProvider?: string;
   agentName?: string;
 };
 
@@ -381,8 +382,10 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
         const seen = new Set<string>();
         const unique = all.filter((m) => {
           const id = m.id.trim();
-          if (!id || seen.has(id)) return false;
-          seen.add(id);
+          const provider = (m.provider ?? '').trim().toLowerCase();
+          const key = `${provider}::${id.toLowerCase()}`;
+          if (!id || seen.has(key)) return false;
+          seen.add(key);
           return true;
         });
         if (!cancelled && unique.length > 0) {
@@ -431,17 +434,35 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
     }
   }, [persisted.prompt, setPersisted]);
 
-  const selectedModel = useMemo(() => {
-    const current = persisted.aiModel?.trim();
-    if (current && aiModels.some((m) => m.id === current)) return current;
-    return aiModels[0]?.id ?? 'qwen/qwen3-32b';
-  }, [persisted.aiModel, aiModels]);
+  const selectedModelOption = useMemo(() => {
+    const currentModel = persisted.aiModel?.trim();
+    const currentProvider = persisted.aiProvider?.trim().toLowerCase();
+    if (currentModel) {
+      const exact = aiModels.find((m) => (
+        m.id === currentModel &&
+        (m.provider ?? '').trim().toLowerCase() === (currentProvider ?? '')
+      ));
+      if (exact) return exact;
+
+      const byModel = aiModels.find((m) => m.id === currentModel);
+      if (byModel) return byModel;
+    }
+
+    return aiModels[0] ?? FALLBACK_AI_MODELS[0];
+  }, [persisted.aiModel, persisted.aiProvider, aiModels]);
+
+  const selectedModel = selectedModelOption.id;
+  const selectedProvider = selectedModelOption.provider?.trim() || undefined;
 
   useEffect(() => {
-    if (persisted.aiModel !== selectedModel) {
-      setPersisted((p) => ({ ...p, aiModel: selectedModel }));
+    const currentModel = persisted.aiModel?.trim() ?? '';
+    const currentProvider = persisted.aiProvider?.trim() ?? '';
+    const nextModel = selectedModel;
+    const nextProvider = selectedProvider ?? '';
+    if (currentModel !== nextModel || currentProvider !== nextProvider) {
+      setPersisted((p) => ({ ...p, aiModel: nextModel, aiProvider: nextProvider || undefined }));
     }
-  }, [persisted.aiModel, selectedModel, setPersisted]);
+  }, [persisted.aiModel, persisted.aiProvider, selectedModel, selectedProvider, setPersisted]);
 
   const registerOnly = useCallback(async (addressToRegister: string) => {
     setErr(null);
@@ -468,6 +489,7 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
         prompt: persisted.prompt,
         owner_address: ownerAddressNonBounce,
         ai_model: selectedModel,
+        ...(selectedProvider ? { ai_provider: selectedProvider } : {}),
         ...(persisted.agentName?.trim() ? { name: persisted.agentName.trim() } : {}),
       });
       setPersisted((p) => ({ ...p, contractAddress: addressToRegister, raceContractId: created.id }));
@@ -489,6 +511,7 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
     persisted.agentName,
     raceCfg,
     selectedModel,
+    selectedProvider,
     setPersisted,
     onContractRegistered,
   ]);
@@ -579,6 +602,7 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
         prompt: persisted.prompt,
         ownerAddress: ownerAddressNonBounce,
         aiModel: selectedModel,
+        aiProvider: selectedProvider,
         name: persisted.agentName?.trim() || undefined,
         createdAt: Date.now(),
       });
@@ -647,23 +671,31 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
               {modelsLoading && <span className="ml-2 loading loading-dots loading-xs" />}
             </label>
             <div className="flex flex-wrap gap-1.5">
-              {aiModels.map((m) => (
+              {aiModels.map((m) => {
+                const modelProvider = m.provider?.trim() ?? '';
+                const isSelected = (
+                  selectedModel === m.id &&
+                  (selectedProvider ?? '') === modelProvider
+                );
+                return (
                 <button
-                  key={m.id}
+                  key={`${modelProvider || 'provider'}:${m.id}`}
                   className={`
                     btn btn-sm border transition-all duration-150
-                    ${selectedModel === m.id
+                    ${isSelected
                       ? 'btn-primary shadow-sm'
                       : 'btn-ghost border-base-content/10 hover:border-base-content/20'
                     }
                   `}
                   type="button"
-                  onClick={() => setPersisted((p) => ({ ...p, aiModel: m.id }))}
+                  onClick={() => setPersisted((p) => ({ ...p, aiModel: m.id, aiProvider: m.provider?.trim() || undefined }))}
                   title={m.description ?? undefined}
                 >
                   <span className="text-xs">{m.name}</span>
+                  {m.provider && <span className="text-[10px] opacity-70">({m.provider})</span>}
                 </button>
-              ))}
+                );
+              })}
             </div>
           </div>
 

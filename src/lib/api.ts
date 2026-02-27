@@ -55,6 +55,8 @@ export type ContractListItem = {
   owner_address: string;
   is_active: boolean;
   status?: string;
+  ai_model?: string | null;
+  ai_provider?: string | null;
   created_at: string;
   updated_at: string;
   total_decisions?: number | null;
@@ -70,6 +72,7 @@ export type ContractDetail = {
   is_active: boolean;
   status?: string;
   ai_model: string;
+  ai_provider?: string | null;
   owner_address: string;
   created_at: string;
   updated_at: string;
@@ -83,6 +86,8 @@ export type RegisterContractRequest = {
   prompt: string;
   is_active?: boolean;
   owner_address: string;
+  ai_model?: string;
+  ai_provider?: string;
 };
 
 export type RegisterRaceContractRequest = {
@@ -94,6 +99,7 @@ export type RegisterRaceContractRequest = {
   owner_address: string;
   is_active?: boolean;
   ai_model?: string;
+  ai_provider?: string;
   name?: string;
 };
 
@@ -101,6 +107,9 @@ export type UpdateContractRequest = {
   name?: string;
   prompt?: string;
   is_active?: boolean;
+  status?: 'active' | 'paused';
+  ai_model?: string;
+  ai_provider?: string;
 };
 
 export type AiHistoryItem = {
@@ -146,6 +155,7 @@ export type LeaderboardEntry = {
   name?: string | null;
   owner_address: string;
   ai_model: string;
+  ai_provider?: string | null;
   is_active: boolean;
   status?: string;
   start_balance_usd: number | null;
@@ -179,6 +189,7 @@ export type ReactionResponse = {
 export type AiModelOption = {
   id: string;
   name: string;
+  provider?: string;
   description?: string | null;
 };
 
@@ -194,6 +205,8 @@ function toIsActive(value: unknown): boolean {
 }
 
 function normalizeContract(item: Record<string, unknown>): ContractListItem {
+  const providerRaw = item.provider ?? item.ai_provider;
+  const aiProvider = typeof providerRaw === 'string' && providerRaw.trim() ? providerRaw.trim() : null;
   return {
     id: String(item.id ?? ''),
     address: String(item.address ?? ''),
@@ -201,6 +214,8 @@ function normalizeContract(item: Record<string, unknown>): ContractListItem {
     owner_address: String(item.owner_address ?? ''),
     is_active: toIsActive(item.is_active ?? item.status),
     status: typeof item.status === 'string' ? item.status : undefined,
+    ai_model: typeof item.ai_model === 'string' ? item.ai_model : null,
+    ai_provider: aiProvider,
     created_at: String(item.created_at ?? ''),
     updated_at: String(item.updated_at ?? ''),
     total_decisions: typeof item.total_decisions === 'number' ? item.total_decisions : null,
@@ -208,6 +223,8 @@ function normalizeContract(item: Record<string, unknown>): ContractListItem {
 }
 
 function normalizeContractDetail(item: Record<string, unknown>): ContractDetail {
+  const providerRaw = item.provider ?? item.ai_provider;
+  const aiProvider = typeof providerRaw === 'string' && providerRaw.trim() ? providerRaw.trim() : null;
   return {
     id: String(item.id ?? ''),
     address: String(item.address ?? ''),
@@ -218,6 +235,7 @@ function normalizeContractDetail(item: Record<string, unknown>): ContractDetail 
     is_active: toIsActive(item.is_active ?? item.status),
     status: typeof item.status === 'string' ? item.status : undefined,
     ai_model: String(item.ai_model ?? ''),
+    ai_provider: aiProvider,
     owner_address: String(item.owner_address ?? ''),
     created_at: String(item.created_at ?? ''),
     updated_at: String(item.updated_at ?? ''),
@@ -225,6 +243,8 @@ function normalizeContractDetail(item: Record<string, unknown>): ContractDetail 
 }
 
 function normalizeLeaderboardEntry(item: Record<string, unknown>): LeaderboardEntry {
+  const providerRaw = item.provider ?? item.ai_provider;
+  const aiProvider = typeof providerRaw === 'string' && providerRaw.trim() ? providerRaw.trim() : null;
   return {
     rank: Number(item.rank ?? 0),
     smart_contract_id: String(item.smart_contract_id ?? ''),
@@ -232,6 +252,7 @@ function normalizeLeaderboardEntry(item: Record<string, unknown>): LeaderboardEn
     name: typeof item.name === 'string' ? item.name : null,
     owner_address: String(item.owner_address ?? ''),
     ai_model: String(item.ai_model ?? ''),
+    ai_provider: aiProvider,
     is_active: toIsActive(item.is_active ?? item.status),
     status: typeof item.status === 'string' ? item.status : undefined,
     start_balance_usd: typeof item.start_balance_usd === 'number' ? item.start_balance_usd : null,
@@ -244,7 +265,7 @@ function normalizeLeaderboardEntry(item: Record<string, unknown>): LeaderboardEn
   };
 }
 
-function normalizeAiModelOption(item: Record<string, unknown>): AiModelOption | null {
+function normalizeAiModelOption(item: Record<string, unknown>, providerHint?: string): AiModelOption | null {
   const isActiveRaw = item.is_active;
   if (typeof isActiveRaw === 'boolean' && !isActiveRaw) return null;
 
@@ -258,8 +279,10 @@ function normalizeAiModelOption(item: Record<string, unknown>): AiModelOption | 
   const name = typeof nameRaw === 'string' && nameRaw.trim() ? nameRaw.trim() : id;
   const descriptionRaw = item.description ?? item.desc ?? item.details;
   const description = typeof descriptionRaw === 'string' && descriptionRaw.trim() ? descriptionRaw.trim() : null;
+  const providerRaw = item.provider ?? item.ai_provider ?? providerHint;
+  const provider = typeof providerRaw === 'string' && providerRaw.trim() ? providerRaw.trim() : undefined;
 
-  return { id, name, description };
+  return { id, name, provider, description };
 }
 
 function normalizeAiModelsGroup(item: Record<string, unknown>): AiModelsByProvider | null {
@@ -267,7 +290,11 @@ function normalizeAiModelsGroup(item: Record<string, unknown>): AiModelsByProvid
   const provider = typeof providerRaw === 'string' && providerRaw.trim() ? providerRaw.trim() : 'Other';
   const modelsRaw = Array.isArray(item.models) ? item.models : [];
   const models = modelsRaw
-    .map((m) => (m && typeof m === 'object' ? normalizeAiModelOption(m as Record<string, unknown>) : null))
+    .map((m) => (
+      m && typeof m === 'object'
+        ? normalizeAiModelOption(m as Record<string, unknown>, provider)
+        : null
+    ))
     .filter((m): m is AiModelOption => !!m);
   if (models.length === 0) return null;
   return { provider, models };
@@ -336,6 +363,32 @@ export async function getRaceContractDetail(cfg: PublicApiConfig, contractId: st
   });
   const data = await jsonOrThrow(res);
   return normalizeContractDetail(data as Record<string, unknown>);
+}
+
+/** Fetch the agent prompt (requires JWT auth). Returns null if unauthenticated or not found. */
+export async function getRaceContractPrompt(cfg: PublicApiConfig, contractId: string): Promise<string | null> {
+  try {
+    const res = await fetch(raceUrl(cfg, `/api/contracts/${contractId}/prompt`), {
+      method: 'GET',
+      headers: publicGetHeaders(cfg),
+    });
+    if (!res.ok) return null;
+    const data = await res.json() as Record<string, unknown>;
+    return typeof data.prompt === 'string' && data.prompt ? data.prompt : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Update the agent prompt (requires JWT auth, owner-only). */
+export async function updateRaceContractPrompt(cfg: PublicApiConfig, contractId: string, prompt: string): Promise<string> {
+  const res = await fetch(raceUrl(cfg, `/api/contracts/${contractId}/prompt`), {
+    method: 'PUT',
+    headers: publicPostHeaders(cfg),
+    body: JSON.stringify({ prompt }),
+  });
+  const data = await jsonOrThrow(res) as Record<string, unknown>;
+  return typeof data.prompt === 'string' ? data.prompt : prompt;
 }
 
 export async function updateRaceContract(cfg: PublicApiConfig, contractId: string, body: UpdateContractRequest): Promise<ContractDetail> {
@@ -455,6 +508,8 @@ export async function listContractsFromLeaderboard(cfg: PublicApiConfig): Promis
     owner_address: e.owner_address,
     is_active: e.is_active,
     status: e.status,
+    ai_model: e.ai_model,
+    ai_provider: e.ai_provider ?? null,
     created_at: e.created_at,
     updated_at: e.created_at, // leaderboard doesn't have updated_at
     total_decisions: e.total_decisions ?? null,
@@ -759,41 +814,55 @@ export async function getTonPriceUsd(): Promise<number | null> {
  * open4dev DEX API — Order Book
  * ========================================================================== */
 
-export type OrderBookLevel = {
-  price_rate: number;
-  total_amount: number;
-  order_count: number;
+/* ---------- Order Scanner (order-scanner.reist01.workers.dev) ---------- */
+
+const ORDER_SCANNER_BASE = 'https://order-scanner.reist01.workers.dev';
+
+export type ScannerLevel = {
+  price: number;       // base per quote (raw float)
+  size: number;        // quote amount
+  total: number;       // base amount
+  orderCount: number;
 };
 
-export type OrderBookResponse = {
-  from_symbol: string;
-  to_symbol: string;
-  asks: OrderBookLevel[];
-  bids: OrderBookLevel[];
+export type ScannerBookResponse = {
+  asks: ScannerLevel[];
+  bids: ScannerLevel[];
+  bestAsk: number | null;
+  bestBid: number | null;
+  spread: number | null;
+  mid: number | null;
 };
 
-/** Fetch aggregated order book (asks + bids) for a trading pair. */
-export async function getDexOrderBook(opts: {
-  fromSymbol: string;
-  toSymbol: string;
-  limit?: number;
-}): Promise<OrderBookResponse> {
+/** Fetch order book from the order-scanner worker using vault addresses. */
+export async function getOrderScannerBook(opts: {
+  baseVault: string;
+  quoteVault: string;
+  levels?: number;
+}): Promise<ScannerBookResponse> {
   const params = new URLSearchParams();
-  params.set('from_symbol', opts.fromSymbol);
-  params.set('to_symbol', opts.toSymbol);
-  if (opts.limit) params.set('limit', String(opts.limit));
-  const res = await fetch(`${OPEN4DEV_BASE}/orders/book?${params}`);
-  const data = (await res.json()) as Record<string, unknown>;
-  const parseLevel = (l: Record<string, unknown>): OrderBookLevel => ({
-    price_rate: Number(l.price_rate ?? 0),
-    total_amount: Number(l.total_amount ?? 0),
-    order_count: Number(l.order_count ?? 0),
+  params.set('baseVault', opts.baseVault);
+  params.set('quoteVault', opts.quoteVault);
+  if (opts.levels) params.set('levels', String(opts.levels));
+  const res = await fetch(`${ORDER_SCANNER_BASE}/orderbook?${params}`);
+  const json = (await res.json()) as Record<string, unknown>;
+  if (!json.ok) throw new Error('Order scanner returned error');
+  const book = json.book as Record<string, unknown>;
+  const parseLevel = (l: Record<string, unknown>): ScannerLevel => ({
+    price: Number(l.price ?? 0),
+    size: Number(l.size ?? 0),
+    total: Number(l.total ?? 0),
+    orderCount: Number(l.order_count ?? 0),
   });
+  const asks = Array.isArray(book.asks) ? book.asks.map((a: Record<string, unknown>) => parseLevel(a)) : [];
+  const bids = Array.isArray(book.bids) ? book.bids.map((b: Record<string, unknown>) => parseLevel(b)) : [];
   return {
-    from_symbol: String(data.from_symbol ?? opts.fromSymbol),
-    to_symbol: String(data.to_symbol ?? opts.toSymbol),
-    asks: Array.isArray(data.asks) ? data.asks.map((a: Record<string, unknown>) => parseLevel(a)) : [],
-    bids: Array.isArray(data.bids) ? data.bids.map((b: Record<string, unknown>) => parseLevel(b)) : [],
+    asks,
+    bids,
+    bestAsk: book.best_ask != null ? Number(book.best_ask) : null,
+    bestBid: book.best_bid != null ? Number(book.best_bid) : null,
+    spread: book.spread != null ? Number(book.spread) : null,
+    mid: book.mid != null ? Number(book.mid) : null,
   };
 }
 
@@ -844,7 +913,6 @@ export type CheckProofRequest = {
     domain: { lengthBytes: number; value: string };
     payload: string;
     signature: string;
-    state_init?: string;
   };
   state_init: string;
 };
@@ -873,4 +941,3 @@ export async function checkProof(cfg: PublicApiConfig, body: CheckProofRequest):
   const data = (await jsonOrThrow(res)) as CheckProofResponse;
   return data.token;
 }
-

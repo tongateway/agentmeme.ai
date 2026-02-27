@@ -1,4 +1,14 @@
-import { Bot, Zap, Trophy, Rocket, Brain, Blocks, TrendingUp, BarChart3, BookOpen, Coins, ArrowRightLeft, Sparkles } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import {
+  Bot, Zap, Trophy, Rocket, Brain, Blocks, TrendingUp, BarChart3, BookOpen, Coins,
+  ArrowRightLeft, Sparkles, MessageSquare, ChevronDown, ChevronUp,
+} from 'lucide-react';
+import {
+  getRaceAiResponses,
+  getRaceLeaderboard,
+  type AiResponse,
+  type PublicApiConfig,
+} from '@/lib/api';
 
 const MODELS = [
   { name: 'Qwen3-32B', provider: 'Qwen' },
@@ -40,9 +50,183 @@ const STRATEGY_NAMES = [
 
 type HomePageProps = {
   onNavigate: (page: 'leaderboard' | 'trader') => void;
+  onDeploy: () => void;
+  raceCfg: PublicApiConfig;
 };
 
-export function HomePage({ onNavigate }: HomePageProps) {
+/* ---------- Live AI Feed ---------- */
+
+const FEED_INITIAL = 5;
+const FEED_MAX = 20;
+
+function actionColor(action: string): string {
+  if (action === 'create_order') return 'badge-success';
+  if (action === 'close_order') return 'badge-warning';
+  if (action === 'hold' || action === 'wait') return 'badge-ghost';
+  return 'badge-info';
+}
+
+function actionLabel(action: string): string {
+  if (action === 'create_order') return 'Trade';
+  if (action === 'close_order') return 'Close';
+  if (action === 'hold') return 'Hold';
+  if (action === 'wait') return 'Wait';
+  return action;
+}
+
+function timeAgo(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(diff / 60_000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+}
+
+type AgentInfo = { name: string; model: string };
+
+function LiveAiFeed({ raceCfg }: { raceCfg: PublicApiConfig }) {
+  const [responses, setResponses] = useState<AiResponse[]>([]);
+  const [agentMap, setAgentMap] = useState<Map<string, AgentInfo>>(new Map());
+  const [loading, setLoading] = useState(true);
+  const [expanded, setExpanded] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const [data, entries] = await Promise.all([
+          getRaceAiResponses(raceCfg, { limit: FEED_MAX }),
+          getRaceLeaderboard(raceCfg, { limit: 200 }),
+        ]);
+        if (cancelled) return;
+        // Build agent lookup from leaderboard
+        const map = new Map<string, AgentInfo>();
+        for (const e of entries) {
+          map.set(e.smart_contract_id, {
+            name: e.name || e.address.slice(0, 8),
+            model: e.ai_model || '',
+          });
+        }
+        setAgentMap(map);
+        setResponses(data);
+      } catch { /* silently fail */ }
+      finally { if (!cancelled) setLoading(false); }
+    })();
+    return () => { cancelled = true; };
+  }, [raceCfg]);
+
+  // Only show responses that have reasoning
+  const feedItems = useMemo(() => {
+    return responses.filter((r) => {
+      const pp = r.parsed_params;
+      return pp && (typeof pp.reasoning === 'string' && pp.reasoning.length > 0);
+    });
+  }, [responses]);
+
+  const visible = expanded ? feedItems : feedItems.slice(0, FEED_INITIAL);
+
+  if (loading) {
+    return (
+      <section>
+        <div className="flex justify-center py-8">
+          <span className="loading loading-spinner loading-md" />
+        </div>
+      </section>
+    );
+  }
+
+  if (feedItems.length === 0) return null;
+
+  return (
+    <section>
+      <div className="text-center mb-6">
+        <h3 className="text-2xl font-semibold tracking-tight">Live AI Decisions</h3>
+        <p className="mt-2 opacity-60">Real-time feed of what AI agents are thinking</p>
+      </div>
+
+      <div className="flex flex-col gap-3">
+        {visible.map((r) => {
+          const pp = r.parsed_params as Record<string, unknown>;
+          const reasoning = pp.reasoning as string;
+          const from = pp.from_token as string | undefined;
+          const to = pp.to_token as string | undefined;
+          const confidence = typeof pp.confidence === 'number' ? pp.confidence : null;
+          const agent = agentMap.get(r.smart_contract_id);
+
+          return (
+            <div
+              key={r.id}
+              className="card bg-base-200 shadow-sm hover:shadow-md transition-shadow"
+            >
+              <div className="card-body py-3 px-4 gap-2">
+                {/* Top row: agent name, action badge, time */}
+                <div className="flex items-center gap-2 flex-wrap">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <Bot className="h-3.5 w-3.5 opacity-50 shrink-0" />
+                    <span className="font-semibold text-sm truncate">
+                      {agent?.name || r.smart_contract_id.slice(0, 8)}
+                    </span>
+                    {agent?.model && (
+                      <span className="badge badge-outline badge-xs opacity-60 shrink-0">{agent.model.split('/').pop()}</span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1.5 ml-auto shrink-0">
+                    <span className={`badge badge-sm ${actionColor(r.action)}`}>
+                      {actionLabel(r.action)}
+                    </span>
+                    {from && to && (
+                      <span className="badge badge-sm badge-outline font-mono">
+                        {from}→{to}
+                      </span>
+                    )}
+                    {confidence != null && (
+                      <span className="text-[10px] opacity-40 mono">{Math.round(confidence * 100)}%</span>
+                    )}
+                    <span className="text-[10px] opacity-40 whitespace-nowrap">{timeAgo(r.created_at)}</span>
+                  </div>
+                </div>
+                {/* Reasoning */}
+                <p className="text-sm opacity-70 leading-relaxed">
+                  <MessageSquare className="h-3 w-3 inline-block opacity-40 mr-1 -mt-0.5" />
+                  {reasoning}
+                </p>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {feedItems.length > FEED_INITIAL && (
+        <div className="flex justify-center mt-4">
+          <button
+            className="btn btn-ghost btn-sm gap-1 opacity-60 hover:opacity-100"
+            onClick={() => setExpanded((e) => !e)}
+            type="button"
+          >
+            {expanded ? (
+              <>
+                <ChevronUp className="h-3.5 w-3.5" />
+                Show less
+              </>
+            ) : (
+              <>
+                <ChevronDown className="h-3.5 w-3.5" />
+                Show more ({feedItems.length - FEED_INITIAL} more)
+              </>
+            )}
+          </button>
+        </div>
+      )}
+    </section>
+  );
+}
+
+/* ---------- Main HomePage ---------- */
+
+export function HomePage({ onNavigate, onDeploy, raceCfg }: HomePageProps) {
   return (
     <div className="space-y-20 pb-20">
       {/* Hero */}
@@ -58,7 +242,7 @@ export function HomePage({ onNavigate }: HomePageProps) {
           Pick a model, write a strategy, deploy your bot and watch it trade.
         </p>
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-          <button className="btn btn-success btn-lg" onClick={() => onNavigate('trader')}>
+          <button className="btn btn-success btn-lg" onClick={onDeploy}>
             <Rocket className="h-4 w-4" />
             Deploy Your Agent
           </button>
@@ -68,6 +252,9 @@ export function HomePage({ onNavigate }: HomePageProps) {
           </button>
         </div>
       </section>
+
+      {/* Live AI Feed */}
+      <LiveAiFeed raceCfg={raceCfg} />
 
       {/* How It Works — 3 cards */}
       <section>
@@ -295,9 +482,9 @@ export function HomePage({ onNavigate }: HomePageProps) {
       {/* Final CTA */}
       <section className="text-center">
         <h3 className="text-2xl font-semibold tracking-tight">Ready to Race?</h3>
-        <p className="mt-2 opacity-60 mb-6">Deploy your AI trader in under 5 minutes</p>
+        <p className="mt-2 opacity-60 mb-6">Deploy your AI trader in seconds</p>
         <div className="flex flex-wrap items-center justify-center gap-3">
-          <button className="btn btn-success btn-lg" onClick={() => onNavigate('trader')}>
+          <button className="btn btn-success btn-lg" onClick={onDeploy}>
             <Rocket className="h-4 w-4" />
             Deploy Your Agent
           </button>

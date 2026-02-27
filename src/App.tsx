@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { TonConnectButton, useTonAddress, useTonWallet } from '@tonconnect/ui-react';
 import { Address } from '@ton/core';
-import { Sun, Moon } from 'lucide-react';
+import { Sun, Moon, AlertTriangle } from 'lucide-react';
 import { listContractsFromLeaderboard, listRaceContracts, registerRaceContract, updateRaceContract, type ContractListItem } from './lib/api';
 import type { PublicApiConfig } from './lib/api';
 import { useLocalStorageState } from './lib/storage';
@@ -68,6 +68,7 @@ export type PendingDeploy = {
   prompt: string;
   ownerAddress: string; // non-bounceable
   aiModel: string;
+  aiProvider?: string;
   name?: string;
   createdAt: number; // Date.now()
 };
@@ -223,6 +224,7 @@ export default function App() {
           prompt: pendingDeploy.prompt,
           owner_address: pendingDeploy.ownerAddress,
           ai_model: pendingDeploy.aiModel,
+          ...(pendingDeploy.aiProvider ? { ai_provider: pendingDeploy.aiProvider } : {}),
           ...(pendingDeploy.name?.trim() ? { name: pendingDeploy.name.trim() } : {}),
         });
         if (cancelled) return;
@@ -313,6 +315,11 @@ export default function App() {
     }
   }, [isConnected]);
 
+  const openDeploy = useCallback(() => {
+    setPageState('trader');
+    setTab({ kind: 'deploy' });
+  }, []);
+
   // Share page — standalone, no header/nav
   if (page === 'share') {
     const hash = window.location.hash;
@@ -357,7 +364,7 @@ export default function App() {
             onClick={() => setPage('stats')}
             type="button"
           >
-            Stats
+            Order Book
           </button>
           <button
             className={`btn btn-sm shrink-0 ${page === 'trader' ? 'btn-active' : 'btn-ghost'}`}
@@ -377,9 +384,19 @@ export default function App() {
         </div>
       </header>
 
+      <div className="mx-auto max-w-6xl px-4 sm:px-6 pt-4">
+        <div role="alert" className="alert alert-warning text-sm">
+          <AlertTriangle className="h-5 w-5 shrink-0" />
+          <div>
+            <span className="font-semibold">Beta Notice:</span>{' '}
+            We are currently in development and auditing smart contracts. Please use with caution — trade at your own risk.
+          </div>
+        </div>
+      </div>
+
       <main className="mx-auto max-w-6xl px-4 sm:px-6 pb-10 pt-6">
         {page === 'home' ? (
-          <HomePage onNavigate={setPage} />
+          <HomePage onNavigate={setPage} onDeploy={openDeploy} raceCfg={raceCfg} />
         ) : page === 'leaderboard' ? (
           <LeaderboardPage raceCfg={raceCfg} onOpenContract={openContractFromLeaderboard} />
         ) : page === 'stats' ? (
