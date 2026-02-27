@@ -60,6 +60,7 @@ export function useAuth(baseCfg: PublicApiConfig): {
   const [authReady, setAuthReady] = useState(false);
   const payloadRef = useRef<string | null>(null);
   const proofCheckedRef = useRef(false);
+  const lastWalletAddrRef = useRef<string | null>(null);
 
   // Track whether we've ever seen a connected wallet in this session,
   // so we only clear JWT on real disconnects (connected → null), not
@@ -90,14 +91,26 @@ export function useAuth(baseCfg: PublicApiConfig): {
 
   // Step 2: Restore JWT from localStorage whenever wallet address changes
   useEffect(() => {
+    const prevWalletAddr = lastWalletAddrRef.current;
+
+    if (walletAddr && prevWalletAddr && prevWalletAddr !== walletAddr) {
+      // Wallet switched: clear previous wallet token and force a fresh proof check
+      setJwtToken(null);
+      proofCheckedRef.current = false;
+    }
+
     if (walletAddr) {
       wasConnectedRef.current = true;
       const stored = readStoredJwt(walletAddr);
       if (stored) {
         setJwtToken(stored);
         proofCheckedRef.current = true;
+      } else {
+        setJwtToken(null);
       }
     }
+
+    lastWalletAddrRef.current = walletAddr;
   }, [walletAddr]);
 
   // Step 3: When wallet connects with proof, exchange for JWT

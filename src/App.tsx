@@ -60,6 +60,14 @@ const LS_KEY = 'ai-trader-race:v3';
 const MY_CONTRACTS_KEY = 'ai-trader-race:my-contracts';
 const PENDING_DEPLOY_KEY = 'ai-trader-race:pending-deploy';
 
+function normalizeTonAddress(addr: string): string {
+  try {
+    return Address.parse(addr).toRawString();
+  } catch {
+    return addr.toLowerCase();
+  }
+}
+
 /** Stores everything needed to retry a backend registration after the on-chain tx was sent. */
 export type PendingDeploy = {
   address: string;
@@ -87,6 +95,10 @@ export default function App() {
   const wallet = useTonWallet();
   const tonAddress = useTonAddress();
   const isConnected = !!wallet;
+  const walletStorageScope = tonAddress ? normalizeTonAddress(tonAddress) : 'disconnected';
+  const persistedStorageKey = `${LS_KEY}:${walletStorageScope}`;
+  const myContractsStorageKey = `${MY_CONTRACTS_KEY}:${walletStorageScope}`;
+  const pendingDeployStorageKey = `${PENDING_DEPLOY_KEY}:${walletStorageScope}`;
 
   const initialRoute = routeFromHash();
   const [page, setPageState] = useState<Page>(initialRoute.page);
@@ -131,7 +143,7 @@ export default function App() {
     setTheme((t) => (t === 'dark' ? 'light' : 'dark'));
   }, [setTheme]);
 
-  const initialPersisted = useMemo((): Persisted => {
+  const createInitialPersisted = useCallback((): Persisted => {
     const kp = generateAgentKeypair();
     return {
       prompt: '',
@@ -145,35 +157,29 @@ export default function App() {
     };
   }, []);
 
-  const [persisted, setPersisted] = useLocalStorageState<Persisted>(LS_KEY, initialPersisted);
-  const [myContractIds, setMyContractIds] = useLocalStorageState<string[]>(MY_CONTRACTS_KEY, []);
-  const [pendingDeploy, setPendingDeploy] = useLocalStorageState<PendingDeploy | null>(PENDING_DEPLOY_KEY, null);
+  const [persisted, setPersisted] = useLocalStorageState<Persisted>(persistedStorageKey, createInitialPersisted);
+  const [myContractIds, setMyContractIds] = useLocalStorageState<string[]>(myContractsStorageKey, []);
+  const [pendingDeploy, setPendingDeploy] = useLocalStorageState<PendingDeploy | null>(pendingDeployStorageKey, null);
   const [allContracts, setAllContracts] = useState<ContractListItem[] | null>(null);
   const [contractsBusy, setContractsBusy] = useState(false);
-
-  // Normalize a TON address to raw form for reliable comparison
-  const normalizeAddr = useCallback((addr: string): string => {
-    try {
-      return Address.parse(addr).toRawString();
-    } catch {
-      return addr.toLowerCase();
-    }
-  }, []);
+  const walletRawAddress = useMemo(
+    () => (tonAddress ? normalizeTonAddress(tonAddress) : null),
+    [tonAddress],
+  );
 
   // Filter to user's contracts: match by wallet owner_address OR localStorage IDs
   const contracts = useMemo(() => {
     if (!allContracts) return null;
     const idSet = new Set(myContractIds);
-    const walletRaw = tonAddress ? normalizeAddr(tonAddress) : null;
     const matched = allContracts.filter((c) => {
       if (idSet.has(c.id)) return true;
-      if (walletRaw && c.owner_address) {
-        return normalizeAddr(c.owner_address) === walletRaw;
+      if (walletRawAddress && c.owner_address) {
+        return normalizeTonAddress(c.owner_address) === walletRawAddress;
       }
       return false;
     });
     return matched;
-  }, [allContracts, myContractIds, tonAddress, normalizeAddr]);
+  }, [allContracts, myContractIds, walletRawAddress]);
   const activeContract = useMemo(
     () => (tab.kind === 'contract' ? allContracts?.find((c) => c.id === tab.contractId) : null),
     [allContracts, tab],
