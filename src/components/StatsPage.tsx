@@ -4,14 +4,6 @@ import { getOrderScannerBook, getRaceTokens, type ScannerBookResponse, type Publ
 
 const AUTO_REFRESH_MS = 10_000; // 10 seconds
 
-/* ---------- vault addresses ---------- */
-
-const VAULTS: Record<string, string> = {
-  TON:   'EQAD7f1rDyPODd6XYfORpVoKP6ZgEOVKCzu4U2dws_gjR7fS',
-  NOT:   'EQA0_4nl1-biEvpzengd5M3GNTt1PRYGIIEHlfanEl3tZkRr',
-  BUILD: 'EQCB7fqENM-zRLR1d6N7a99fWKO1scE-G0wf-49H0uSFIpI-',
-};
-
 /* ---------- pair definitions ---------- */
 
 type TradingPair = {
@@ -19,13 +11,36 @@ type TradingPair = {
   label: string;
   fromSymbol: string;  // quote symbol (price denomination, e.g. TON)
   toSymbol: string;    // base symbol (the asset, e.g. NOT)
+  baseVault: string;
+  quoteVault: string;
 };
 
 /** Only pairs whose both vaults exist */
 const DEFAULT_PAIRS: TradingPair[] = [
-  { slug: 'TON-NOT',   label: 'TON / NOT',   fromSymbol: 'TON',   toSymbol: 'NOT' },
-  { slug: 'TON-BUILD', label: 'TON / BUILD', fromSymbol: 'TON',   toSymbol: 'BUILD' },
-  { slug: 'NOT-BUILD', label: 'NOT / BUILD', fromSymbol: 'NOT',   toSymbol: 'BUILD' },
+  {
+    slug: 'TON-NOT',
+    label: 'TON / NOT',
+    fromSymbol: 'TON',
+    toSymbol: 'NOT',
+    baseVault: 'EQA0_4nl1-biEvpzengd5M3GNTt1PRYGIIEHlfanEl3tZkRr',
+    quoteVault: 'EQAD7f1rDyPODd6XYfORpVoKP6ZgEOVKCzu4U2dws_gjR7fS',
+  },
+  {
+    slug: 'TON-BUILD',
+    label: 'TON / BUILD',
+    fromSymbol: 'TON',
+    toSymbol: 'BUILD',
+    baseVault: 'EQA0_4nl1-biEvpzengd5M3GNTt1PRYGIIEHlfanEl3tZkRr',
+    quoteVault: 'EQCxWoj_Yxgeh-sRS1MjR7YuqzVLHrOpVFz9neN-Hn1eSYUC',
+  },
+  {
+    slug: 'NOT-BUILD',
+    label: 'NOT / BUILD',
+    fromSymbol: 'NOT',
+    toSymbol: 'BUILD',
+    baseVault: 'EQCB7fqENM-zRLR1d6N7a99fWKO1scE-G0wf-49H0uSFIpI-',
+    quoteVault: 'EQA0_4nl1-biEvpzengd5M3GNTt1PRYGIIEHlfanEl3tZkRr',
+  },
 ];
 
 function pairIdxFromSlug(slug: string | null): number {
@@ -135,6 +150,8 @@ export function StatsPage({ raceCfg, pairSlug, onPairChange }: StatsPageProps) {
       label: `${currentPair.toSymbol} / ${currentPair.fromSymbol}`,
       fromSymbol: currentPair.toSymbol,
       toSymbol: currentPair.fromSymbol,
+      baseVault: currentPair.quoteVault,
+      quoteVault: currentPair.baseVault,
     };
   }, [currentPair, reversed]);
 
@@ -145,8 +162,7 @@ export function StatsPage({ raceCfg, pairSlug, onPairChange }: StatsPageProps) {
 
   const fetchBook = useCallback(async (silent = false) => {
     // base = toSymbol (the asset), quote = fromSymbol (price denomination)
-    const baseVault = VAULTS[effectivePair.toSymbol];
-    const quoteVault = VAULTS[effectivePair.fromSymbol];
+    const { baseVault, quoteVault } = effectivePair;
     if (!baseVault || !quoteVault) {
       if (!silent) setBookError(`No vault address for pair ${effectivePair.fromSymbol}/${effectivePair.toSymbol}`);
       return;
@@ -162,7 +178,7 @@ export function StatsPage({ raceCfg, pairSlug, onPairChange }: StatsPageProps) {
     } finally {
       if (!silent) setBookLoading(false);
     }
-  }, [effectivePair.fromSymbol, effectivePair.toSymbol]);
+  }, [effectivePair]);
 
   // Initial load + auto-refresh every 10s
   useEffect(() => {
