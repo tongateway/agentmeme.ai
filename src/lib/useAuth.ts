@@ -11,7 +11,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTonConnectUI, useTonWallet } from '@tonconnect/ui-react';
-import { getAuthPayload, checkProof, type PublicApiConfig } from './api';
+import { getAuthPayload, checkProof, type PublicApiConfig, type CheckProofRequest } from './api';
 
 const JWT_STORAGE_KEY = 'ai-trader-race:jwt';
 const JWT_ADDR_KEY = 'ai-trader-race:jwt-addr';
@@ -131,17 +131,9 @@ export function useAuth(baseCfg: PublicApiConfig): AuthState {
 
     if (!tonProofItem || tonProofItem.name !== 'ton_proof' || !('proof' in tonProofItem)) {
       // Wallet restored from session without proof — no way to get JWT.
-      // If there's no stored JWT either, disconnect the stale session so the
-      // user gets a clean "Connect Wallet" button that will do a fresh proof.
+      // Keep wallet connected (public endpoints still work), but show auth error.
       proofCheckedRef.current = true;
-      const hasStoredJwt = readStoredJwt(wallet.account.address);
-      if (!hasStoredJwt) {
-        console.warn('[useAuth] stale session without proof or JWT — auto-disconnecting');
-        void tonConnectUI.disconnect().catch(() => {});
-        return;
-      }
-      // Has a stored JWT — keep the session, but warn that proof wasn't re-verified.
-      setAuthError('Session restored without proof. Reconnect wallet to re-authenticate.');
+      setAuthError('Session restored without proof. Reconnect wallet to authenticate.');
       return;
     }
 
@@ -149,16 +141,19 @@ export function useAuth(baseCfg: PublicApiConfig): AuthState {
 
     try {
       const proof = tonProofItem.proof;
-      const jwt = await checkProof(baseCfg, {
+      const reqBody: CheckProofRequest = {
         address: wallet.account.address,
+        network: wallet.account.chain,
         proof: {
           timestamp: proof.timestamp,
           domain: proof.domain,
           payload: proof.payload,
           signature: proof.signature,
+          state_init: wallet.account.walletStateInit ?? '',
         },
-        state_init: wallet.account.walletStateInit ?? '',
-      });
+      };
+      console.log('[useAuth] check-proof request:', JSON.stringify(reqBody, null, 2));
+      const jwt = await checkProof(baseCfg, reqBody);
       setJwtToken(jwt);
       setAuthError(null);
       storeJwt(jwt, wallet.account.address);
@@ -167,7 +162,7 @@ export function useAuth(baseCfg: PublicApiConfig): AuthState {
       console.error('[useAuth] check-proof failed:', msg);
       setAuthError(msg);
     }
-  }, [wallet, baseCfg, tonConnectUI]);
+  }, [wallet, baseCfg]);
 
   useEffect(() => {
     void exchangeProof();
