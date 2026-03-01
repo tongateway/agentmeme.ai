@@ -143,14 +143,13 @@ export function useAuth(baseCfg: PublicApiConfig): AuthState {
       const proof = tonProofItem.proof;
       const reqBody: CheckProofRequest = {
         address: wallet.account.address,
-        network: wallet.account.chain,
         proof: {
           timestamp: proof.timestamp,
           domain: proof.domain,
           payload: proof.payload,
           signature: proof.signature,
-          state_init: wallet.account.walletStateInit ?? '',
         },
+        state_init: wallet.account.walletStateInit ?? '',
       };
       console.log('[useAuth] check-proof request:', JSON.stringify(reqBody, null, 2));
       const jwt = await checkProof(baseCfg, reqBody);

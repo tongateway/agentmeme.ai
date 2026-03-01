@@ -937,14 +937,13 @@ export type AuthPayloadResponse = {
 
 export type CheckProofRequest = {
   address: string;
-  network?: string;
   proof: {
     timestamp: number;
     domain: { lengthBytes: number; value: string };
     payload: string;
     signature: string;
-    state_init: string;
   };
+  state_init: string;
 };
 
 export type CheckProofResponse = {
