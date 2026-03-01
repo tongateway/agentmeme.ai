@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { TonConnectButton, useTonAddress, useTonWallet } from '@tonconnect/ui-react';
 import { Address } from '@ton/core';
-import { Sun, Moon, AlertTriangle } from 'lucide-react';
+import { Sun, Moon, AlertTriangle, ShieldAlert, RefreshCw } from 'lucide-react';
 import { listContractsFromLeaderboard, listRaceContracts, registerRaceContract, updateRaceContract, type ContractListItem } from './lib/api';
 import type { PublicApiConfig } from './lib/api';
 import { useLocalStorageState } from './lib/storage';
@@ -86,7 +86,7 @@ export default function App() {
   const baseCfg = useMemo<PublicApiConfig>(() => ({ baseUrl: raceApiUrl }), [raceApiUrl]);
 
   // TonConnect proof → JWT auth for higher RPS
-  const { jwtToken } = useAuth(baseCfg);
+  const { jwtToken, authError, reconnect } = useAuth(baseCfg);
   const raceCfg = useMemo<PublicApiConfig>(
     () => ({ baseUrl: raceApiUrl, jwtToken }),
     [raceApiUrl, jwtToken],
@@ -409,6 +409,26 @@ export default function App() {
           <StatsPage raceCfg={raceCfg} pairSlug={statsPairSlug} onPairChange={setStatsPairSlug} />
         ) : (
           <>
+            {/* Auth warning — wallet connected but no JWT */}
+            {isConnected && !jwtToken && authError && (
+              <div role="alert" className="alert alert-error text-sm mb-4">
+                <ShieldAlert className="h-5 w-5 shrink-0" />
+                <div className="flex-1">
+                  <span className="font-semibold">Not authenticated:</span>{' '}
+                  {authError}
+                  <span className="opacity-70"> — owner actions (delete, edit prompt, pause) won&apos;t work.</span>
+                </div>
+                <button
+                  className="btn btn-sm btn-ghost gap-1"
+                  onClick={() => void reconnect()}
+                  type="button"
+                >
+                  <RefreshCw className="h-3.5 w-3.5" />
+                  Reconnect
+                </button>
+              </div>
+            )}
+
             <ContractTabBar
               contracts={contracts}
               activeTab={tab}

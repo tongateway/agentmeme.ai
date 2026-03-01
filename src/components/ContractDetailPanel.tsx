@@ -243,7 +243,11 @@ export function ContractDetailPanel({ contract, raceCfg, theme, onDeleted }: Con
         setPrompt(p);
         setPromptOpen(true);
       } else {
-        setError('Could not load prompt. Only the contract owner can view it.');
+        setError(
+          raceCfg.jwtToken
+            ? 'Could not load prompt. Only the contract owner can view it.'
+            : 'Not authenticated — reconnect your wallet to view the prompt.',
+        );
       }
     } finally {
       setPromptLoading(false);

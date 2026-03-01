@@ -48,16 +48,23 @@ function clearStoredJwt(): void {
   }
 }
 
-export function useAuth(baseCfg: PublicApiConfig): {
+export type AuthState = {
   jwtToken: string | null;
   authReady: boolean;
-} {
+  /** Non-null when proof exchange failed (e.g. "Invalid signature"). */
+  authError: string | null;
+  /** Disconnect + reconnect wallet to retry the proof flow. */
+  reconnect: () => Promise<void>;
+};
+
+export function useAuth(baseCfg: PublicApiConfig): AuthState {
   const [tonConnectUI] = useTonConnectUI();
   const wallet = useTonWallet();
   const walletAddr = wallet?.account?.address ?? null;
 
   const [jwtToken, setJwtToken] = useState<string | null>(null);
   const [authReady, setAuthReady] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
   const payloadRef = useRef<string | null>(null);
   const proofCheckedRef = useRef(false);
   const lastWalletAddrRef = useRef<string | null>(null);
@@ -96,6 +103,7 @@ export function useAuth(baseCfg: PublicApiConfig): {
     if (walletAddr && prevWalletAddr && prevWalletAddr !== walletAddr) {
       // Wallet switched: clear previous wallet token and force a fresh proof check
       setJwtToken(null);
+      setAuthError(null);
       proofCheckedRef.current = false;
     }
 
@@ -104,6 +112,7 @@ export function useAuth(baseCfg: PublicApiConfig): {
       const stored = readStoredJwt(walletAddr);
       if (stored) {
         setJwtToken(stored);
+        setAuthError(null);
         proofCheckedRef.current = true;
       } else {
         setJwtToken(null);
@@ -124,6 +133,7 @@ export function useAuth(baseCfg: PublicApiConfig): {
       // Wallet restored from session without proof — no way to get JWT.
       // Keep the wallet connected; user can still use public endpoints.
       proofCheckedRef.current = true;
+      setAuthError('Session restored without proof. Reconnect wallet to authenticate.');
       return;
     }
 
@@ -142,9 +152,12 @@ export function useAuth(baseCfg: PublicApiConfig): {
         state_init: wallet.account.walletStateInit ?? '',
       });
       setJwtToken(jwt);
+      setAuthError(null);
       storeJwt(jwt, wallet.account.address);
-    } catch {
-      // Auth failed — continue without JWT (lower RPS)
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      console.error('[useAuth] check-proof failed:', msg);
+      setAuthError(msg);
     }
   }, [wallet, baseCfg]);
 
@@ -160,6 +173,7 @@ export function useAuth(baseCfg: PublicApiConfig): {
       if (!w && wasConnectedRef.current) {
         // Real disconnect: user explicitly disconnected
         setJwtToken(null);
+        setAuthError(null);
         clearStoredJwt();
         proofCheckedRef.current = false;
         wasConnectedRef.current = false;
@@ -168,5 +182,34 @@ export function useAuth(baseCfg: PublicApiConfig): {
     return unsubscribe;
   }, [tonConnectUI]);
 
-  return { jwtToken, authReady };
+  // Reconnect: disconnect wallet, then open connect modal to get a fresh proof
+  const reconnect = useCallback(async () => {
+    try {
+      await tonConnectUI.disconnect();
+    } catch {
+      // already disconnected
+    }
+    setJwtToken(null);
+    setAuthError(null);
+    clearStoredJwt();
+    proofCheckedRef.current = false;
+    wasConnectedRef.current = false;
+
+    // Re-fetch payload so the new connection gets a fresh tonProof
+    try {
+      const payload = await getAuthPayload(baseCfg);
+      payloadRef.current = payload;
+      tonConnectUI.setConnectRequestParameters({
+        state: 'ready',
+        value: { tonProof: payload },
+      });
+    } catch {
+      tonConnectUI.setConnectRequestParameters(null);
+    }
+
+    // Open the connect modal
+    await tonConnectUI.openModal();
+  }, [tonConnectUI, baseCfg]);
+
+  return { jwtToken, authReady, authError, reconnect };
 }
