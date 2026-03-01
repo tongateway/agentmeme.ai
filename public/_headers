@@ -1,0 +1,6 @@
+# Cloudflare Pages custom headers
+# https://developers.cloudflare.com/pages/configuration/headers/
+
+/tonconnect-manifest.json
+  Cache-Control: no-cache, must-revalidate
+  CDN-Cache-Control: no-store

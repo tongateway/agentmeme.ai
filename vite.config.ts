@@ -15,6 +15,7 @@ export default defineConfig({
   ],
   define: {
     global: 'globalThis',
+    __APP_VERSION__: JSON.stringify(Date.now().toString(36)),
   },
   resolve: {
     alias: {

@@ -13,9 +13,10 @@ import App from './App.tsx';
 const savedTheme = localStorage.getItem('ai-trader-race:theme');
 document.documentElement.setAttribute('data-theme', savedTheme ? JSON.parse(savedTheme) : 'dark');
 
+// Cache-bust the manifest URL so CDN-cached stale copies are never served to wallets.
 const manifestUrl =
   import.meta.env.VITE_TONCONNECT_MANIFEST_URL ||
-  `${window.location.origin}/tonconnect-manifest.json`;
+  `${window.location.origin}/tonconnect-manifest.json?v=${__APP_VERSION__}`;
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
