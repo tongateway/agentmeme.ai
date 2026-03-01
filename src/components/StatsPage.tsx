@@ -362,9 +362,8 @@ function OrderBookTable({ normalized, stats, fromUpper, toUpper, amountPriceUsd,
 
 /* ---------- stat badges row ---------- */
 
-function StatBadges({ stats, fromUpper, toUpper, priceOfToSymbol }: {
+function StatBadges({ stats, toUpper, priceOfToSymbol }: {
   stats: BookStats;
-  fromUpper: string;
   toUpper: string;
   priceOfToSymbol: number | null;
 }) {
@@ -652,7 +651,7 @@ export function StatsPage({ raceCfg, pairSlug, onPairChange }: StatsPageProps) {
 
       {/* Stat badges — scanner */}
       {scannerStats && !bookLoading && (
-        <StatBadges stats={scannerStats} fromUpper={fromUpper} toUpper={toUpper} priceOfToSymbol={amountPriceUsd} />
+        <StatBadges stats={scannerStats} toUpper={toUpper} priceOfToSymbol={amountPriceUsd} />
       )}
 
       {/* Order Book(s) */}
