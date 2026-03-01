@@ -20,6 +20,8 @@ jobs:
 
       - run: npm ci
       - run: npm run build
+        env:
+          TONCONNECT_APP_URL: https://agentmeme.ai
 
       - uses: cloudflare/wrangler-action@v3
         with:

@@ -33,7 +33,8 @@ const rootDir = path.resolve(path.dirname(new URL(import.meta.url).pathname), '.
 const outPath = path.join(rootDir, 'public', 'tonconnect-manifest.json');
 
 const lifecycle = process.env.npm_lifecycle_event || '';
-const isBuild = lifecycle === 'build';
+// Detect build: either running directly as "build" or called from the build script chain
+const isBuild = lifecycle === 'build' || lifecycle === 'gen:tonconnect-manifest' && process.env.CI === 'true';
 
 const allowLocal = process.env.TONCONNECT_ALLOW_LOCAL_MANIFEST === '1';
 
