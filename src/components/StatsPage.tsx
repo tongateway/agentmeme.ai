@@ -2,9 +2,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { BarChart3, ArrowDownUp } from 'lucide-react';
 import {
   getOrderScannerBook,
+  getOrderScannerStats,
   getDexOrdersByPair,
   getRaceTokens,
   type ScannerBookResponse,
+  type ScannerStatsResponse,
   type DexOrder,
   type PublicApiConfig,
 } from '@/lib/api';
@@ -407,6 +409,78 @@ function StatBadges({ stats, toUpper, priceOfToSymbol }: {
   );
 }
 
+/* ---------- pair stats card ---------- */
+
+function PairStatsCard({ stats, fromSymbol, toSymbol }: {
+  stats: ScannerStatsResponse;
+  fromSymbol: string;
+  toSymbol: string;
+}) {
+  const w1h = stats.windows['1h'];
+  const w24h = stats.windows['24h'];
+  const wAll = stats.windows.all_time;
+  const vol = (v: string) => {
+    const n = parseFloat(v);
+    if (n <= 0) return '—';
+    return fmtUsd(n);
+  };
+
+  return (
+    <div className="card bg-base-200 shadow-md">
+      <div className="card-body p-4 gap-3">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-semibold tracking-tight">
+            {fromSymbol} / {toSymbol} Stats
+          </h3>
+          <span className="text-[10px] opacity-40">
+            order-scanner
+          </span>
+        </div>
+
+        {/* Stat grid */}
+        <div className="overflow-x-auto">
+          <table className="table table-xs w-full">
+            <thead>
+              <tr className="text-[10px] uppercase opacity-40">
+                <th className="pl-0">Window</th>
+                <th className="text-right">Open</th>
+                <th className="text-right">Completed</th>
+                <th className="text-right">Volume</th>
+              </tr>
+            </thead>
+            <tbody className="text-xs">
+              <tr>
+                <td className="pl-0 font-medium opacity-70">1 h</td>
+                <td className="text-right mono text-info">{w1h.open_orders}</td>
+                <td className="text-right mono text-success">{w1h.completed_orders}</td>
+                <td className="text-right mono">{vol(w1h.volume_usd)}</td>
+              </tr>
+              <tr>
+                <td className="pl-0 font-medium opacity-70">24 h</td>
+                <td className="text-right mono text-info">{w24h.open_orders}</td>
+                <td className="text-right mono text-success">{w24h.completed_orders}</td>
+                <td className="text-right mono">{vol(w24h.volume_usd)}</td>
+              </tr>
+              <tr className="font-semibold">
+                <td className="pl-0 opacity-70">All time</td>
+                <td className="text-right mono text-info">{wAll.open_orders.toLocaleString()}</td>
+                <td className="text-right mono text-success">{wAll.completed_orders.toLocaleString()}</td>
+                <td className="text-right mono">{vol(wAll.volume_usd)}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        {/* Vault addresses */}
+        <div className="flex flex-col gap-0.5 text-[10px] opacity-30 font-mono break-all">
+          <span>Base: {stats.scope.base_vault_friendly}</span>
+          <span>Quote: {stats.scope.quote_vault_friendly}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ---------- main component ---------- */
 
 type StatsPageProps = {
@@ -430,6 +504,9 @@ export function StatsPage({ raceCfg, pairSlug, onPairChange }: StatsPageProps) {
   const [o4dNormalized, setO4dNormalized] = useState<NormalizedBook | null>(null);
   const [o4dLoading, setO4dLoading] = useState(false);
   const [o4dError, setO4dError] = useState<string | null>(null);
+
+  // Order scanner stats state
+  const [pairStats, setPairStats] = useState<ScannerStatsResponse | null>(null);
 
   const pairs = DEFAULT_PAIRS;
   const currentPair = pairs[selectedPairIdx] ?? pairs[0];
@@ -517,6 +594,24 @@ export function StatsPage({ raceCfg, pairSlug, onPairChange }: StatsPageProps) {
   useEffect(() => {
     setO4dNormalized(null);
     setO4dError(null);
+  }, [effectivePair]);
+
+  // Fetch order-scanner stats for the active pair (same vaults)
+  useEffect(() => {
+    const { baseVault, quoteVault } = effectivePair;
+    if (!baseVault || !quoteVault) return;
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const data = await getOrderScannerStats({ baseVault, quoteVault });
+        if (!cancelled) setPairStats(data);
+      } catch {
+        if (!cancelled) setPairStats(null);
+      }
+    };
+    void load();
+    const id = setInterval(() => void load(), AUTO_REFRESH_MS);
+    return () => { cancelled = true; clearInterval(id); };
   }, [effectivePair]);
 
   // Fetch token USD prices once
@@ -652,6 +747,11 @@ export function StatsPage({ raceCfg, pairSlug, onPairChange }: StatsPageProps) {
       {/* Stat badges — scanner */}
       {scannerStats && !bookLoading && (
         <StatBadges stats={scannerStats} toUpper={toUpper} priceOfToSymbol={amountPriceUsd} />
+      )}
+
+      {/* Pair stats from order-scanner */}
+      {pairStats && (
+        <PairStatsCard stats={pairStats} fromSymbol={fromUpper} toSymbol={toUpper} />
       )}
 
       {/* Order Book(s) */}

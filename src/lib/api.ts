@@ -866,6 +866,60 @@ export async function getOrderScannerBook(opts: {
   };
 }
 
+/* ---------- Order Scanner — stats ---------- */
+
+export type ScannerStatsWindow = {
+  open_orders: number;
+  completed_orders: number;
+  volume_usd: string;
+};
+
+export type ScannerStatsResponse = {
+  scope: {
+    base_vault_friendly: string;
+    quote_vault_friendly: string;
+  };
+  generated_at: number;
+  windows: {
+    '1h': ScannerStatsWindow;
+    '24h': ScannerStatsWindow;
+    all_time: ScannerStatsWindow;
+  };
+};
+
+/** Fetch order stats from order-scanner worker for a vault pair. */
+export async function getOrderScannerStats(opts: {
+  baseVault: string;
+  quoteVault: string;
+}): Promise<ScannerStatsResponse> {
+  const params = new URLSearchParams();
+  params.set('baseVault', opts.baseVault);
+  params.set('quoteVault', opts.quoteVault);
+  const res = await fetch(`${ORDER_SCANNER_BASE}/stats/orders?${params}`);
+  const json = (await res.json()) as Record<string, unknown>;
+  if (!json.ok) throw new Error('Order scanner stats returned error');
+  const stats = json.stats as Record<string, unknown>;
+  const parseWindow = (w: Record<string, unknown>): ScannerStatsWindow => ({
+    open_orders: Number(w.open_orders ?? 0),
+    completed_orders: Number(w.completed_orders ?? 0),
+    volume_usd: String(w.volume_usd ?? '0'),
+  });
+  const windows = stats.windows as Record<string, Record<string, unknown>>;
+  const scope = stats.scope as Record<string, string>;
+  return {
+    scope: {
+      base_vault_friendly: String(scope.base_vault_friendly ?? ''),
+      quote_vault_friendly: String(scope.quote_vault_friendly ?? ''),
+    },
+    generated_at: Number(stats.generated_at ?? 0),
+    windows: {
+      '1h': parseWindow(windows['1h'] ?? {}),
+      '24h': parseWindow(windows['24h'] ?? {}),
+      all_time: parseWindow(windows.all_time ?? {}),
+    },
+  };
+}
+
 export type DexCoinFull = {
   id: number;
   name: string;
