@@ -885,6 +885,35 @@ export async function getDexCoins(): Promise<DexCoinFull[]> {
   }));
 }
 
+/** Fetch deployed orders for a specific coin pair from open4dev (for building order books). */
+export async function getDexOrdersByPair(
+  fromCoinId: number,
+  toCoinId: number,
+  opts?: { limit?: number },
+): Promise<DexOrder[]> {
+  const params = new URLSearchParams();
+  params.set('from_coin_id', String(fromCoinId));
+  params.set('to_coin_id', String(toCoinId));
+  params.set('status', 'deployed');
+  params.set('limit', String(opts?.limit ?? 200));
+  const res = await fetch(`${OPEN4DEV_BASE}/orders?${params}`);
+  const data = await res.json();
+  const orders = (data as Record<string, unknown>).orders;
+  if (!Array.isArray(orders)) return [];
+  return orders.map((o: Record<string, unknown>) => ({
+    id: Number(o.id ?? 0),
+    raw_address: String(o.raw_address ?? ''),
+    created_at: String(o.created_at ?? ''),
+    status: String(o.status ?? ''),
+    amount: Number(o.amount ?? 0),
+    initial_amount: Number(o.initial_amount ?? 0),
+    price_rate: Number(o.price_rate ?? 0),
+    slippage: Number(o.slippage ?? 0),
+    from_coin_id: Number(o.from_coin_id ?? 0),
+    to_coin_id: Number(o.to_coin_id ?? 0),
+  }));
+}
+
 /** Fetch order stats from open4dev. */
 export async function getDexOrderStats(walletRawAddress: string): Promise<DexOrderStats> {
   const res = await fetch(`${OPEN4DEV_BASE}/orders/stats?wallet_address=${encodeURIComponent(walletRawAddress)}`);
