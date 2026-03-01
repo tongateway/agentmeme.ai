@@ -30,7 +30,8 @@ if (fs.existsSync(envPath)) {
 }
 
 const rootDir = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
-const outPath = path.join(rootDir, 'public', 'tonconnect-manifest.json');
+// Use a non-default filename so we can bust stale CDN caches by renaming.
+const outPath = path.join(rootDir, 'public', 'tc-manifest.json');
 
 const lifecycle = process.env.npm_lifecycle_event || '';
 // Detect build: either running directly as "build" or called from the build script chain
