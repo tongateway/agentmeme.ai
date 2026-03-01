@@ -131,9 +131,17 @@ export function useAuth(baseCfg: PublicApiConfig): AuthState {
 
     if (!tonProofItem || tonProofItem.name !== 'ton_proof' || !('proof' in tonProofItem)) {
       // Wallet restored from session without proof — no way to get JWT.
-      // Keep the wallet connected; user can still use public endpoints.
+      // If there's no stored JWT either, disconnect the stale session so the
+      // user gets a clean "Connect Wallet" button that will do a fresh proof.
       proofCheckedRef.current = true;
-      setAuthError('Session restored without proof. Reconnect wallet to authenticate.');
+      const hasStoredJwt = readStoredJwt(wallet.account.address);
+      if (!hasStoredJwt) {
+        console.warn('[useAuth] stale session without proof or JWT — auto-disconnecting');
+        void tonConnectUI.disconnect().catch(() => {});
+        return;
+      }
+      // Has a stored JWT — keep the session, but warn that proof wasn't re-verified.
+      setAuthError('Session restored without proof. Reconnect wallet to re-authenticate.');
       return;
     }
 
@@ -159,7 +167,7 @@ export function useAuth(baseCfg: PublicApiConfig): AuthState {
       console.error('[useAuth] check-proof failed:', msg);
       setAuthError(msg);
     }
-  }, [wallet, baseCfg]);
+  }, [wallet, baseCfg, tonConnectUI]);
 
   useEffect(() => {
     void exchangeProof();
