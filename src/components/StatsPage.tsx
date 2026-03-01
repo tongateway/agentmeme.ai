@@ -411,6 +411,49 @@ function StatBadges({ stats, toUpper, priceOfToSymbol }: {
 
 /* ---------- pair stats card ---------- */
 
+function StatWindow({ label, open, completed, volumeUsd, highlight }: {
+  label: string;
+  open: number;
+  completed: number;
+  volumeUsd: string;
+  highlight?: boolean;
+}) {
+  const total = open + completed;
+  const completionPct = total > 0 ? (completed / total) * 100 : 0;
+  const volNum = parseFloat(volumeUsd);
+
+  return (
+    <div className={`flex-1 min-w-[7rem] px-3 py-2.5 rounded-lg relative overflow-hidden ${
+      highlight ? 'bg-base-300/80' : 'bg-base-300/40'
+    }`}>
+      {/* Completion bar background */}
+      <div
+        className="absolute bottom-0 left-0 h-[2px] bg-success/40 transition-all duration-700"
+        style={{ width: `${completionPct}%` }}
+      />
+
+      <div className="flex items-baseline justify-between mb-1.5">
+        <span className="text-[10px] font-bold uppercase tracking-widest opacity-50">{label}</span>
+        {volNum > 0 && (
+          <span className="text-[9px] mono opacity-30">{fmtUsd(volNum)}</span>
+        )}
+      </div>
+
+      <div className="flex items-center gap-3">
+        <div className="flex items-baseline gap-1">
+          <span className="text-sm font-bold mono text-info leading-none">{open.toLocaleString()}</span>
+          <span className="text-[9px] opacity-30">open</span>
+        </div>
+        <div className="text-[10px] opacity-20">/</div>
+        <div className="flex items-baseline gap-1">
+          <span className="text-sm font-bold mono text-success leading-none">{completed.toLocaleString()}</span>
+          <span className="text-[9px] opacity-30">filled</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function PairStatsCard({ stats, fromSymbol, toSymbol }: {
   stats: ScannerStatsResponse;
   fromSymbol: string;
@@ -419,63 +462,30 @@ function PairStatsCard({ stats, fromSymbol, toSymbol }: {
   const w1h = stats.windows['1h'];
   const w24h = stats.windows['24h'];
   const wAll = stats.windows.all_time;
-  const vol = (v: string) => {
-    const n = parseFloat(v);
-    if (n <= 0) return '—';
-    return fmtUsd(n);
-  };
 
   return (
-    <div className="card bg-base-200 shadow-md">
-      <div className="card-body p-4 gap-3">
-        <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold tracking-tight">
-            {fromSymbol} / {toSymbol} Stats
-          </h3>
-          <span className="text-[10px] opacity-40">
-            order-scanner
+    <div className="rounded-xl border border-base-content/5 bg-base-200/60 p-3">
+      {/* Header row */}
+      <div className="flex items-center justify-between mb-2.5">
+        <div className="flex items-center gap-2">
+          <div className="w-1 h-3.5 rounded-full bg-info/60" />
+          <span className="text-[11px] font-bold tracking-tight opacity-70">
+            {fromSymbol}/{toSymbol} Activity
           </span>
         </div>
-
-        {/* Stat grid */}
-        <div className="overflow-x-auto">
-          <table className="table table-xs w-full">
-            <thead>
-              <tr className="text-[10px] uppercase opacity-40">
-                <th className="pl-0">Window</th>
-                <th className="text-right">Open</th>
-                <th className="text-right">Completed</th>
-                <th className="text-right">Volume</th>
-              </tr>
-            </thead>
-            <tbody className="text-xs">
-              <tr>
-                <td className="pl-0 font-medium opacity-70">1 h</td>
-                <td className="text-right mono text-info">{w1h.open_orders}</td>
-                <td className="text-right mono text-success">{w1h.completed_orders}</td>
-                <td className="text-right mono">{vol(w1h.volume_usd)}</td>
-              </tr>
-              <tr>
-                <td className="pl-0 font-medium opacity-70">24 h</td>
-                <td className="text-right mono text-info">{w24h.open_orders}</td>
-                <td className="text-right mono text-success">{w24h.completed_orders}</td>
-                <td className="text-right mono">{vol(w24h.volume_usd)}</td>
-              </tr>
-              <tr className="font-semibold">
-                <td className="pl-0 opacity-70">All time</td>
-                <td className="text-right mono text-info">{wAll.open_orders.toLocaleString()}</td>
-                <td className="text-right mono text-success">{wAll.completed_orders.toLocaleString()}</td>
-                <td className="text-right mono">{vol(wAll.volume_usd)}</td>
-              </tr>
-            </tbody>
-          </table>
+        <div className="flex items-center gap-2">
+          <span className="text-[9px] mono opacity-20 hidden sm:inline" title={`Base: ${stats.scope.base_vault_friendly}`}>
+            {stats.scope.base_vault_friendly.slice(0, 8)}...{stats.scope.base_vault_friendly.slice(-4)}
+          </span>
+          <div className="h-2 w-2 rounded-full bg-success/50 animate-pulse" />
         </div>
+      </div>
 
-        {/* Vault addresses */}
-        <div className="flex flex-col gap-0.5 text-[10px] opacity-30 font-mono break-all">
-          <span>Base: {stats.scope.base_vault_friendly}</span>
-          <span>Quote: {stats.scope.quote_vault_friendly}</span>
-        </div>
+      {/* Windows strip */}
+      <div className="flex gap-2">
+        <StatWindow label="1H" open={w1h.open_orders} completed={w1h.completed_orders} volumeUsd={w1h.volume_usd} />
+        <StatWindow label="24H" open={w24h.open_orders} completed={w24h.completed_orders} volumeUsd={w24h.volume_usd} />
+        <StatWindow label="All" open={wAll.open_orders} completed={wAll.completed_orders} volumeUsd={wAll.volume_usd} highlight />
       </div>
     </div>
   );
