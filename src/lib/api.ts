@@ -970,6 +970,64 @@ export async function getDexOrdersByPair(
   }));
 }
 
+export type DexTradingStatusStat = {
+  count: number;
+  volume: number;
+};
+
+export type DexTradingStatsPeriod = {
+  period: string;
+  total_orders: number;
+  total_volume: number;
+  by_status: Record<string, DexTradingStatusStat>;
+};
+
+export type DexTradingStats = {
+  from_symbol: string;
+  to_symbol: string;
+  from_decimals: number;
+  to_decimals: number;
+  periods: DexTradingStatsPeriod[];
+};
+
+/** Fetch market trading stats for a symbol pair from open4dev. */
+export async function getDexTradingStats(fromSymbol: string, toSymbol: string): Promise<DexTradingStats> {
+  const params = new URLSearchParams();
+  params.set('from_symbol', fromSymbol);
+  params.set('to_symbol', toSymbol);
+  const res = await fetch(`${OPEN4DEV_BASE}/orders/trading-stats?${params}`);
+  const data = (await res.json()) as Record<string, unknown>;
+
+  const periodsRaw = Array.isArray(data.periods) ? data.periods as Record<string, unknown>[] : [];
+  const periods = periodsRaw.map((p) => {
+    const byStatusRaw = p.by_status;
+    const byStatus: Record<string, DexTradingStatusStat> = {};
+    if (byStatusRaw && typeof byStatusRaw === 'object') {
+      for (const [status, val] of Object.entries(byStatusRaw as Record<string, unknown>)) {
+        if (!val || typeof val !== 'object') continue;
+        byStatus[status] = {
+          count: Number((val as Record<string, unknown>).count ?? 0),
+          volume: Number((val as Record<string, unknown>).volume ?? 0),
+        };
+      }
+    }
+    return {
+      period: String(p.period ?? ''),
+      total_orders: Number(p.total_orders ?? 0),
+      total_volume: Number(p.total_volume ?? 0),
+      by_status: byStatus,
+    };
+  });
+
+  return {
+    from_symbol: String(data.from_symbol ?? fromSymbol),
+    to_symbol: String(data.to_symbol ?? toSymbol),
+    from_decimals: Number(data.from_decimals ?? 9),
+    to_decimals: Number(data.to_decimals ?? 9),
+    periods,
+  };
+}
+
 /** Fetch order stats from open4dev. */
 export async function getDexOrderStats(walletRawAddress: string): Promise<DexOrderStats> {
   const res = await fetch(`${OPEN4DEV_BASE}/orders/stats?wallet_address=${encodeURIComponent(walletRawAddress)}`);

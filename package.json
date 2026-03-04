@@ -9,8 +9,8 @@
     "build": "npm run gen:tonconnect-manifest && tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "deploy": "wrangler pages deploy dist --project-name ai-trader",
-    "deploy:preview": "wrangler pages deploy dist --project-name ai-trader --branch preview"
+    "deploy": "npx wrangler pages deploy dist --project-name ai-trader",
+    "deploy:preview": "npx wrangler pages deploy dist --project-name ai-trader --branch preview"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.1.18",

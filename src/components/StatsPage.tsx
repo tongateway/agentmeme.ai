@@ -1,12 +1,9 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { BarChart3, ArrowDownUp } from 'lucide-react';
 import {
-  getOrderScannerBook,
-  getOrderScannerStats,
   getDexOrdersByPair,
+  getDexTradingStats,
   getRaceTokens,
-  type ScannerBookResponse,
-  type ScannerStatsResponse,
   type DexOrder,
   type PublicApiConfig,
 } from '@/lib/api';
@@ -31,8 +28,6 @@ type TradingPair = {
   label: string;
   fromSymbol: string;  // quote symbol (price denomination, e.g. TON)
   toSymbol: string;    // base symbol (the asset, e.g. NOT)
-  baseVault: string;
-  quoteVault: string;
 };
 
 /** Only pairs whose both vaults exist */
@@ -42,50 +37,36 @@ const DEFAULT_PAIRS: TradingPair[] = [
     label: 'TON / NOT',
     fromSymbol: 'TON',
     toSymbol: 'NOT',
-    // NOT vault (jetton) / TON vault
-    baseVault: 'EQAD7f1rDyPODd6XYfORpVoKP6ZgEOVKCzu4U2dws_gjR7fS',
-    quoteVault: 'EQA0_4nl1-biEvpzengd5M3GNTt1PRYGIIEHlfanEl3tZkRr',
   },
   {
     slug: 'TON-BUILD',
     label: 'TON / BUILD',
     fromSymbol: 'TON',
     toSymbol: 'BUILD',
-    // BUILD vault (jetton) / TON vault
-    baseVault: 'EQCxWoj_Yxgeh-sRS1MjR7YuqzVLHrOpVFz9neN-Hn1eSYUC',
-    quoteVault: 'EQA0_4nl1-biEvpzengd5M3GNTt1PRYGIIEHlfanEl3tZkRr',
   },
   {
     slug: 'NOT-BUILD',
     label: 'NOT / BUILD',
     fromSymbol: 'NOT',
     toSymbol: 'BUILD',
-    baseVault: 'EQCxWoj_Yxgeh-sRS1MjR7YuqzVLHrOpVFz9neN-Hn1eSYUC',
-    quoteVault: 'EQAD7f1rDyPODd6XYfORpVoKP6ZgEOVKCzu4U2dws_gjR7fS',
   },
   {
     slug: 'TON-DOGS',
     label: 'TON / DOGS',
     fromSymbol: 'TON',
     toSymbol: 'DOGS',
-    baseVault: 'EQClIJo99DbIH56sUAnTK0wrdH3_i-_rcxl24CmIhlmGl17i',
-    quoteVault: 'EQA0_4nl1-biEvpzengd5M3GNTt1PRYGIIEHlfanEl3tZkRr',
   },
   {
     slug: 'TON-NOTPIXEL',
     label: 'TON / NOT PIXEL',
     fromSymbol: 'TON',
     toSymbol: 'PX',
-    baseVault: 'EQC1dcxtmYFpKETQ_TA6fA5LfnmLwPYqAWg2M94WWSajEF_Y',
-    quoteVault: 'EQA0_4nl1-biEvpzengd5M3GNTt1PRYGIIEHlfanEl3tZkRr',
   },
   {
     slug: 'TON-XAUT',
     label: 'TON / XAUt',
     fromSymbol: 'TON',
     toSymbol: 'XAUT0',
-    baseVault: 'EQClbgXPqGsSzPRfu8p6WKJwdjs1-14JI6m3tJ4-umB_omK1',
-    quoteVault: 'EQA0_4nl1-biEvpzengd5M3GNTt1PRYGIIEHlfanEl3tZkRr',
   },
 ];
 
@@ -128,16 +109,6 @@ function fmtUsd(n: number): string {
 
 /* ---------- normalized level ---------- */
 
-/**
- * Scanner API (base=toSymbol, quote=fromSymbol):
- *   price  = base per quote (toSymbol per fromSymbol)
- *   size   = quote amount (fromSymbol)
- *   total  = base amount (toSymbol)
- *
- * We display:
- *   price  = fromSymbol per toSymbol = 1 / api_price
- *   amount = toSymbol amount = api total
- */
 type NormalizedLevel = {
   price: number;       // fromSymbol per toSymbol
   amount: number;      // in toSymbol
@@ -148,31 +119,6 @@ type NormalizedBook = {
   asks: NormalizedLevel[];
   bids: NormalizedLevel[];
 };
-
-function normalizeScanner(book: ScannerBookResponse): NormalizedBook {
-  const asks: NormalizedLevel[] = book.asks
-    .filter((a) => a.price > 0)
-    .map((a) => ({
-      price: 1 / a.price,
-      amount: a.total,
-      orderCount: a.orderCount,
-    }));
-
-  const bids: NormalizedLevel[] = book.bids
-    .filter((b) => b.price > 0)
-    .map((b) => ({
-      price: 1 / b.price,
-      amount: b.total,
-      orderCount: b.orderCount,
-    }));
-
-  // Sort asks: lowest price first (closest to spread)
-  asks.sort((a, b) => a.price - b.price);
-  // Sort bids: highest price first (closest to spread)
-  bids.sort((a, b) => b.price - a.price);
-
-  return { asks, bids };
-}
 
 /**
  * Build order book from raw open4dev orders.
@@ -246,6 +192,15 @@ type BookStats = {
   spreadPct: number | null;
 };
 
+type RealPairStats24h = {
+  bidOrders: number | null;
+  askOrders: number | null;
+  bidVolume: number | null;
+  askVolume: number | null;
+  bidVolumeSymbol: string;
+  askVolumeSymbol: string;
+};
+
 function computeStats(normalized: NormalizedBook): BookStats {
   const totalAskOrders = normalized.asks.reduce((s, a) => s + a.orderCount, 0);
   const totalBidOrders = normalized.bids.reduce((s, b) => s + b.orderCount, 0);
@@ -267,12 +222,24 @@ type OrderBookTableProps = {
   stats: BookStats;
   fromUpper: string;
   toUpper: string;
+  fromPriceUsd: number | null;
   amountPriceUsd: number | null;
   refreshTick: number;
   sourceLabel?: string;
+  realStats24h?: RealPairStats24h | null;
 };
 
-function OrderBookTable({ normalized, stats, fromUpper, toUpper, amountPriceUsd, refreshTick, sourceLabel }: OrderBookTableProps) {
+function OrderBookTable({
+  normalized,
+  stats,
+  fromUpper,
+  toUpper,
+  fromPriceUsd,
+  amountPriceUsd,
+  refreshTick,
+  sourceLabel,
+  realStats24h,
+}: OrderBookTableProps) {
   const maxAmount = useMemo(() => {
     const maxAsk = Math.max(...normalized.asks.map((a) => a.amount), 0);
     const maxBid = Math.max(...normalized.bids.map((b) => b.amount), 0);
@@ -280,6 +247,23 @@ function OrderBookTable({ normalized, stats, fromUpper, toUpper, amountPriceUsd,
   }, [normalized]);
 
   const asksReversed = useMemo(() => [...normalized.asks].reverse(), [normalized.asks]);
+
+  const bidOrders = realStats24h?.bidOrders ?? stats.totalBidOrders;
+  const askOrders = realStats24h?.askOrders ?? stats.totalAskOrders;
+  const bidVolume = realStats24h?.bidVolume ?? stats.totalBidAmount;
+  const askVolume = realStats24h?.askVolume ?? stats.totalAskAmount;
+  const bidVolumeSymbol = realStats24h?.bidVolumeSymbol ?? toUpper;
+  const askVolumeSymbol = realStats24h?.askVolumeSymbol ?? toUpper;
+  const bidVolumeUsd = bidVolumeSymbol.toUpperCase() === fromUpper
+    ? (fromPriceUsd != null ? bidVolume * fromPriceUsd : null)
+    : bidVolumeSymbol.toUpperCase() === toUpper
+      ? (amountPriceUsd != null ? bidVolume * amountPriceUsd : null)
+      : null;
+  const askVolumeUsd = askVolumeSymbol.toUpperCase() === fromUpper
+    ? (fromPriceUsd != null ? askVolume * fromPriceUsd : null)
+    : askVolumeSymbol.toUpperCase() === toUpper
+      ? (amountPriceUsd != null ? askVolume * amountPriceUsd : null)
+      : null;
 
   return (
     <div className="card bg-base-200 shadow-md overflow-hidden flex-1 min-w-0">
@@ -336,23 +320,57 @@ function OrderBookTable({ normalized, stats, fromUpper, toUpper, amountPriceUsd,
         )}
 
         {/* ---- SPREAD BAR ---- */}
-        <div className="flex items-center gap-3 px-3 py-2 border-y border-base-content/10 bg-base-300/50">
-          <span className="text-xs font-bold tracking-tight">
+        <div className="flex flex-wrap items-center gap-1.5 px-3 py-2 border-y border-base-content/10 bg-base-300/50">
+          <span className="text-xs font-bold tracking-tight mr-1">
             {fromUpper} / {toUpper}
           </span>
-          {stats.spreadPct != null && (
-            <span className="badge badge-xs badge-ghost mono">
-              Spread {stats.spreadPct.toFixed(2)}%
+
+          {stats.bestBid != null && (
+            <span className="badge badge-xs badge-ghost gap-1 mono">
+              <span className="opacity-50">Bid</span>
+              <span className="text-success font-semibold">{fmtRate(stats.bestBid)}</span>
             </span>
           )}
-          <span className="flex-1" />
-          <div className="flex items-center gap-2 text-[10px] opacity-50">
-            <span className="text-success">{stats.totalBidOrders} bids</span>
-            <span className="opacity-30">|</span>
-            <span className="text-error">{stats.totalAskOrders} asks</span>
-          </div>
-        </div>
 
+          {stats.bestAsk != null && (
+            <span className="badge badge-xs badge-ghost gap-1 mono">
+              <span className="opacity-50">Ask</span>
+              <span className="text-error font-semibold">{fmtRate(stats.bestAsk)}</span>
+            </span>
+          )}
+
+          {stats.spreadPct != null && (
+            <span className="badge badge-xs badge-ghost gap-1 mono">
+              <span className="opacity-50">Spread</span>
+              <span className="font-semibold">{stats.spreadPct.toFixed(2)}%</span>
+            </span>
+          )}
+
+          <span className="badge badge-xs badge-ghost gap-1 mono">
+            <span className="opacity-50">{realStats24h ? 'Bid Vol 24h' : 'Bid Vol'}</span>
+            <span className="text-success font-semibold">{fmtAmount(bidVolume)}</span>
+            <span className="opacity-40">{bidVolumeSymbol}</span>
+            {bidVolumeUsd != null && (
+              <span className="opacity-40 hidden sm:inline">~{fmtUsd(bidVolumeUsd)}</span>
+            )}
+          </span>
+
+          <span className="badge badge-xs badge-ghost gap-1 mono">
+            <span className="opacity-50">{realStats24h ? 'Ask Vol 24h' : 'Ask Vol'}</span>
+            <span className="text-error font-semibold">{fmtAmount(askVolume)}</span>
+            <span className="opacity-40">{askVolumeSymbol}</span>
+            {askVolumeUsd != null && (
+              <span className="opacity-40 hidden sm:inline">~{fmtUsd(askVolumeUsd)}</span>
+            )}
+          </span>
+
+          <span className="ml-auto flex items-center gap-2 text-[10px] opacity-50">
+            <span className="text-success">{bidOrders}{realStats24h ? ' bids (24h)' : ' bids'}</span>
+            <span className="opacity-30">|</span>
+            <span className="text-error">{askOrders}{realStats24h ? ' asks (24h)' : ' asks'}</span>
+          </span>
+        </div>
+        
         {/* ---- BIDS (highest price at top, closest to spread) ---- */}
         {normalized.bids.length === 0 ? (
           <div className="text-center py-4 text-xs opacity-40">No bids</div>
@@ -393,135 +411,6 @@ function OrderBookTable({ normalized, stats, fromUpper, toUpper, amountPriceUsd,
   );
 }
 
-/* ---------- stat badges row ---------- */
-
-function StatBadges({ stats, toUpper, priceOfToSymbol }: {
-  stats: BookStats;
-  toUpper: string;
-  priceOfToSymbol: number | null;
-}) {
-  return (
-    <div className="flex flex-wrap gap-2">
-      {stats.bestBid != null && (
-        <div className="badge badge-lg gap-1.5 py-3">
-          <span className="text-[10px] opacity-50">Best Bid</span>
-          <span className="text-xs font-semibold mono text-success">{fmtRate(stats.bestBid)}</span>
-        </div>
-      )}
-      {stats.bestAsk != null && (
-        <div className="badge badge-lg gap-1.5 py-3">
-          <span className="text-[10px] opacity-50">Best Ask</span>
-          <span className="text-xs font-semibold mono text-error">{fmtRate(stats.bestAsk)}</span>
-        </div>
-      )}
-      {stats.spreadPct != null && (
-        <div className="badge badge-lg gap-1.5 py-3">
-          <span className="text-[10px] opacity-50">Spread</span>
-          <span className="text-xs font-semibold mono">{stats.spreadPct.toFixed(2)}%</span>
-        </div>
-      )}
-      <div className="badge badge-lg gap-1.5 py-3">
-        <span className="text-[10px] opacity-50">Bid Vol</span>
-        <span className="text-xs font-semibold mono text-success">{fmtAmount(stats.totalBidAmount)}</span>
-        <span className="text-[10px] opacity-40">{toUpper}</span>
-        {priceOfToSymbol != null && (
-          <span className="text-[10px] opacity-40 mono">~{fmtUsd(stats.totalBidAmount * priceOfToSymbol)}</span>
-        )}
-      </div>
-      <div className="badge badge-lg gap-1.5 py-3">
-        <span className="text-[10px] opacity-50">Ask Vol</span>
-        <span className="text-xs font-semibold mono text-error">{fmtAmount(stats.totalAskAmount)}</span>
-        <span className="text-[10px] opacity-40">{toUpper}</span>
-        {priceOfToSymbol != null && (
-          <span className="text-[10px] opacity-40 mono">~{fmtUsd(stats.totalAskAmount * priceOfToSymbol)}</span>
-        )}
-      </div>
-    </div>
-  );
-}
-
-/* ---------- pair stats card ---------- */
-
-function StatWindow({ label, open, completed, volumeUsd, highlight }: {
-  label: string;
-  open: number;
-  completed: number;
-  volumeUsd: string;
-  highlight?: boolean;
-}) {
-  const total = open + completed;
-  const completionPct = total > 0 ? (completed / total) * 100 : 0;
-  const volNum = parseFloat(volumeUsd);
-
-  return (
-    <div className={`flex-1 min-w-[7rem] px-3 py-2.5 rounded-lg relative overflow-hidden ${
-      highlight ? 'bg-base-300/80' : 'bg-base-300/40'
-    }`}>
-      {/* Completion bar background */}
-      <div
-        className="absolute bottom-0 left-0 h-[2px] bg-success/40 transition-all duration-700"
-        style={{ width: `${completionPct}%` }}
-      />
-
-      <div className="flex items-baseline justify-between mb-1.5">
-        <span className="text-[10px] font-bold uppercase tracking-widest opacity-50">{label}</span>
-        {volNum > 0 && (
-          <span className="text-[9px] mono opacity-30">{fmtUsd(volNum)}</span>
-        )}
-      </div>
-
-      <div className="flex items-center gap-3">
-        <div className="flex items-baseline gap-1">
-          <span className="text-sm font-bold mono text-info leading-none">{open.toLocaleString()}</span>
-          <span className="text-[9px] opacity-30">open</span>
-        </div>
-        <div className="text-[10px] opacity-20">/</div>
-        <div className="flex items-baseline gap-1">
-          <span className="text-sm font-bold mono text-success leading-none">{completed.toLocaleString()}</span>
-          <span className="text-[9px] opacity-30">filled</span>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function PairStatsCard({ stats, fromSymbol, toSymbol }: {
-  stats: ScannerStatsResponse;
-  fromSymbol: string;
-  toSymbol: string;
-}) {
-  const w1h = stats.windows['1h'];
-  const w24h = stats.windows['24h'];
-  const wAll = stats.windows.all_time;
-
-  return (
-    <div className="rounded-xl border border-base-content/5 bg-base-200/60 p-3">
-      {/* Header row */}
-      <div className="flex items-center justify-between mb-2.5">
-        <div className="flex items-center gap-2">
-          <div className="w-1 h-3.5 rounded-full bg-info/60" />
-          <span className="text-[11px] font-bold tracking-tight opacity-70">
-            {fromSymbol}/{toSymbol} Activity
-          </span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-[9px] mono opacity-20 hidden sm:inline" title={`Base: ${stats.scope.base_vault_friendly}`}>
-            {stats.scope.base_vault_friendly.slice(0, 8)}...{stats.scope.base_vault_friendly.slice(-4)}
-          </span>
-          <div className="h-2 w-2 rounded-full bg-success/50 animate-pulse" />
-        </div>
-      </div>
-
-      {/* Windows strip */}
-      <div className="flex gap-2">
-        <StatWindow label="1H" open={w1h.open_orders} completed={w1h.completed_orders} volumeUsd={w1h.volume_usd} />
-        <StatWindow label="24H" open={w24h.open_orders} completed={w24h.completed_orders} volumeUsd={w24h.volume_usd} />
-        <StatWindow label="All" open={wAll.open_orders} completed={wAll.completed_orders} volumeUsd={wAll.volume_usd} highlight />
-      </div>
-    </div>
-  );
-}
-
 /* ---------- main component ---------- */
 
 type StatsPageProps = {
@@ -535,19 +424,11 @@ export function StatsPage({ raceCfg, pairSlug, onPairChange }: StatsPageProps) {
   const [reversed, setReversed] = useState(false);
   const [tokenPrices, setTokenPrices] = useState<Map<string, number>>(new Map());
 
-  // Scanner order book state
-  const [book, setBook] = useState<ScannerBookResponse | null>(null);
+  // Open4dev order book state
+  const [book, setBook] = useState<NormalizedBook | null>(null);
   const [bookLoading, setBookLoading] = useState(false);
   const [bookError, setBookError] = useState<string | null>(null);
-
-  // Open4dev order book state
-  const [showOpen4dev, setShowOpen4dev] = useState(false);
-  const [o4dNormalized, setO4dNormalized] = useState<NormalizedBook | null>(null);
-  const [o4dLoading, setO4dLoading] = useState(false);
-  const [o4dError, setO4dError] = useState<string | null>(null);
-
-  // Order scanner stats state
-  const [pairStats, setPairStats] = useState<ScannerStatsResponse | null>(null);
+  const [realStats24h, setRealStats24h] = useState<RealPairStats24h | null>(null);
 
   const pairs = DEFAULT_PAIRS;
   const currentPair = pairs[selectedPairIdx] ?? pairs[0];
@@ -559,101 +440,71 @@ export function StatsPage({ raceCfg, pairSlug, onPairChange }: StatsPageProps) {
       label: `${currentPair.toSymbol} / ${currentPair.fromSymbol}`,
       fromSymbol: currentPair.toSymbol,
       toSymbol: currentPair.fromSymbol,
-      baseVault: currentPair.quoteVault,
-      quoteVault: currentPair.baseVault,
     };
   }, [currentPair, reversed]);
 
-  // Track whether this is the very first load (show spinner) vs background refresh
-  const hasLoadedOnce = useRef(false);
   // Counter bumped on every successful refresh — drives row flash animation
   const [refreshTick, setRefreshTick] = useState(0);
-  const [o4dRefreshTick, setO4dRefreshTick] = useState(0);
 
-  // --- Scanner book fetch ---
   const fetchBook = useCallback(async (silent = false) => {
-    const { baseVault, quoteVault } = effectivePair;
-    if (!baseVault || !quoteVault) {
-      if (!silent) setBookError(`No vault address for pair ${effectivePair.fromSymbol}/${effectivePair.toSymbol}`);
+    const fromCoinId = COIN_IDS[effectivePair.fromSymbol];
+    const toCoinId = COIN_IDS[effectivePair.toSymbol];
+    if (fromCoinId == null || toCoinId == null) {
+      if (!silent) setBookError(`Unknown coin ID for ${effectivePair.fromSymbol} or ${effectivePair.toSymbol}`);
       return;
     }
     if (!silent) { setBookLoading(true); setBookError(null); }
     try {
-      const data = await getOrderScannerBook({ baseVault, quoteVault, levels: 15 });
-      setBook(data);
-      setRefreshTick((t) => t + 1);
-      hasLoadedOnce.current = true;
-    } catch (e) {
-      if (!silent) setBookError(e instanceof Error ? e.message : String(e));
-    } finally {
-      if (!silent) setBookLoading(false);
-    }
-  }, [effectivePair]);
-
-  // --- Open4dev book fetch ---
-  const fetchOpen4devBook = useCallback(async (silent = false) => {
-    const fromCoinId = COIN_IDS[effectivePair.fromSymbol];
-    const toCoinId = COIN_IDS[effectivePair.toSymbol];
-    if (fromCoinId == null || toCoinId == null) {
-      if (!silent) setO4dError(`Unknown coin ID for ${effectivePair.fromSymbol} or ${effectivePair.toSymbol}`);
-      return;
-    }
-    if (!silent) { setO4dLoading(true); setO4dError(null); }
-    try {
-      // Fetch both directions in parallel
       const [bidOrders, askOrders] = await Promise.all([
         getDexOrdersByPair(fromCoinId, toCoinId, { limit: 200 }),
         getDexOrdersByPair(toCoinId, fromCoinId, { limit: 200 }),
       ]);
       const normalized = normalizeOpen4dev(bidOrders, askOrders);
-      setO4dNormalized(normalized);
-      setO4dRefreshTick((t) => t + 1);
+      setBook(normalized);
+      setRefreshTick((t) => t + 1);
     } catch (e) {
-      if (!silent) setO4dError(e instanceof Error ? e.message : String(e));
+      if (!silent) setBookError(e instanceof Error ? e.message : String(e));
     } finally {
-      if (!silent) setO4dLoading(false);
+      if (!silent) setBookLoading(false);
     }
-  }, [effectivePair]);
+  }, [effectivePair.fromSymbol, effectivePair.toSymbol]);
 
-  // Initial load + auto-refresh every 10s (scanner)
+  const fetchTradingStats = useCallback(async () => {
+    try {
+      const [bidSide, askSide] = await Promise.all([
+        getDexTradingStats(effectivePair.fromSymbol, effectivePair.toSymbol),
+        getDexTradingStats(effectivePair.toSymbol, effectivePair.fromSymbol),
+      ]);
+
+      const bid24h = bidSide.periods.find((p) => p.period === '24h') ?? null;
+      const ask24h = askSide.periods.find((p) => p.period === '24h') ?? null;
+
+      setRealStats24h({
+        bidOrders: bid24h?.total_orders ?? null,
+        askOrders: ask24h?.total_orders ?? null,
+        bidVolume: bid24h?.total_volume ?? null,
+        askVolume: ask24h?.total_volume ?? null,
+        bidVolumeSymbol: effectivePair.fromSymbol,
+        askVolumeSymbol: effectivePair.toSymbol,
+      });
+    } catch {
+      setRealStats24h(null);
+    }
+  }, [effectivePair.fromSymbol, effectivePair.toSymbol]);
+
+  // Initial load + auto-refresh every 10s
   useEffect(() => {
-    hasLoadedOnce.current = false;
     void fetchBook();
     const id = setInterval(() => void fetchBook(true), AUTO_REFRESH_MS);
     return () => clearInterval(id);
   }, [fetchBook]);
 
-  // Fetch open4dev book when enabled + auto-refresh
+  // Real market stats/volume from open4dev trading-stats API
   useEffect(() => {
-    if (!showOpen4dev) return;
-    void fetchOpen4devBook();
-    const id = setInterval(() => void fetchOpen4devBook(true), AUTO_REFRESH_MS);
+    void fetchTradingStats();
+    const id = setInterval(() => void fetchTradingStats(), AUTO_REFRESH_MS);
     return () => clearInterval(id);
-  }, [showOpen4dev, fetchOpen4devBook]);
-
-  // Reset open4dev data when pair changes
-  useEffect(() => {
-    setO4dNormalized(null);
-    setO4dError(null);
-  }, [effectivePair]);
-
-  // Fetch order-scanner stats for the active pair (same vaults)
-  useEffect(() => {
-    const { baseVault, quoteVault } = effectivePair;
-    if (!baseVault || !quoteVault) return;
-    let cancelled = false;
-    const load = async () => {
-      try {
-        const data = await getOrderScannerStats({ baseVault, quoteVault });
-        if (!cancelled) setPairStats(data);
-      } catch {
-        if (!cancelled) setPairStats(null);
-      }
-    };
-    void load();
-    const id = setInterval(() => void load(), AUTO_REFRESH_MS);
-    return () => { cancelled = true; clearInterval(id); };
-  }, [effectivePair]);
+  }, [fetchTradingStats]);
 
   // Fetch token USD prices once
   useEffect(() => {
@@ -683,39 +534,26 @@ export function StatsPage({ raceCfg, pairSlug, onPairChange }: StatsPageProps) {
     return null;
   }, [tokenPrices]);
 
-  // Normalize the scanner response
-  const scannerNormalized = useMemo(() => {
+  const normalized = useMemo(() => {
     if (!book) return null;
-    return normalizeScanner(book);
+    return book;
   }, [book]);
 
-  // Stats for scanner book
-  const scannerStats = useMemo(() => {
-    if (!scannerNormalized) return null;
-    return computeStats(scannerNormalized);
-  }, [scannerNormalized]);
-
-  // Stats for open4dev book
-  const o4dStats = useMemo(() => {
-    if (!o4dNormalized) return null;
-    return computeStats(o4dNormalized);
-  }, [o4dNormalized]);
+  const stats = useMemo(() => {
+    if (!normalized) return null;
+    return computeStats(normalized);
+  }, [normalized]);
 
   // Amount is always in toSymbol
+  const fromPriceUsd = priceOf(effectivePair.fromSymbol);
   const amountPriceUsd = priceOf(effectivePair.toSymbol);
   const fromUpper = effectivePair.fromSymbol;
   const toUpper = effectivePair.toSymbol;
 
-  // Handler for pair buttons
-  const selectPair = useCallback((idx: number, source: 'scanner' | 'open4dev') => {
+  const selectPair = useCallback((idx: number) => {
     setSelectedPairIdx(idx);
     setReversed(false);
     onPairChange?.(pairs[idx].slug);
-    if (source === 'open4dev') {
-      setShowOpen4dev(true);
-    } else {
-      setShowOpen4dev(false);
-    }
   }, [onPairChange, pairs]);
 
   return (
@@ -737,66 +575,35 @@ export function StatsPage({ raceCfg, pairSlug, onPairChange }: StatsPageProps) {
         </div>
       </div>
 
-      {/* Pair Switcher — two rows */}
-      <div className="flex flex-col gap-2">
-        {/* Row 1: Scanner pairs */}
-        <div className="flex flex-wrap items-center gap-2">
-          {pairs.map((p, idx) => (
-            <button
-              key={`scanner-${p.slug}`}
-              className={`btn btn-xs ${
-                selectedPairIdx === idx && !reversed && !showOpen4dev
-                  ? 'btn-primary'
-                  : 'btn-ghost border border-base-content/10'
-              }`}
-              onClick={() => selectPair(idx, 'scanner')}
-              type="button"
-            >
-              {p.label}
-            </button>
-          ))}
+      {/* Pair Switcher */}
+      <div className="flex flex-wrap items-center gap-2">
+        {pairs.map((p, idx) => (
           <button
-            className="btn btn-ghost btn-xs gap-1 opacity-60 hover:opacity-100"
-            onClick={() => setReversed((r) => !r)}
+            key={p.slug}
+            className={`btn btn-xs ${
+              selectedPairIdx === idx && !reversed
+                ? 'btn-primary'
+                : 'btn-ghost border border-base-content/10'
+            }`}
+            onClick={() => selectPair(idx)}
             type="button"
-            title="Reverse pair"
           >
-            <ArrowDownUp className="h-3 w-3" />
-            Flip
+            {p.label}
           </button>
-        </div>
-
-        {/* Row 2: Open4dev pairs */}
-        <div className="flex flex-wrap items-center gap-2">
-          {pairs.map((p, idx) => (
-            <button
-              key={`o4d-${p.slug}`}
-              className={`btn btn-xs ${
-                selectedPairIdx === idx && !reversed && showOpen4dev
-                  ? 'btn-secondary'
-                  : 'btn-ghost border border-base-content/10'
-              }`}
-              onClick={() => selectPair(idx, 'open4dev')}
-              type="button"
-            >
-              {p.label} <span className="opacity-50">(open4dev)</span>
-            </button>
-          ))}
-        </div>
+        ))}
+        <button
+          className="btn btn-ghost btn-xs gap-1 opacity-60 hover:opacity-100"
+          onClick={() => setReversed((r) => !r)}
+          type="button"
+          title="Reverse pair"
+        >
+          <ArrowDownUp className="h-3 w-3" />
+          Flip
+        </button>
       </div>
 
-      {/* Stat badges — scanner */}
-      {scannerStats && !bookLoading && (
-        <StatBadges stats={scannerStats} toUpper={toUpper} priceOfToSymbol={amountPriceUsd} />
-      )}
-
-      {/* Pair stats from order-scanner */}
-      {pairStats && (
-        <PairStatsCard stats={pairStats} fromSymbol={fromUpper} toSymbol={toUpper} />
-      )}
-
-      {/* Order Book(s) */}
-      {bookError && !showOpen4dev ? (
+      {/* Order Book */}
+      {bookError ? (
         <div className="card bg-base-200 shadow-md">
           <div className="card-body">
             <div className="text-sm text-error">{bookError}</div>
@@ -810,75 +617,17 @@ export function StatsPage({ raceCfg, pairSlug, onPairChange }: StatsPageProps) {
             </div>
           </div>
         </div>
-      ) : showOpen4dev ? (
-        /* --- Side-by-side comparison mode --- */
-        <div className="flex flex-col lg:flex-row gap-4">
-          {/* Scanner book */}
-          {scannerNormalized && scannerStats ? (
-            <OrderBookTable
-              normalized={scannerNormalized}
-              stats={scannerStats}
-              fromUpper={fromUpper}
-              toUpper={toUpper}
-              amountPriceUsd={amountPriceUsd}
-              refreshTick={refreshTick}
-              sourceLabel="Order Scanner (aggregated)"
-            />
-          ) : bookError ? (
-            <div className="card bg-base-200 shadow-md flex-1">
-              <div className="card-body">
-                <div className="text-[10px] uppercase tracking-wider font-semibold opacity-50 mb-2">Order Scanner</div>
-                <div className="text-sm text-error">{bookError}</div>
-              </div>
-            </div>
-          ) : (
-            <div className="card bg-base-200 shadow-md flex-1">
-              <div className="card-body">
-                <div className="flex justify-center py-10">
-                  <span className="loading loading-spinner loading-md" />
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Open4dev book */}
-          {o4dLoading && !o4dNormalized ? (
-            <div className="card bg-base-200 shadow-md flex-1">
-              <div className="card-body">
-                <div className="text-[10px] uppercase tracking-wider font-semibold opacity-50 mb-2">Open4Dev API (raw orders)</div>
-                <div className="flex justify-center py-10">
-                  <span className="loading loading-spinner loading-md" />
-                </div>
-              </div>
-            </div>
-          ) : o4dError ? (
-            <div className="card bg-base-200 shadow-md flex-1">
-              <div className="card-body">
-                <div className="text-[10px] uppercase tracking-wider font-semibold opacity-50 mb-2">Open4Dev API</div>
-                <div className="text-sm text-error">{o4dError}</div>
-              </div>
-            </div>
-          ) : o4dNormalized && o4dStats ? (
-            <OrderBookTable
-              normalized={o4dNormalized}
-              stats={o4dStats}
-              fromUpper={fromUpper}
-              toUpper={toUpper}
-              amountPriceUsd={amountPriceUsd}
-              refreshTick={o4dRefreshTick}
-              sourceLabel="Open4Dev API (raw orders)"
-            />
-          ) : null}
-        </div>
-      ) : scannerNormalized && scannerStats ? (
-        /* --- Single scanner book (default) --- */
+      ) : normalized && stats ? (
         <OrderBookTable
-          normalized={scannerNormalized}
-          stats={scannerStats}
+          normalized={normalized}
+          stats={stats}
           fromUpper={fromUpper}
           toUpper={toUpper}
+          fromPriceUsd={fromPriceUsd}
           amountPriceUsd={amountPriceUsd}
           refreshTick={refreshTick}
+          sourceLabel="Open4Dev (aggregated)"
+          realStats24h={realStats24h}
         />
       ) : null}
     </div>
