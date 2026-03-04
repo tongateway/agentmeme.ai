@@ -836,6 +836,26 @@ export type ScannerBookResponse = {
   mid: number | null;
 };
 
+export type DexOrderBookLevel = {
+  price_rate: number;
+  total_amount: number;
+  order_count: number;
+  total_value: number;
+  cumulative_amount: number;
+  cumulative_value: number;
+};
+
+export type DexOrderBookResponse = {
+  from_symbol: string;
+  to_symbol: string;
+  from_decimals: number;
+  to_decimals: number;
+  spread: number | null;
+  mid_price: number | null;
+  asks: DexOrderBookLevel[];
+  bids: DexOrderBookLevel[];
+};
+
 /** Fetch order book from the order-scanner worker using vault addresses. */
 export async function getOrderScannerBook(opts: {
   baseVault: string;
@@ -865,6 +885,44 @@ export async function getOrderScannerBook(opts: {
     bestBid: book.best_bid != null ? Number(book.best_bid) : null,
     spread: book.spread != null ? Number(book.spread) : null,
     mid: book.mid != null ? Number(book.mid) : null,
+  };
+}
+
+/** Fetch aggregated order book from open4dev by symbols (or jetton minters in swagger). */
+export async function getDexOrderBook(opts: {
+  fromSymbol: string;
+  toSymbol: string;
+  limit?: number;
+}): Promise<DexOrderBookResponse> {
+  const params = new URLSearchParams();
+  params.set('from_symbol', opts.fromSymbol);
+  params.set('to_symbol', opts.toSymbol);
+  if (opts.limit != null) params.set('limit', String(opts.limit));
+  const res = await fetch(`${OPEN4DEV_BASE}/orders/book?${params}`);
+  if (!res.ok) throw new Error(`Open4Dev order book error: ${res.status} ${res.statusText}`);
+  const data = (await res.json()) as Record<string, unknown>;
+
+  const parseLevel = (l: Record<string, unknown>): DexOrderBookLevel => ({
+    price_rate: Number(l.price_rate ?? 0),
+    total_amount: Number(l.total_amount ?? 0),
+    order_count: Number(l.order_count ?? 0),
+    total_value: Number(l.total_value ?? 0),
+    cumulative_amount: Number(l.cumulative_amount ?? 0),
+    cumulative_value: Number(l.cumulative_value ?? 0),
+  });
+
+  const asks = Array.isArray(data.asks) ? data.asks.map((a: Record<string, unknown>) => parseLevel(a)) : [];
+  const bids = Array.isArray(data.bids) ? data.bids.map((b: Record<string, unknown>) => parseLevel(b)) : [];
+
+  return {
+    from_symbol: String(data.from_symbol ?? opts.fromSymbol),
+    to_symbol: String(data.to_symbol ?? opts.toSymbol),
+    from_decimals: Number(data.from_decimals ?? 9),
+    to_decimals: Number(data.to_decimals ?? 9),
+    spread: data.spread != null ? Number(data.spread) : null,
+    mid_price: data.mid_price != null ? Number(data.mid_price) : null,
+    asks,
+    bids,
   };
 }
 

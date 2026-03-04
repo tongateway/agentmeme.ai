@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { BarChart3, ArrowDownUp } from 'lucide-react';
 import {
+  getDexOrderBook,
   getDexTradingStats,
-  getOrderScannerBook,
   getOrderScannerStats,
   getRaceTokens,
+  type DexOrderBookResponse,
   type DexTradingStatsPeriod,
   type PublicApiConfig,
-  type ScannerBookResponse,
   type ScannerStatsResponse,
   type ScannerStatsWindow,
 } from '@/lib/api';
@@ -128,30 +128,29 @@ type NormalizedBook = {
 };
 
 /**
- * Scanner API (base=toSymbol, quote=fromSymbol):
+ * Open4Dev order book API:
  *   price  = base per quote (toSymbol per fromSymbol)
- *   size   = quote amount (fromSymbol)
- *   total  = base amount (toSymbol)
+ *   total_amount = base amount (toSymbol)
  *
  * We display:
  *   price  = fromSymbol per toSymbol = 1 / api_price
- *   amount = toSymbol amount = api total
+ *   amount = toSymbol amount = total_amount
  */
-function normalizeScanner(book: ScannerBookResponse): NormalizedBook {
+function normalizeOpen4DevBook(book: DexOrderBookResponse): NormalizedBook {
   const asks: NormalizedLevel[] = book.asks
-    .filter((a) => a.price > 0)
+    .filter((a) => a.price_rate > 0)
     .map((a) => ({
-      price: 1 / a.price,
-      amount: a.total,
-      orderCount: a.orderCount,
+      price: 1 / a.price_rate,
+      amount: a.total_amount,
+      orderCount: a.order_count,
     }));
 
   const bids: NormalizedLevel[] = book.bids
-    .filter((b) => b.price > 0)
+    .filter((b) => b.price_rate > 0)
     .map((b) => ({
-      price: 1 / b.price,
-      amount: b.total,
-      orderCount: b.orderCount,
+      price: 1 / b.price_rate,
+      amount: b.total_amount,
+      orderCount: b.order_count,
     }));
 
   asks.sort((a, b) => a.price - b.price);
@@ -499,8 +498,8 @@ export function StatsPage({ raceCfg, pairSlug, onPairChange }: StatsPageProps) {
   const [reversed, setReversed] = useState(false);
   const [tokenPrices, setTokenPrices] = useState<Map<string, number>>(new Map());
 
-  // Order Scanner order book state
-  const [book, setBook] = useState<ScannerBookResponse | null>(null);
+  // Open4Dev order book state
+  const [book, setBook] = useState<DexOrderBookResponse | null>(null);
   const [bookLoading, setBookLoading] = useState(false);
   const [bookError, setBookError] = useState<string | null>(null);
   const [pairStats, setPairStats] = useState<ScannerStatsResponse | null>(null);
@@ -526,19 +525,16 @@ export function StatsPage({ raceCfg, pairSlug, onPairChange }: StatsPageProps) {
 
   const fetchBook = useCallback(
     async (silent = false) => {
-      const { baseVault, quoteVault } = effectivePair;
-      if (!baseVault || !quoteVault) {
-        if (!silent) {
-          setBookError(`No vault address for pair ${effectivePair.fromSymbol}/${effectivePair.toSymbol}`);
-        }
-        return;
-      }
       if (!silent) {
         setBookLoading(true);
         setBookError(null);
       }
       try {
-        const data = await getOrderScannerBook({ baseVault, quoteVault, levels: 20 });
+        const data = await getDexOrderBook({
+          fromSymbol: effectivePair.fromSymbol,
+          toSymbol: effectivePair.toSymbol,
+          limit: 15,
+        });
         setBook(data);
         setRefreshTick((t) => t + 1);
       } catch (e) {
@@ -547,7 +543,7 @@ export function StatsPage({ raceCfg, pairSlug, onPairChange }: StatsPageProps) {
         if (!silent) setBookLoading(false);
       }
     },
-    [effectivePair],
+    [effectivePair.fromSymbol, effectivePair.toSymbol],
   );
 
   const fetchPairStats = useCallback(async () => {
@@ -646,7 +642,7 @@ export function StatsPage({ raceCfg, pairSlug, onPairChange }: StatsPageProps) {
 
   const normalized = useMemo(() => {
     if (!book) return null;
-    return normalizeScanner(book);
+    return normalizeOpen4DevBook(book);
   }, [book]);
 
   const stats = useMemo(() => {
@@ -711,7 +707,7 @@ export function StatsPage({ raceCfg, pairSlug, onPairChange }: StatsPageProps) {
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75" />
               <span className="relative inline-flex rounded-full h-2 w-2 bg-success" />
             </span>
-            <p className="text-xs opacity-50">Live aggregated by order scanner</p>
+            <p className="text-xs opacity-50">Live from open4dev orderbook</p>
           </div>
         </div>
       </div>
@@ -772,7 +768,7 @@ export function StatsPage({ raceCfg, pairSlug, onPairChange }: StatsPageProps) {
           fromPriceUsd={fromPriceUsd}
           amountPriceUsd={amountPriceUsd}
           refreshTick={refreshTick}
-          sourceLabel="Order Scanner (aggregated)"
+          sourceLabel="Open4Dev Order Book (15 levels)"
           realStats24h={realStats24h}
         />
       ) : null}
