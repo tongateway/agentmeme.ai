@@ -5,6 +5,7 @@ import {
   getOrderScannerBook,
   getOrderScannerStats,
   getRaceTokens,
+  type DexTradingStatsPeriod,
   type PublicApiConfig,
   type ScannerBookResponse,
   type ScannerStatsResponse,
@@ -179,6 +180,17 @@ type RealPairStats24h = {
   askVolume: number | null;
   bidVolumeSymbol: string;
   askVolumeSymbol: string;
+};
+
+type ActivityVolumeUsdByWindow = {
+  '1h': number | null;
+  '24h': number | null;
+  max: number | null;
+};
+
+type TradingPeriodsState = {
+  bid: DexTradingStatsPeriod[];
+  ask: DexTradingStatsPeriod[];
 };
 
 function computeStats(normalized: NormalizedBook): BookStats {
@@ -404,14 +416,18 @@ function ActivityWindow({
   label,
   data,
   highlight,
+  volumeUsdOverride,
 }: {
   label: string;
   data: ScannerStatsWindow;
   highlight?: boolean;
+  volumeUsdOverride?: number | null;
 }) {
   const total = data.open_orders + data.completed_orders;
   const completionPct = total > 0 ? (data.completed_orders / total) * 100 : 0;
-  const volume = Number(data.volume_usd);
+  const volume =
+    volumeUsdOverride ??
+    Number(String(data.volume_usd ?? '0').replaceAll(',', '').trim());
   const volumeText = Number.isFinite(volume) && volume > 0 ? fmtUsd(volume) : '$0.00';
 
   return (
@@ -443,10 +459,11 @@ function ActivityWindow({
   );
 }
 
-function PairActivityRow({ stats, fromSymbol, toSymbol }: {
+function PairActivityRow({ stats, fromSymbol, toSymbol, volumeUsdByWindow }: {
   stats: ScannerStatsResponse;
   fromSymbol: string;
   toSymbol: string;
+  volumeUsdByWindow?: ActivityVolumeUsdByWindow | null;
 }) {
   return (
     <div className="rounded-xl border border-base-content/5 bg-base-200/60 p-3">
@@ -461,9 +478,9 @@ function PairActivityRow({ stats, fromSymbol, toSymbol }: {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-        <ActivityWindow label="1H" data={stats.windows['1h']} />
-        <ActivityWindow label="24H" data={stats.windows['24h']} />
-        <ActivityWindow label="MAX" data={stats.windows.all_time} highlight />
+        <ActivityWindow label="1H" data={stats.windows['1h']} volumeUsdOverride={volumeUsdByWindow?.['1h'] ?? null} />
+        <ActivityWindow label="24H" data={stats.windows['24h']} volumeUsdOverride={volumeUsdByWindow?.['24h'] ?? null} />
+        <ActivityWindow label="MAX" data={stats.windows.all_time} volumeUsdOverride={volumeUsdByWindow?.max ?? null} highlight />
       </div>
     </div>
   );
@@ -488,6 +505,7 @@ export function StatsPage({ raceCfg, pairSlug, onPairChange }: StatsPageProps) {
   const [bookError, setBookError] = useState<string | null>(null);
   const [pairStats, setPairStats] = useState<ScannerStatsResponse | null>(null);
   const [realStats24h, setRealStats24h] = useState<RealPairStats24h | null>(null);
+  const [tradingPeriods, setTradingPeriods] = useState<TradingPeriodsState | null>(null);
 
   const pairs = DEFAULT_PAIRS;
   const currentPair = pairs[selectedPairIdx] ?? pairs[0];
@@ -564,8 +582,13 @@ export function StatsPage({ raceCfg, pairSlug, onPairChange }: StatsPageProps) {
         bidVolumeSymbol: effectivePair.fromSymbol,
         askVolumeSymbol: effectivePair.toSymbol,
       });
+      setTradingPeriods({
+        bid: bidSide.periods,
+        ask: askSide.periods,
+      });
     } catch {
       setRealStats24h(null);
+      setTradingPeriods(null);
     }
   }, [effectivePair.fromSymbol, effectivePair.toSymbol]);
 
@@ -635,6 +658,36 @@ export function StatsPage({ raceCfg, pairSlug, onPairChange }: StatsPageProps) {
   const amountPriceUsd = priceOf(effectivePair.toSymbol);
   const fromUpper = effectivePair.fromSymbol;
   const toUpper = effectivePair.toSymbol;
+  const activityVolumeUsd = useMemo<ActivityVolumeUsdByWindow | null>(() => {
+    if (!tradingPeriods) return null;
+
+    const getPeriod = (periods: DexTradingStatsPeriod[], period: string) =>
+      periods.find((p) => p.period === period) ?? null;
+    const getMaxPeriod = (periods: DexTradingStatsPeriod[]) =>
+      periods.find((p) => p.period === '30d') ?? periods[periods.length - 1] ?? null;
+
+    const toUsd = (volume: number | null, price: number | null): number | null => {
+      if (volume == null || price == null) return null;
+      return volume * price;
+    };
+    const sumUsd = (a: number | null, b: number | null): number | null => {
+      if (a == null && b == null) return null;
+      return (a ?? 0) + (b ?? 0);
+    };
+
+    const bid1h = getPeriod(tradingPeriods.bid, '1h');
+    const ask1h = getPeriod(tradingPeriods.ask, '1h');
+    const bid24h = getPeriod(tradingPeriods.bid, '24h');
+    const ask24h = getPeriod(tradingPeriods.ask, '24h');
+    const bidMax = getMaxPeriod(tradingPeriods.bid);
+    const askMax = getMaxPeriod(tradingPeriods.ask);
+
+    return {
+      '1h': sumUsd(toUsd(bid1h?.total_volume ?? null, fromPriceUsd), toUsd(ask1h?.total_volume ?? null, amountPriceUsd)),
+      '24h': sumUsd(toUsd(bid24h?.total_volume ?? null, fromPriceUsd), toUsd(ask24h?.total_volume ?? null, amountPriceUsd)),
+      max: sumUsd(toUsd(bidMax?.total_volume ?? null, fromPriceUsd), toUsd(askMax?.total_volume ?? null, amountPriceUsd)),
+    };
+  }, [tradingPeriods, fromPriceUsd, amountPriceUsd]);
 
   const selectPair = useCallback(
     (idx: number) => {
@@ -687,7 +740,14 @@ export function StatsPage({ raceCfg, pairSlug, onPairChange }: StatsPageProps) {
         </button>
       </div>
 
-      {pairStats && <PairActivityRow stats={pairStats} fromSymbol={fromUpper} toSymbol={toUpper} />}
+      {pairStats && (
+        <PairActivityRow
+          stats={pairStats}
+          fromSymbol={fromUpper}
+          toSymbol={toUpper}
+          volumeUsdByWindow={activityVolumeUsd}
+        />
+      )}
 
       {bookError ? (
         <div className="card bg-base-200 shadow-md">
