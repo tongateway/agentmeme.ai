@@ -1,33 +1,27 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { BarChart3, ArrowDownUp } from 'lucide-react';
 import {
-  getDexOrdersByPair,
   getDexTradingStats,
+  getOrderScannerBook,
+  getOrderScannerStats,
   getRaceTokens,
-  type DexOrder,
   type PublicApiConfig,
+  type ScannerBookResponse,
+  type ScannerStatsResponse,
+  type ScannerStatsWindow,
 } from '@/lib/api';
 
 const AUTO_REFRESH_MS = 10_000; // 10 seconds
-
-/* ---------- coin ID mapping (open4dev) ---------- */
-
-const COIN_IDS: Record<string, number> = {
-  TON: 0,
-  NOT: 107,
-  BUILD: 24,
-  DOGS: 1696227,
-  PX: 1696228,
-  XAUT0: 1696229,
-};
 
 /* ---------- pair definitions ---------- */
 
 type TradingPair = {
   slug: string;
   label: string;
-  fromSymbol: string;  // quote symbol (price denomination, e.g. TON)
-  toSymbol: string;    // base symbol (the asset, e.g. NOT)
+  fromSymbol: string; // quote symbol (price denomination, e.g. TON)
+  toSymbol: string; // base symbol (the asset, e.g. NOT)
+  baseVault: string;
+  quoteVault: string;
 };
 
 /** Only pairs whose both vaults exist */
@@ -37,36 +31,48 @@ const DEFAULT_PAIRS: TradingPair[] = [
     label: 'TON / NOT',
     fromSymbol: 'TON',
     toSymbol: 'NOT',
+    baseVault: 'EQAD7f1rDyPODd6XYfORpVoKP6ZgEOVKCzu4U2dws_gjR7fS',
+    quoteVault: 'EQA0_4nl1-biEvpzengd5M3GNTt1PRYGIIEHlfanEl3tZkRr',
   },
   {
     slug: 'TON-BUILD',
     label: 'TON / BUILD',
     fromSymbol: 'TON',
     toSymbol: 'BUILD',
+    baseVault: 'EQCxWoj_Yxgeh-sRS1MjR7YuqzVLHrOpVFz9neN-Hn1eSYUC',
+    quoteVault: 'EQA0_4nl1-biEvpzengd5M3GNTt1PRYGIIEHlfanEl3tZkRr',
   },
   {
     slug: 'NOT-BUILD',
     label: 'NOT / BUILD',
     fromSymbol: 'NOT',
     toSymbol: 'BUILD',
+    baseVault: 'EQCxWoj_Yxgeh-sRS1MjR7YuqzVLHrOpVFz9neN-Hn1eSYUC',
+    quoteVault: 'EQAD7f1rDyPODd6XYfORpVoKP6ZgEOVKCzu4U2dws_gjR7fS',
   },
   {
     slug: 'TON-DOGS',
     label: 'TON / DOGS',
     fromSymbol: 'TON',
     toSymbol: 'DOGS',
+    baseVault: 'EQClIJo99DbIH56sUAnTK0wrdH3_i-_rcxl24CmIhlmGl17i',
+    quoteVault: 'EQA0_4nl1-biEvpzengd5M3GNTt1PRYGIIEHlfanEl3tZkRr',
   },
   {
     slug: 'TON-NOTPIXEL',
     label: 'TON / NOT PIXEL',
     fromSymbol: 'TON',
     toSymbol: 'PX',
+    baseVault: 'EQC1dcxtmYFpKETQ_TA6fA5LfnmLwPYqAWg2M94WWSajEF_Y',
+    quoteVault: 'EQA0_4nl1-biEvpzengd5M3GNTt1PRYGIIEHlfanEl3tZkRr',
   },
   {
     slug: 'TON-XAUT',
     label: 'TON / XAUt',
     fromSymbol: 'TON',
     toSymbol: 'XAUT0',
+    baseVault: 'EQClbgXPqGsSzPRfu8p6WKJwdjs1-14JI6m3tJ4-umB_omK1',
+    quoteVault: 'EQA0_4nl1-biEvpzengd5M3GNTt1PRYGIIEHlfanEl3tZkRr',
   },
 ];
 
@@ -110,8 +116,8 @@ function fmtUsd(n: number): string {
 /* ---------- normalized level ---------- */
 
 type NormalizedLevel = {
-  price: number;       // fromSymbol per toSymbol
-  amount: number;      // in toSymbol
+  price: number; // fromSymbol per toSymbol
+  amount: number; // in toSymbol
   orderCount: number;
 };
 
@@ -121,60 +127,34 @@ type NormalizedBook = {
 };
 
 /**
- * Build order book from raw open4dev orders.
+ * Scanner API (base=toSymbol, quote=fromSymbol):
+ *   price  = base per quote (toSymbol per fromSymbol)
+ *   size   = quote amount (fromSymbol)
+ *   total  = base amount (toSymbol)
  *
- * For pair fromSymbol/toSymbol (e.g. TON/NOT), display price = fromSymbol per toSymbol.
- *
- * Bids (buying toSymbol with fromSymbol):
- *   Orders: from_coin = fromSymbol, to_coin = toSymbol
- *   price_rate = toSymbol per fromSymbol (how much toSymbol you get per fromSymbol)
- *   Display price = 1 / price_rate
- *   Amount in toSymbol = order.amount * price_rate
- *
- * Asks (selling toSymbol for fromSymbol):
- *   Orders: from_coin = toSymbol, to_coin = fromSymbol
- *   price_rate = fromSymbol per toSymbol (directly the display price)
- *   Amount in toSymbol = order.amount
+ * We display:
+ *   price  = fromSymbol per toSymbol = 1 / api_price
+ *   amount = toSymbol amount = api total
  */
-function normalizeOpen4dev(bidOrders: DexOrder[], askOrders: DexOrder[]): NormalizedBook {
-  // Aggregate bids by price level
-  const bidMap = new Map<string, { price: number; amount: number; count: number }>();
-  for (const o of bidOrders) {
-    if (o.price_rate <= 0 || o.amount <= 0) continue;
-    const displayPrice = 1 / o.price_rate;
-    const key = displayPrice.toPrecision(6);
-    const existing = bidMap.get(key);
-    const amountInToSymbol = o.amount * o.price_rate;
-    if (existing) {
-      existing.amount += amountInToSymbol;
-      existing.count += 1;
-    } else {
-      bidMap.set(key, { price: displayPrice, amount: amountInToSymbol, count: 1 });
-    }
-  }
+function normalizeScanner(book: ScannerBookResponse): NormalizedBook {
+  const asks: NormalizedLevel[] = book.asks
+    .filter((a) => a.price > 0)
+    .map((a) => ({
+      price: 1 / a.price,
+      amount: a.total,
+      orderCount: a.orderCount,
+    }));
 
-  // Aggregate asks by price level
-  const askMap = new Map<string, { price: number; amount: number; count: number }>();
-  for (const o of askOrders) {
-    if (o.price_rate <= 0 || o.amount <= 0) continue;
-    const displayPrice = o.price_rate;
-    const key = displayPrice.toPrecision(6);
-    const existing = askMap.get(key);
-    if (existing) {
-      existing.amount += o.amount;
-      existing.count += 1;
-    } else {
-      askMap.set(key, { price: displayPrice, amount: o.amount, count: 1 });
-    }
-  }
+  const bids: NormalizedLevel[] = book.bids
+    .filter((b) => b.price > 0)
+    .map((b) => ({
+      price: 1 / b.price,
+      amount: b.total,
+      orderCount: b.orderCount,
+    }));
 
-  const bids: NormalizedLevel[] = [...bidMap.values()]
-    .map((v) => ({ price: v.price, amount: v.amount, orderCount: v.count }))
-    .sort((a, b) => b.price - a.price); // highest bid first
-
-  const asks: NormalizedLevel[] = [...askMap.values()]
-    .map((v) => ({ price: v.price, amount: v.amount, orderCount: v.count }))
-    .sort((a, b) => a.price - b.price); // lowest ask first
+  asks.sort((a, b) => a.price - b.price);
+  bids.sort((a, b) => b.price - a.price);
 
   return { asks, bids };
 }
@@ -209,10 +189,20 @@ function computeStats(normalized: NormalizedBook): BookStats {
   const bestAsk = normalized.asks.length > 0 ? normalized.asks[0].price : null;
   const bestBid = normalized.bids.length > 0 ? normalized.bids[0].price : null;
   const spread = bestAsk != null && bestBid != null ? bestAsk - bestBid : null;
-  const spreadPct = spread != null && bestBid != null && bestBid > 0
-    ? (spread / ((bestAsk! + bestBid) / 2)) * 100
-    : null;
-  return { totalAskOrders, totalBidOrders, totalAskAmount, totalBidAmount, bestAsk, bestBid, spread, spreadPct };
+  const spreadPct =
+    spread != null && bestBid != null && bestBid > 0
+      ? (spread / (((bestAsk as number) + bestBid) / 2)) * 100
+      : null;
+  return {
+    totalAskOrders,
+    totalBidOrders,
+    totalAskAmount,
+    totalBidAmount,
+    bestAsk,
+    bestBid,
+    spread,
+    spreadPct,
+  };
 }
 
 /* ---------- OrderBookTable (reusable) ---------- */
@@ -254,28 +244,36 @@ function OrderBookTable({
   const askVolume = realStats24h?.askVolume ?? stats.totalAskAmount;
   const bidVolumeSymbol = realStats24h?.bidVolumeSymbol ?? toUpper;
   const askVolumeSymbol = realStats24h?.askVolumeSymbol ?? toUpper;
-  const bidVolumeUsd = bidVolumeSymbol.toUpperCase() === fromUpper
-    ? (fromPriceUsd != null ? bidVolume * fromPriceUsd : null)
-    : bidVolumeSymbol.toUpperCase() === toUpper
-      ? (amountPriceUsd != null ? bidVolume * amountPriceUsd : null)
-      : null;
-  const askVolumeUsd = askVolumeSymbol.toUpperCase() === fromUpper
-    ? (fromPriceUsd != null ? askVolume * fromPriceUsd : null)
-    : askVolumeSymbol.toUpperCase() === toUpper
-      ? (amountPriceUsd != null ? askVolume * amountPriceUsd : null)
-      : null;
+  const bidVolumeUsd =
+    bidVolumeSymbol.toUpperCase() === fromUpper
+      ? fromPriceUsd != null
+        ? bidVolume * fromPriceUsd
+        : null
+      : bidVolumeSymbol.toUpperCase() === toUpper
+        ? amountPriceUsd != null
+          ? bidVolume * amountPriceUsd
+          : null
+        : null;
+  const askVolumeUsd =
+    askVolumeSymbol.toUpperCase() === fromUpper
+      ? fromPriceUsd != null
+        ? askVolume * fromPriceUsd
+        : null
+      : askVolumeSymbol.toUpperCase() === toUpper
+        ? amountPriceUsd != null
+          ? askVolume * amountPriceUsd
+          : null
+        : null;
 
   return (
     <div className="card bg-base-200 shadow-md overflow-hidden flex-1 min-w-0">
       <div className="card-body p-0">
-        {/* Source label */}
         {sourceLabel && (
           <div className="px-3 py-1.5 text-[10px] uppercase tracking-wider font-semibold opacity-50 border-b border-base-content/5 bg-base-300/30">
             {sourceLabel}
           </div>
         )}
 
-        {/* Column header */}
         <div className="flex items-center gap-2 px-3 py-2 text-[10px] uppercase tracking-wider opacity-40 border-b border-base-content/5">
           <span className="w-28 sm:w-36 text-right">Price ({fromUpper})</span>
           <span className="flex-1 text-right">Amount ({toUpper})</span>
@@ -283,7 +281,6 @@ function OrderBookTable({
           <span className="w-10 text-right">Qty</span>
         </div>
 
-        {/* ---- ASKS (reversed: highest at top, lowest near spread) ---- */}
         {asksReversed.length === 0 ? (
           <div className="text-center py-4 text-xs opacity-40">No asks</div>
         ) : (
@@ -304,22 +301,17 @@ function OrderBookTable({
                   <span className="relative z-10 w-28 sm:w-36 text-right text-error font-medium">
                     {fmtRate(lvl.price)}
                   </span>
-                  <span className="relative z-10 flex-1 text-right">
-                    {fmtAmount(lvl.amount)}
-                  </span>
+                  <span className="relative z-10 flex-1 text-right">{fmtAmount(lvl.amount)}</span>
                   <span className="relative z-10 w-16 text-right opacity-40 text-[10px] hidden sm:block">
                     {usdVal != null ? fmtUsd(usdVal) : ''}
                   </span>
-                  <span className="relative z-10 w-10 text-right opacity-50">
-                    {lvl.orderCount}
-                  </span>
+                  <span className="relative z-10 w-10 text-right opacity-50">{lvl.orderCount}</span>
                 </div>
               );
             })}
           </div>
         )}
 
-        {/* ---- SPREAD BAR ---- */}
         <div className="flex flex-wrap items-center gap-1.5 px-3 py-2 border-y border-base-content/10 bg-base-300/50">
           <span className="text-xs font-bold tracking-tight mr-1">
             {fromUpper} / {toUpper}
@@ -370,8 +362,7 @@ function OrderBookTable({
             <span className="text-error">{askOrders}{realStats24h ? ' asks (24h)' : ' asks'}</span>
           </span>
         </div>
-        
-        {/* ---- BIDS (highest price at top, closest to spread) ---- */}
+
         {normalized.bids.length === 0 ? (
           <div className="text-center py-4 text-xs opacity-40">No bids</div>
         ) : (
@@ -392,20 +383,87 @@ function OrderBookTable({
                   <span className="relative z-10 w-28 sm:w-36 text-right text-success font-medium">
                     {fmtRate(lvl.price)}
                   </span>
-                  <span className="relative z-10 flex-1 text-right">
-                    {fmtAmount(lvl.amount)}
-                  </span>
+                  <span className="relative z-10 flex-1 text-right">{fmtAmount(lvl.amount)}</span>
                   <span className="relative z-10 w-16 text-right opacity-40 text-[10px] hidden sm:block">
                     {usdVal != null ? fmtUsd(usdVal) : ''}
                   </span>
-                  <span className="relative z-10 w-10 text-right opacity-50">
-                    {lvl.orderCount}
-                  </span>
+                  <span className="relative z-10 w-10 text-right opacity-50">{lvl.orderCount}</span>
                 </div>
               );
             })}
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+/* ---------- activity row ---------- */
+
+function ActivityWindow({
+  label,
+  data,
+  highlight,
+}: {
+  label: string;
+  data: ScannerStatsWindow;
+  highlight?: boolean;
+}) {
+  const total = data.open_orders + data.completed_orders;
+  const completionPct = total > 0 ? (data.completed_orders / total) * 100 : 0;
+  const volume = Number(data.volume_usd);
+  const volumeText = Number.isFinite(volume) && volume > 0 ? fmtUsd(volume) : '$0.00';
+
+  return (
+    <div
+      className={`rounded-lg px-3 py-2.5 relative overflow-hidden border border-base-content/5 ${
+        highlight ? 'bg-base-300/80' : 'bg-base-300/50'
+      }`}
+    >
+      <div
+        className="absolute left-0 bottom-0 h-[2px] bg-success/50 transition-all duration-700"
+        style={{ width: `${completionPct}%` }}
+      />
+      <div className="text-[10px] uppercase tracking-widest font-semibold opacity-50 mb-2">{label}</div>
+      <div className="grid grid-cols-3 gap-2">
+        <div>
+          <div className="text-[9px] uppercase tracking-wide opacity-40">Open</div>
+          <div className="text-sm font-semibold mono text-info">{data.open_orders.toLocaleString()}</div>
+        </div>
+        <div>
+          <div className="text-[9px] uppercase tracking-wide opacity-40">Filled</div>
+          <div className="text-sm font-semibold mono text-success">{data.completed_orders.toLocaleString()}</div>
+        </div>
+        <div>
+          <div className="text-[9px] uppercase tracking-wide opacity-40">Volume</div>
+          <div className="text-sm font-semibold mono opacity-75">{volumeText}</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PairActivityRow({ stats, fromSymbol, toSymbol }: {
+  stats: ScannerStatsResponse;
+  fromSymbol: string;
+  toSymbol: string;
+}) {
+  return (
+    <div className="rounded-xl border border-base-content/5 bg-base-200/60 p-3">
+      <div className="flex items-center justify-between mb-2.5">
+        <div className="flex items-center gap-2">
+          <div className="w-1 h-3.5 rounded-full bg-info/60" />
+          <span className="text-[11px] font-bold tracking-tight opacity-70">
+            {fromSymbol}/{toSymbol} Open Orders / Filled Orders / Volume
+          </span>
+        </div>
+        <div className="h-2 w-2 rounded-full bg-success/50 animate-pulse" />
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+        <ActivityWindow label="1H" data={stats.windows['1h']} />
+        <ActivityWindow label="24H" data={stats.windows['24h']} />
+        <ActivityWindow label="MAX" data={stats.windows.all_time} highlight />
       </div>
     </div>
   );
@@ -424,10 +482,11 @@ export function StatsPage({ raceCfg, pairSlug, onPairChange }: StatsPageProps) {
   const [reversed, setReversed] = useState(false);
   const [tokenPrices, setTokenPrices] = useState<Map<string, number>>(new Map());
 
-  // Open4dev order book state
-  const [book, setBook] = useState<NormalizedBook | null>(null);
+  // Order Scanner order book state
+  const [book, setBook] = useState<ScannerBookResponse | null>(null);
   const [bookLoading, setBookLoading] = useState(false);
   const [bookError, setBookError] = useState<string | null>(null);
+  const [pairStats, setPairStats] = useState<ScannerStatsResponse | null>(null);
   const [realStats24h, setRealStats24h] = useState<RealPairStats24h | null>(null);
 
   const pairs = DEFAULT_PAIRS;
@@ -440,34 +499,52 @@ export function StatsPage({ raceCfg, pairSlug, onPairChange }: StatsPageProps) {
       label: `${currentPair.toSymbol} / ${currentPair.fromSymbol}`,
       fromSymbol: currentPair.toSymbol,
       toSymbol: currentPair.fromSymbol,
+      baseVault: currentPair.quoteVault,
+      quoteVault: currentPair.baseVault,
     };
   }, [currentPair, reversed]);
 
-  // Counter bumped on every successful refresh — drives row flash animation
   const [refreshTick, setRefreshTick] = useState(0);
 
-  const fetchBook = useCallback(async (silent = false) => {
-    const fromCoinId = COIN_IDS[effectivePair.fromSymbol];
-    const toCoinId = COIN_IDS[effectivePair.toSymbol];
-    if (fromCoinId == null || toCoinId == null) {
-      if (!silent) setBookError(`Unknown coin ID for ${effectivePair.fromSymbol} or ${effectivePair.toSymbol}`);
+  const fetchBook = useCallback(
+    async (silent = false) => {
+      const { baseVault, quoteVault } = effectivePair;
+      if (!baseVault || !quoteVault) {
+        if (!silent) {
+          setBookError(`No vault address for pair ${effectivePair.fromSymbol}/${effectivePair.toSymbol}`);
+        }
+        return;
+      }
+      if (!silent) {
+        setBookLoading(true);
+        setBookError(null);
+      }
+      try {
+        const data = await getOrderScannerBook({ baseVault, quoteVault, levels: 20 });
+        setBook(data);
+        setRefreshTick((t) => t + 1);
+      } catch (e) {
+        if (!silent) setBookError(e instanceof Error ? e.message : String(e));
+      } finally {
+        if (!silent) setBookLoading(false);
+      }
+    },
+    [effectivePair],
+  );
+
+  const fetchPairStats = useCallback(async () => {
+    const { baseVault, quoteVault } = effectivePair;
+    if (!baseVault || !quoteVault) {
+      setPairStats(null);
       return;
     }
-    if (!silent) { setBookLoading(true); setBookError(null); }
     try {
-      const [bidOrders, askOrders] = await Promise.all([
-        getDexOrdersByPair(fromCoinId, toCoinId, { limit: 200 }),
-        getDexOrdersByPair(toCoinId, fromCoinId, { limit: 200 }),
-      ]);
-      const normalized = normalizeOpen4dev(bidOrders, askOrders);
-      setBook(normalized);
-      setRefreshTick((t) => t + 1);
-    } catch (e) {
-      if (!silent) setBookError(e instanceof Error ? e.message : String(e));
-    } finally {
-      if (!silent) setBookLoading(false);
+      const data = await getOrderScannerStats({ baseVault, quoteVault });
+      setPairStats(data);
+    } catch {
+      setPairStats(null);
     }
-  }, [effectivePair.fromSymbol, effectivePair.toSymbol]);
+  }, [effectivePair]);
 
   const fetchTradingStats = useCallback(async () => {
     try {
@@ -492,21 +569,24 @@ export function StatsPage({ raceCfg, pairSlug, onPairChange }: StatsPageProps) {
     }
   }, [effectivePair.fromSymbol, effectivePair.toSymbol]);
 
-  // Initial load + auto-refresh every 10s
   useEffect(() => {
     void fetchBook();
     const id = setInterval(() => void fetchBook(true), AUTO_REFRESH_MS);
     return () => clearInterval(id);
   }, [fetchBook]);
 
-  // Real market stats/volume from open4dev trading-stats API
+  useEffect(() => {
+    void fetchPairStats();
+    const id = setInterval(() => void fetchPairStats(), AUTO_REFRESH_MS);
+    return () => clearInterval(id);
+  }, [fetchPairStats]);
+
   useEffect(() => {
     void fetchTradingStats();
     const id = setInterval(() => void fetchTradingStats(), AUTO_REFRESH_MS);
     return () => clearInterval(id);
   }, [fetchTradingStats]);
 
-  // Fetch token USD prices once
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -518,25 +598,32 @@ export function StatsPage({ raceCfg, pairSlug, onPairChange }: StatsPageProps) {
           if (t.price_usd > 0) map.set(t.symbol.toUpperCase(), t.price_usd);
         }
         setTokenPrices(map);
-      } catch { /* ignore */ }
+      } catch {
+        // ignore
+      }
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [raceCfg]);
 
-  const priceOf = useCallback((sym: string): number | null => {
-    const upper = sym.toUpperCase();
-    const p = tokenPrices.get(upper);
-    if (p != null) return p;
-    if (upper.startsWith('J')) {
-      const fallback = tokenPrices.get(upper.slice(1));
-      if (fallback != null) return fallback;
-    }
-    return null;
-  }, [tokenPrices]);
+  const priceOf = useCallback(
+    (sym: string): number | null => {
+      const upper = sym.toUpperCase();
+      const p = tokenPrices.get(upper);
+      if (p != null) return p;
+      if (upper.startsWith('J')) {
+        const fallback = tokenPrices.get(upper.slice(1));
+        if (fallback != null) return fallback;
+      }
+      return null;
+    },
+    [tokenPrices],
+  );
 
   const normalized = useMemo(() => {
     if (!book) return null;
-    return book;
+    return normalizeScanner(book);
   }, [book]);
 
   const stats = useMemo(() => {
@@ -544,21 +631,22 @@ export function StatsPage({ raceCfg, pairSlug, onPairChange }: StatsPageProps) {
     return computeStats(normalized);
   }, [normalized]);
 
-  // Amount is always in toSymbol
   const fromPriceUsd = priceOf(effectivePair.fromSymbol);
   const amountPriceUsd = priceOf(effectivePair.toSymbol);
   const fromUpper = effectivePair.fromSymbol;
   const toUpper = effectivePair.toSymbol;
 
-  const selectPair = useCallback((idx: number) => {
-    setSelectedPairIdx(idx);
-    setReversed(false);
-    onPairChange?.(pairs[idx].slug);
-  }, [onPairChange, pairs]);
+  const selectPair = useCallback(
+    (idx: number) => {
+      setSelectedPairIdx(idx);
+      setReversed(false);
+      onPairChange?.(pairs[idx].slug);
+    },
+    [onPairChange, pairs],
+  );
 
   return (
     <div className="space-y-4">
-      {/* Header */}
       <div className="flex items-center gap-3">
         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
           <BarChart3 className="h-5 w-5 text-primary" />
@@ -570,20 +658,17 @@ export function StatsPage({ raceCfg, pairSlug, onPairChange }: StatsPageProps) {
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75" />
               <span className="relative inline-flex rounded-full h-2 w-2 bg-success" />
             </span>
-            <p className="text-xs opacity-50">Live from open4dev DEX</p>
+            <p className="text-xs opacity-50">Live aggregated by order scanner</p>
           </div>
         </div>
       </div>
 
-      {/* Pair Switcher */}
       <div className="flex flex-wrap items-center gap-2">
         {pairs.map((p, idx) => (
           <button
             key={p.slug}
             className={`btn btn-xs ${
-              selectedPairIdx === idx && !reversed
-                ? 'btn-primary'
-                : 'btn-ghost border border-base-content/10'
+              selectedPairIdx === idx && !reversed ? 'btn-primary' : 'btn-ghost border border-base-content/10'
             }`}
             onClick={() => selectPair(idx)}
             type="button"
@@ -602,7 +687,8 @@ export function StatsPage({ raceCfg, pairSlug, onPairChange }: StatsPageProps) {
         </button>
       </div>
 
-      {/* Order Book */}
+      {pairStats && <PairActivityRow stats={pairStats} fromSymbol={fromUpper} toSymbol={toUpper} />}
+
       {bookError ? (
         <div className="card bg-base-200 shadow-md">
           <div className="card-body">
@@ -626,7 +712,7 @@ export function StatsPage({ raceCfg, pairSlug, onPairChange }: StatsPageProps) {
           fromPriceUsd={fromPriceUsd}
           amountPriceUsd={amountPriceUsd}
           refreshTick={refreshTick}
-          sourceLabel="Open4Dev (aggregated)"
+          sourceLabel="Order Scanner (aggregated)"
           realStats24h={realStats24h}
         />
       ) : null}
