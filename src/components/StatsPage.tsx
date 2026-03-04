@@ -80,8 +80,8 @@ const DEFAULT_PAIRS: TradingPair[] = [
     quoteVault: 'EQA0_4nl1-biEvpzengd5M3GNTt1PRYGIIEHlfanEl3tZkRr',
   },
   {
-    slug: 'TON-XAUTH',
-    label: 'TON / XAUTH',
+    slug: 'TON-XAUT',
+    label: 'TON / XAUt',
     fromSymbol: 'TON',
     toSymbol: 'XAUT0',
     baseVault: 'EQClbgXPqGsSzPRfu8p6WKJwdjs1-14JI6m3tJ4-umB_omK1',
@@ -92,7 +92,9 @@ const DEFAULT_PAIRS: TradingPair[] = [
 function pairIdxFromSlug(slug: string | null): number {
   if (!slug) return 0;
   const upper = slug.toUpperCase();
-  const idx = DEFAULT_PAIRS.findIndex((p) => p.slug === upper);
+  // Backward compatibility for older links
+  const normalized = upper === 'TON-XAUTH' ? 'TON-XAUT' : upper;
+  const idx = DEFAULT_PAIRS.findIndex((p) => p.slug === normalized);
   return idx >= 0 ? idx : 0;
 }
 
