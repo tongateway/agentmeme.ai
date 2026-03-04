@@ -275,15 +275,63 @@ function OrderBookTable({
           ? askVolume * amountPriceUsd
           : null
         : null;
+  const statsStrip = (classes: string) => (
+    <div className={`flex flex-wrap items-center gap-1.5 px-3 py-2 ${classes}`}>
+      <span className="text-xs font-bold tracking-tight mr-1">
+        {fromUpper} / {toUpper}
+      </span>
+
+      {stats.bestBid != null && (
+        <span className="badge badge-xs badge-ghost gap-1 mono">
+          <span className="opacity-50">Bid</span>
+          <span className="text-success font-semibold">{fmtRate(stats.bestBid)}</span>
+        </span>
+      )}
+
+      {stats.bestAsk != null && (
+        <span className="badge badge-xs badge-ghost gap-1 mono">
+          <span className="opacity-50">Ask</span>
+          <span className="text-error font-semibold">{fmtRate(stats.bestAsk)}</span>
+        </span>
+      )}
+
+      {stats.spreadPct != null && (
+        <span className="badge badge-xs badge-ghost gap-1 mono">
+          <span className="opacity-50">Spread</span>
+          <span className="font-semibold">{stats.spreadPct.toFixed(2)}%</span>
+        </span>
+      )}
+
+      <span className="badge badge-xs badge-ghost gap-1 mono">
+        <span className="opacity-50">{realStats24h ? 'Bid Vol 24h' : 'Bid Vol'}</span>
+        <span className="text-success font-semibold">{fmtAmount(bidVolume)}</span>
+        <span className="opacity-40">{bidVolumeSymbol}</span>
+        {bidVolumeUsd != null && (
+          <span className="opacity-40 hidden sm:inline">~{fmtUsd(bidVolumeUsd)}</span>
+        )}
+      </span>
+
+      <span className="badge badge-xs badge-ghost gap-1 mono">
+        <span className="opacity-50">{realStats24h ? 'Ask Vol 24h' : 'Ask Vol'}</span>
+        <span className="text-error font-semibold">{fmtAmount(askVolume)}</span>
+        <span className="opacity-40">{askVolumeSymbol}</span>
+        {askVolumeUsd != null && (
+          <span className="opacity-40 hidden sm:inline">~{fmtUsd(askVolumeUsd)}</span>
+        )}
+      </span>
+
+      <span className="ml-auto flex items-center gap-2 text-[10px] opacity-50">
+        <span className="text-success">{bidOrders}{realStats24h ? ' bids (24h)' : ' bids'}</span>
+        <span className="opacity-30">|</span>
+        <span className="text-error">{askOrders}{realStats24h ? ' asks (24h)' : ' asks'}</span>
+      </span>
+    </div>
+  );
 
   return (
     <div className="card bg-base-200 shadow-md overflow-hidden flex-1 min-w-0">
       <div className="card-body p-0">
-        {sourceLabel && (
-          <div className="px-3 py-1.5 text-[10px] uppercase tracking-wider font-semibold opacity-50 border-b border-base-content/5 bg-base-300/30">
-            {sourceLabel}
-          </div>
-        )}
+        {statsStrip('border-b border-base-content/10 bg-base-300/40')}
 
         <div className="flex items-center gap-2 px-3 py-2 text-[10px] uppercase tracking-wider opacity-40 border-b border-base-content/5">
           <span className="w-28 sm:w-36 text-right">Price ({fromUpper})</span>
@@ -323,56 +371,7 @@ function OrderBookTable({
           </div>
         )}
 
-        <div className="flex flex-wrap items-center gap-1.5 px-3 py-2 border-y border-base-content/10 bg-base-300/50">
-          <span className="text-xs font-bold tracking-tight mr-1">
-            {fromUpper} / {toUpper}
-          </span>
-
-          {stats.bestBid != null && (
-            <span className="badge badge-xs badge-ghost gap-1 mono">
-              <span className="opacity-50">Bid</span>
-              <span className="text-success font-semibold">{fmtRate(stats.bestBid)}</span>
-            </span>
-          )}
-
-          {stats.bestAsk != null && (
-            <span className="badge badge-xs badge-ghost gap-1 mono">
-              <span className="opacity-50">Ask</span>
-              <span className="text-error font-semibold">{fmtRate(stats.bestAsk)}</span>
-            </span>
-          )}
-
-          {stats.spreadPct != null && (
-            <span className="badge badge-xs badge-ghost gap-1 mono">
-              <span className="opacity-50">Spread</span>
-              <span className="font-semibold">{stats.spreadPct.toFixed(2)}%</span>
-            </span>
-          )}
-
-          <span className="badge badge-xs badge-ghost gap-1 mono">
-            <span className="opacity-50">{realStats24h ? 'Bid Vol 24h' : 'Bid Vol'}</span>
-            <span className="text-success font-semibold">{fmtAmount(bidVolume)}</span>
-            <span className="opacity-40">{bidVolumeSymbol}</span>
-            {bidVolumeUsd != null && (
-              <span className="opacity-40 hidden sm:inline">~{fmtUsd(bidVolumeUsd)}</span>
-            )}
-          </span>
-
-          <span className="badge badge-xs badge-ghost gap-1 mono">
-            <span className="opacity-50">{realStats24h ? 'Ask Vol 24h' : 'Ask Vol'}</span>
-            <span className="text-error font-semibold">{fmtAmount(askVolume)}</span>
-            <span className="opacity-40">{askVolumeSymbol}</span>
-            {askVolumeUsd != null && (
-              <span className="opacity-40 hidden sm:inline">~{fmtUsd(askVolumeUsd)}</span>
-            )}
-          </span>
-
-          <span className="ml-auto flex items-center gap-2 text-[10px] opacity-50">
-            <span className="text-success">{bidOrders}{realStats24h ? ' bids (24h)' : ' bids'}</span>
-            <span className="opacity-30">|</span>
-            <span className="text-error">{askOrders}{realStats24h ? ' asks (24h)' : ' asks'}</span>
-          </span>
-        </div>
+        {statsStrip('border-y border-base-content/10 bg-base-300/50')}
 
         {normalized.bids.length === 0 ? (
           <div className="text-center py-4 text-xs opacity-40">No bids</div>
@@ -402,6 +401,11 @@ function OrderBookTable({
                 </div>
               );
             })}
+          </div>
+        )}
+        {sourceLabel && (
+          <div className="px-3 py-1.5 text-[10px] tracking-wide opacity-50 border-t border-base-content/5 bg-base-300/30 text-center">
+            {sourceLabel}
           </div>
         )}
       </div>
@@ -768,7 +772,7 @@ export function StatsPage({ raceCfg, pairSlug, onPairChange }: StatsPageProps) {
           fromPriceUsd={fromPriceUsd}
           amountPriceUsd={amountPriceUsd}
           refreshTick={refreshTick}
-          sourceLabel="Open4Dev Order Book (15 levels)"
+          sourceLabel="open4dev is data provider"
           realStats24h={realStats24h}
         />
       ) : null}
