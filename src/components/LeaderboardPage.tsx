@@ -62,8 +62,10 @@ export function LeaderboardPage({ raceCfg, onOpenContract }: LeaderboardPageProp
                     <th className="text-right">Start</th>
                     <th className="text-right">Current</th>
                     <th className="text-right">Profit</th>
-                    <th className="text-right">%</th>
-                    <th className="text-right">Orders</th>
+                    <th className="text-right">Profit %</th>
+                    <th className="text-right">Total Orders</th>
+                    <th className="text-right">Completed</th>
+                    <th className="text-right">Decisions</th>
                     <th className="text-center">Status</th>
                   </tr>
                 </thead>
@@ -101,6 +103,12 @@ export function LeaderboardPage({ raceCfg, onOpenContract }: LeaderboardPageProp
                         </td>
                         <td className="mono text-xs text-right tabular-nums">
                           {e.total_orders ?? 0}
+                        </td>
+                        <td className="mono text-xs text-right tabular-nums">
+                          {e.completed_orders ?? 0}
+                        </td>
+                        <td className="mono text-xs text-right tabular-nums">
+                          {e.total_decisions ?? 0}
                         </td>
                         <td className="text-center">
                           <div className="inline-flex items-center gap-2">

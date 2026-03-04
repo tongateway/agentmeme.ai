@@ -163,6 +163,7 @@ export type LeaderboardEntry = {
   profit_usd: number | null;
   profit_pct: number | null;
   total_orders: number | null;
+  completed_orders: number | null;
   total_decisions: number | null;
   created_at: string;
 };
@@ -260,6 +261,7 @@ function normalizeLeaderboardEntry(item: Record<string, unknown>): LeaderboardEn
     profit_usd: typeof item.profit_usd === 'number' ? item.profit_usd : null,
     profit_pct: typeof item.profit_pct === 'number' ? item.profit_pct : null,
     total_orders: typeof item.total_orders === 'number' ? item.total_orders : null,
+    completed_orders: typeof item.completed_orders === 'number' ? item.completed_orders : null,
     total_decisions: typeof item.total_decisions === 'number' ? item.total_decisions : null,
     created_at: String(item.created_at ?? ''),
   };
