@@ -19,6 +19,9 @@ const COIN_IDS: Record<string, number> = {
   TON: 0,
   NOT: 107,
   BUILD: 24,
+  DOGS: 1696227,
+  PX: 1696228,
+  XAUT0: 1696229,
 };
 
 /* ---------- pair definitions ---------- */
@@ -39,23 +42,49 @@ const DEFAULT_PAIRS: TradingPair[] = [
     label: 'TON / NOT',
     fromSymbol: 'TON',
     toSymbol: 'NOT',
-    baseVault: 'EQA0_4nl1-biEvpzengd5M3GNTt1PRYGIIEHlfanEl3tZkRr',
-    quoteVault: 'EQAD7f1rDyPODd6XYfORpVoKP6ZgEOVKCzu4U2dws_gjR7fS',
+    // NOT vault (jetton) / TON vault
+    baseVault: 'EQAD7f1rDyPODd6XYfORpVoKP6ZgEOVKCzu4U2dws_gjR7fS',
+    quoteVault: 'EQA0_4nl1-biEvpzengd5M3GNTt1PRYGIIEHlfanEl3tZkRr',
   },
   {
     slug: 'TON-BUILD',
     label: 'TON / BUILD',
     fromSymbol: 'TON',
     toSymbol: 'BUILD',
-    baseVault: 'EQA0_4nl1-biEvpzengd5M3GNTt1PRYGIIEHlfanEl3tZkRr',
-    quoteVault: 'EQCxWoj_Yxgeh-sRS1MjR7YuqzVLHrOpVFz9neN-Hn1eSYUC',
+    // BUILD vault (jetton) / TON vault
+    baseVault: 'EQCxWoj_Yxgeh-sRS1MjR7YuqzVLHrOpVFz9neN-Hn1eSYUC',
+    quoteVault: 'EQA0_4nl1-biEvpzengd5M3GNTt1PRYGIIEHlfanEl3tZkRr',
   },
   {
     slug: 'NOT-BUILD',
     label: 'NOT / BUILD',
     fromSymbol: 'NOT',
     toSymbol: 'BUILD',
-    baseVault: 'EQCB7fqENM-zRLR1d6N7a99fWKO1scE-G0wf-49H0uSFIpI-',
+    baseVault: 'EQCxWoj_Yxgeh-sRS1MjR7YuqzVLHrOpVFz9neN-Hn1eSYUC',
+    quoteVault: 'EQAD7f1rDyPODd6XYfORpVoKP6ZgEOVKCzu4U2dws_gjR7fS',
+  },
+  {
+    slug: 'TON-DOGS',
+    label: 'TON / DOGS',
+    fromSymbol: 'TON',
+    toSymbol: 'DOGS',
+    baseVault: 'EQClIJo99DbIH56sUAnTK0wrdH3_i-_rcxl24CmIhlmGl17i',
+    quoteVault: 'EQA0_4nl1-biEvpzengd5M3GNTt1PRYGIIEHlfanEl3tZkRr',
+  },
+  {
+    slug: 'TON-NOTPIXEL',
+    label: 'TON / NOT PIXEL',
+    fromSymbol: 'TON',
+    toSymbol: 'PX',
+    baseVault: 'EQC1dcxtmYFpKETQ_TA6fA5LfnmLwPYqAWg2M94WWSajEF_Y',
+    quoteVault: 'EQA0_4nl1-biEvpzengd5M3GNTt1PRYGIIEHlfanEl3tZkRr',
+  },
+  {
+    slug: 'TON-XAUTH',
+    label: 'TON / XAUTH',
+    fromSymbol: 'TON',
+    toSymbol: 'XAUT0',
+    baseVault: 'EQClbgXPqGsSzPRfu8p6WKJwdjs1-14JI6m3tJ4-umB_omK1',
     quoteVault: 'EQA0_4nl1-biEvpzengd5M3GNTt1PRYGIIEHlfanEl3tZkRr',
   },
 ];
