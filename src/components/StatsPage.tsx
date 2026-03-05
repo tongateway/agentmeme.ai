@@ -44,12 +44,12 @@ const DEFAULT_PAIRS: TradingPair[] = [
     quoteVault: 'EQA0_4nl1-biEvpzengd5M3GNTt1PRYGIIEHlfanEl3tZkRr',
   },
   {
-    slug: 'NOT-BUILD',
-    label: 'NOT / BUILD',
-    fromSymbol: 'NOT',
-    toSymbol: 'BUILD',
-    baseVault: 'EQCxWoj_Yxgeh-sRS1MjR7YuqzVLHrOpVFz9neN-Hn1eSYUC',
-    quoteVault: 'EQAD7f1rDyPODd6XYfORpVoKP6ZgEOVKCzu4U2dws_gjR7fS',
+    slug: 'TON-USDT',
+    label: 'TON / USDT',
+    fromSymbol: 'TON',
+    toSymbol: 'USDT',
+    baseVault: '',
+    quoteVault: '',
   },
   {
     slug: 'TON-DOGS',
