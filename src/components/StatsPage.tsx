@@ -135,12 +135,23 @@ type NormalizedBook = {
  * We display:
  *   price  = fromSymbol per toSymbol = 1 / api_price
  *   amount = toSymbol amount = total_amount
+ *
+ * NOTE: Some orders have price_rate already in display format (inverted).
+ * We detect this by comparing against mid_price — if price_rate is >1000×
+ * smaller than mid_price, it's already inverted and should be used as-is.
  */
 function normalizeOpen4DevBook(book: DexOrderBookResponse): NormalizedBook {
+  const ref = book.mid_price ?? null;
+
+  const toDisplayPrice = (priceRate: number): number => {
+    if (ref != null && ref > 0 && priceRate < ref / 1000) return priceRate;
+    return 1 / priceRate;
+  };
+
   const asks: NormalizedLevel[] = book.asks
     .filter((a) => a.price_rate > 0)
     .map((a) => ({
-      price: 1 / a.price_rate,
+      price: toDisplayPrice(a.price_rate),
       amount: a.total_amount,
       orderCount: a.order_count,
     }));
@@ -148,7 +159,7 @@ function normalizeOpen4DevBook(book: DexOrderBookResponse): NormalizedBook {
   const bids: NormalizedLevel[] = book.bids
     .filter((b) => b.price_rate > 0)
     .map((b) => ({
-      price: 1 / b.price_rate,
+      price: toDisplayPrice(b.price_rate),
       amount: b.total_amount,
       orderCount: b.order_count,
     }));

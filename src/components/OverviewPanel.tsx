@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { createChart, LineSeries, type IChartApi, type UTCTimestamp } from 'lightweight-charts';
 import { getRaceAiResponses, type ContractListItem, type PublicApiConfig } from '@/lib/api';
 import { getChartOptions, SERIES_COLORS, lineSeriesOptions, dedupeChartData, type AppTheme } from '@/lib/chart-theme';
@@ -19,6 +19,8 @@ type ContractSeries = {
   color: string;
 };
 
+type ChartMode = 'usd' | 'pct';
+
 function shortAddr(addr: string): string {
   if (addr.length <= 16) return addr;
   return `${addr.slice(0, 8)}...${addr.slice(-6)}`;
@@ -29,14 +31,14 @@ function contractLabel(name: string | null | undefined, address: string): string
   return trimmed && trimmed.length ? trimmed : shortAddr(address);
 }
 
-function OverviewChart({ seriesData, theme }: { seriesData: ContractSeries[]; theme: AppTheme }) {
+function OverviewChart({ seriesData, theme, mode }: { seriesData: ContractSeries[]; theme: AppTheme; mode: ChartMode }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const seriesRef = useRef<any[]>([]);
 
   const [chartReady, setChartReady] = useState(false);
 
-  // Create chart
+  // Create chart — recreate when mode changes so Y-axis format updates
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
@@ -47,6 +49,9 @@ function OverviewChart({ seriesData, theme }: { seriesData: ContractSeries[]; th
       height: 420,
       handleScroll: { mouseWheel: true, pressedMouseMove: true },
       handleScale: { axisPressedMouseMove: true, mouseWheel: true, pinch: true },
+      localization: mode === 'pct'
+        ? { priceFormatter: (v: number) => `${v >= 0 ? '+' : ''}${v.toFixed(1)}%` }
+        : { priceFormatter: (v: number) => `$${v.toFixed(2)}` },
     });
 
     chartRef.current = chart;
@@ -67,7 +72,7 @@ function OverviewChart({ seriesData, theme }: { seriesData: ContractSeries[]; th
       seriesRef.current = [];
       setChartReady(false);
     };
-  }, []);
+  }, [mode]);
 
   // Update theme
   useEffect(() => {
@@ -124,10 +129,27 @@ function LatestLegend({ seriesData }: { seriesData: ContractSeries[] }) {
   );
 }
 
+/** Convert series to % change from first data point */
+function toPctSeries(series: ContractSeries[]): ContractSeries[] {
+  return series.map((s) => {
+    if (s.points.length === 0) return s;
+    const base = s.points[0].value;
+    if (base === 0) return s;
+    return {
+      ...s,
+      points: s.points.map((p) => ({
+        time: p.time,
+        value: ((p.value - base) / base) * 100,
+      })),
+    };
+  });
+}
+
 export function OverviewPanel({ contracts, raceCfg, theme }: OverviewPanelProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [seriesData, setSeriesData] = useState<ContractSeries[]>([]);
+  const [mode, setMode] = useState<ChartMode>('pct');
 
   useEffect(() => {
     let alive = true;
@@ -179,11 +201,36 @@ export function OverviewPanel({ contracts, raceCfg, theme }: OverviewPanelProps)
     };
   }, [contracts, raceCfg]);
 
+  const displaySeries = useMemo(
+    () => (mode === 'pct' ? toPctSeries(seriesData) : seriesData),
+    [seriesData, mode],
+  );
+
   return (
     <div className="mt-4 card bg-base-200 shadow-md">
       <div className="card-body gap-4">
-        <h2 className="card-title">Overview</h2>
-        <p className="text-xs opacity-60">Single chart for all your wallets.</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="card-title">Overview</h2>
+            <p className="text-xs opacity-60">Single chart for all your wallets.</p>
+          </div>
+          <div className="join">
+            <button
+              type="button"
+              className={`join-item btn btn-xs ${mode === 'pct' ? 'btn-primary' : 'btn-ghost border border-base-content/10'}`}
+              onClick={() => setMode('pct')}
+            >
+              % Change
+            </button>
+            <button
+              type="button"
+              className={`join-item btn btn-xs ${mode === 'usd' ? 'btn-primary' : 'btn-ghost border border-base-content/10'}`}
+              onClick={() => setMode('usd')}
+            >
+              USD
+            </button>
+          </div>
+        </div>
 
         {loading ? (
           <div className="flex justify-center py-8">
@@ -196,7 +243,7 @@ export function OverviewPanel({ contracts, raceCfg, theme }: OverviewPanelProps)
         ) : (
           <>
             <LatestLegend seriesData={seriesData} />
-            <OverviewChart seriesData={seriesData} theme={theme} />
+            <OverviewChart seriesData={displaySeries} theme={theme} mode={mode} />
           </>
         )}
       </div>
