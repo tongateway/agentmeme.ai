@@ -270,6 +270,23 @@ function normalizeLeaderboardEntry(item: Record<string, unknown>): LeaderboardEn
   };
 }
 
+/** Token decimals for converting nano (smallest-unit) amounts to human-readable values. */
+const TOKEN_DECIMALS: Record<string, number> = {
+  TON: 9,
+  USDT: 6,
+  USDC: 6,
+  NOT: 9,
+  DOGS: 9,
+  JETTON: 9,
+};
+const DEFAULT_TOKEN_DECIMALS = 9;
+
+/** Convert a nano (smallest-unit) amount to a human-readable number. */
+function fromNanoToken(nano: number, currency?: string): number {
+  const decimals = TOKEN_DECIMALS[(currency ?? '').toUpperCase()] ?? DEFAULT_TOKEN_DECIMALS;
+  return nano / 10 ** decimals;
+}
+
 function normalizeAiModelOption(item: Record<string, unknown>, providerHint?: string): AiModelOption | null {
   const isActiveRaw = item.is_active;
   if (typeof isActiveRaw === 'boolean' && !isActiveRaw) return null;
@@ -289,9 +306,9 @@ function normalizeAiModelOption(item: Record<string, unknown>, providerHint?: st
   const isThinkingRaw = item.is_thinking;
   const isThinking = typeof isThinkingRaw === 'boolean' ? isThinkingRaw : undefined;
   const priceRaw = item.price;
-  const price = typeof priceRaw === 'number' ? priceRaw : undefined;
   const priceCurrencyRaw = item.price_currency;
   const priceCurrency = typeof priceCurrencyRaw === 'string' && priceCurrencyRaw.trim() ? priceCurrencyRaw.trim() : undefined;
+  const price = typeof priceRaw === 'number' ? fromNanoToken(priceRaw, priceCurrency) : undefined;
 
   return { id, name, provider, description, isThinking, price, priceCurrency };
 }

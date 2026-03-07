@@ -816,7 +816,7 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
                           </span>
                         )}
                         <span className="text-[10px] opacity-40 ml-auto">
-                          {price > 0 ? `${price} ${currency}` : `Free`}
+                          {price > 0 ? `${parseFloat(price.toFixed(4))} ${currency}` : `Free`}
                           {' '}<span className="opacity-70">(500 dec.)</span>
                         </span>
                       </div>
