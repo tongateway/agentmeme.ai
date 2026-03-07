@@ -29,7 +29,7 @@ const FALLBACK_AI_MODELS: AiModelOption[] = [
   { id: 'grok-4', name: 'Grok 4', provider: 'xAI' },
 ];
 
-/** Hardcoded model prices in TON (~500 AI decisions per deploy). Will move to API later. */
+/** Hardcoded model deploy prices in TON (~500 AI decisions). Will move to API later. */
 const MODEL_PRICES: Record<string, number> = {
   'Qwen/Qwen3-32B': 2,
   'claude-haiku-4-5': 3,
@@ -42,6 +42,13 @@ const MODEL_PRICES: Record<string, number> = {
   'gpt-5.2-pro': 10,
   'deepseek-chat': 2,
 };
+const DEFAULT_MODEL_PRICE = 5;
+
+/** Extract short model name from description (strip "— long subtitle" suffix) */
+function shortModelName(name: string): string {
+  const sep = name.indexOf(' — ');
+  return sep > 0 ? name.slice(0, sep).trim() : name;
+}
 
 type StrategyTemplate = {
   name: string;
@@ -681,78 +688,66 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
               <span className="text-sm font-semibold">Choose AI Model</span>
               {modelsLoading && <span className="ml-1 loading loading-dots loading-xs" />}
             </div>
-            <div className="space-y-4">
-              {displayGroups.map((group) => (
-                <div key={group.provider}>
-                  {/* Provider header */}
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-[11px] font-semibold uppercase tracking-wider opacity-40">
-                      {group.provider}
-                    </span>
-                    <div className="flex-1 h-px bg-base-content/5" />
-                  </div>
-                  {/* Model cards grid */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {group.models.map((m) => {
-                      const modelProvider = m.provider?.trim() ?? '';
-                      const isSelected =
-                        selectedModel === m.id &&
-                        (selectedProvider ?? '') === modelProvider;
-                      const price = MODEL_PRICES[m.id];
-                      return (
-                        <button
-                          key={`${modelProvider || 'p'}:${m.id}`}
-                          type="button"
-                          className={`
-                            relative flex flex-col items-start gap-1 rounded-xl border-2 px-3.5 py-3
-                            transition-all duration-150 text-left cursor-pointer
-                            ${isSelected
-                              ? 'border-success bg-success/5 shadow-sm'
-                              : 'border-base-content/8 hover:border-base-content/20 hover:bg-base-300/30'
-                            }
-                          `}
-                          onClick={() =>
-                            setPersisted((p) => ({
-                              ...p,
-                              aiModel: m.id,
-                              aiProvider: m.provider?.trim() || undefined,
-                            }))
-                          }
-                          title={m.description ?? undefined}
-                        >
-                          {/* Selected checkmark */}
-                          {isSelected && (
-                            <div className="absolute top-2 right-2 flex h-5 w-5 items-center justify-center rounded-full bg-success text-success-content">
-                              <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                              </svg>
-                            </div>
-                          )}
-                          {/* Model name */}
-                          <span className="text-sm font-semibold leading-tight">{m.name}</span>
-                          {/* Price + badge row */}
-                          <div className="flex items-center gap-2 flex-wrap">
-                            {price != null && (
-                              <span className="text-xs font-medium opacity-50">~{price} TON</span>
-                            )}
-                            {m.isThinking != null && (
-                              <span
-                                className={`inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-medium ${
-                                  m.isThinking
-                                    ? 'bg-info/15 text-info'
-                                    : 'bg-warning/15 text-warning'
-                                }`}
-                              >
-                                {m.isThinking ? 'Thinking' : 'Fast'}
-                              </span>
-                            )}
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {displayGroups.flatMap((group) =>
+                group.models.map((m) => {
+                  const modelProvider = m.provider?.trim() ?? '';
+                  const isSelected =
+                    selectedModel === m.id &&
+                    (selectedProvider ?? '') === modelProvider;
+                  const price = MODEL_PRICES[m.id] ?? DEFAULT_MODEL_PRICE;
+                  return (
+                    <button
+                      key={`${modelProvider || 'p'}:${m.id}`}
+                      type="button"
+                      className={`
+                        relative flex flex-col items-start gap-1.5 rounded-lg border-2 px-3 py-2.5
+                        transition-all duration-150 text-left cursor-pointer
+                        ${isSelected
+                          ? 'border-success bg-success/5 shadow-sm'
+                          : 'border-base-content/8 hover:border-base-content/20 hover:bg-base-300/30'
+                        }
+                      `}
+                      onClick={() =>
+                        setPersisted((p) => ({
+                          ...p,
+                          aiModel: m.id,
+                          aiProvider: m.provider?.trim() || undefined,
+                        }))
+                      }
+                      title={m.description ?? undefined}
+                    >
+                      {isSelected && (
+                        <div className="absolute top-2 right-2 flex h-4.5 w-4.5 items-center justify-center rounded-full bg-success text-success-content">
+                          <svg className="h-2.5 w-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                          </svg>
+                        </div>
+                      )}
+                      <span className="text-sm font-bold leading-tight">{shortModelName(m.name)}</span>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        {modelProvider && (
+                          <span className="rounded-full bg-base-content/5 px-1.5 py-0.5 text-[10px] opacity-50">
+                            {modelProvider}
+                          </span>
+                        )}
+                        {m.isThinking != null && (
+                          <span
+                            className={`rounded-full px-1.5 py-0.5 text-[10px] font-medium ${
+                              m.isThinking
+                                ? 'bg-info/15 text-info'
+                                : 'bg-warning/15 text-warning'
+                            }`}
+                          >
+                            {m.isThinking ? 'Thinking' : 'Fast'}
+                          </span>
+                        )}
+                        <span className="text-[10px] opacity-40 ml-auto">{price} TON <span className="opacity-70">(500 dec.)</span></span>
+                      </div>
+                    </button>
+                  );
+                })
+              )}
             </div>
           </div>
 
