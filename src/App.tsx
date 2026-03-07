@@ -296,6 +296,15 @@ export default function App() {
     [refreshContracts, setMyContractIds],
   );
 
+  const handleContractStatusChanged = useCallback(
+    (contractId: string, isActive: boolean) => {
+      setAllContracts((prev) =>
+        prev?.map((c) => (c.id === contractId ? { ...c, is_active: isActive } : c)) ?? null,
+      );
+    },
+    [],
+  );
+
   const handleRenameContract = useCallback(
     async (contractId: string, newName: string) => {
       await updateRaceContract(raceCfg, contractId, { name: newName });
@@ -446,6 +455,7 @@ export default function App() {
                 raceCfg={raceCfg}
                 theme={theme}
                 onDeleted={(id) => void handleContractDeleted(id)}
+                onStatusChanged={handleContractStatusChanged}
               />
             ) : tab.kind === 'contract' && allContracts == null ? (
               <div className="mt-4 flex justify-center py-8">

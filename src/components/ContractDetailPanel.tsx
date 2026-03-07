@@ -74,6 +74,7 @@ type ContractDetailPanelProps = {
   raceCfg: PublicApiConfig;
   theme: AppTheme;
   onDeleted?: (contractId: string) => void;
+  onStatusChanged?: (contractId: string, isActive: boolean) => void;
 };
 
 async function fetchTonBalance(address: string): Promise<string> {
@@ -176,7 +177,7 @@ function BalanceChart({ points, theme }: { points: ChartPoint[]; theme: AppTheme
 
 /* ---------- Main Component ---------- */
 
-export function ContractDetailPanel({ contract, raceCfg, theme, onDeleted }: ContractDetailPanelProps) {
+export function ContractDetailPanel({ contract, raceCfg, theme, onDeleted, onStatusChanged }: ContractDetailPanelProps) {
   const [tonConnectUI] = useTonConnectUI();
 
   const [topupAmount, setTopupAmount] = useState('5');
@@ -496,13 +497,15 @@ export function ContractDetailPanel({ contract, raceCfg, theme, onDeleted }: Con
     try {
       const newStatus = isActive ? 'paused' : 'active' as const;
       await updateRaceContract(raceCfg, contract.id, { status: newStatus });
-      setIsActive(newStatus === 'active');
+      const newIsActive = newStatus === 'active';
+      setIsActive(newIsActive);
+      onStatusChanged?.(contract.id, newIsActive);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
       setPauseBusy(false);
     }
-  }, [raceCfg, contract.id, isActive]);
+  }, [raceCfg, contract.id, isActive, onStatusChanged]);
 
   const canDelete = withdrawDone.has('jetton') && withdrawDone.has('ton');
 
