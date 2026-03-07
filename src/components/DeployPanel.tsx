@@ -29,20 +29,6 @@ const FALLBACK_AI_MODELS: AiModelOption[] = [
   { id: 'grok-4', name: 'Grok 4', provider: 'xAI' },
 ];
 
-/** Hardcoded model deploy prices in TON (~500 AI decisions). Will move to API later. */
-const MODEL_PRICES: Record<string, number> = {
-  'Qwen/Qwen3-32B': 2,
-  'claude-haiku-4-5': 3,
-  'claude-sonnet-4-6': 8,
-  'gemini-3.1-flash-lite': 1,
-  'gemini-3.1-pro-preview': 6,
-  'grok-4': 5,
-  'grok-4.1-fast': 3,
-  'gpt-5.2': 4,
-  'gpt-5.2-pro': 10,
-  'deepseek-chat': 2,
-};
-const DEFAULT_MODEL_PRICE = 5;
 
 /** Extract short model name from description (strip "— long subtitle" suffix) */
 function shortModelName(name: string): string {
@@ -781,7 +767,8 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
                   const isSelected =
                     selectedModel === m.id &&
                     (selectedProvider ?? '') === modelProvider;
-                  const price = MODEL_PRICES[m.id] ?? DEFAULT_MODEL_PRICE;
+                  const price = m.price ?? 0;
+                  const currency = m.priceCurrency ?? 'TON';
                   return (
                     <button
                       key={`${modelProvider || 'p'}:${m.id}`}
@@ -828,7 +815,10 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
                             {m.isThinking ? 'Thinking' : 'Fast'}
                           </span>
                         )}
-                        <span className="text-[10px] opacity-40 ml-auto">{price} TON <span className="opacity-70">(500 dec.)</span></span>
+                        <span className="text-[10px] opacity-40 ml-auto">
+                          {price > 0 ? `${price} ${currency}` : `Free`}
+                          {' '}<span className="opacity-70">(500 dec.)</span>
+                        </span>
                       </div>
                     </button>
                   );

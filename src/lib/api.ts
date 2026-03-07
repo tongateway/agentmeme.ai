@@ -193,6 +193,8 @@ export type AiModelOption = {
   provider?: string;
   description?: string | null;
   isThinking?: boolean;
+  price?: number;
+  priceCurrency?: string;
 };
 
 export type AiModelsByProvider = {
@@ -286,8 +288,12 @@ function normalizeAiModelOption(item: Record<string, unknown>, providerHint?: st
   const provider = typeof providerRaw === 'string' && providerRaw.trim() ? providerRaw.trim() : undefined;
   const isThinkingRaw = item.is_thinking;
   const isThinking = typeof isThinkingRaw === 'boolean' ? isThinkingRaw : undefined;
+  const priceRaw = item.price;
+  const price = typeof priceRaw === 'number' ? priceRaw : undefined;
+  const priceCurrencyRaw = item.price_currency;
+  const priceCurrency = typeof priceCurrencyRaw === 'string' && priceCurrencyRaw.trim() ? priceCurrencyRaw.trim() : undefined;
 
-  return { id, name, provider, description, isThinking };
+  return { id, name, provider, description, isThinking, price, priceCurrency };
 }
 
 function normalizeAiModelsGroup(item: Record<string, unknown>): AiModelsByProvider | null {
