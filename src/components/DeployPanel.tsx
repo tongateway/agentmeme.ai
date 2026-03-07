@@ -692,36 +692,82 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
 
           {/* AI Model Selection */}
           <div>
-            <label className="text-xs font-medium opacity-60 mb-1.5 block">
+            <label className="text-xs font-medium opacity-60 mb-3 block">
               AI Model
               {modelsLoading && <span className="ml-2 loading loading-dots loading-xs" />}
             </label>
-            <div className="flex flex-wrap gap-1.5">
-              {aiModels.map((m) => {
-                const modelProvider = m.provider?.trim() ?? '';
-                const isSelected = (
-                  selectedModel === m.id &&
-                  (selectedProvider ?? '') === modelProvider
-                );
-                return (
-                <button
-                  key={`${modelProvider || 'provider'}:${m.id}`}
-                  className={`
-                    btn btn-sm border transition-all duration-150
-                    ${isSelected
-                      ? 'btn-primary shadow-sm'
-                      : 'btn-ghost border-base-content/10 hover:border-base-content/20'
-                    }
-                  `}
-                  type="button"
-                  onClick={() => setPersisted((p) => ({ ...p, aiModel: m.id, aiProvider: m.provider?.trim() || undefined }))}
-                  title={m.description ?? undefined}
-                >
-                  <span className="text-xs">{m.name}</span>
-                  {m.provider && <span className="text-[10px] opacity-70">({m.provider})</span>}
-                </button>
-                );
-              })}
+            <div className="space-y-4">
+              {displayGroups.map((group) => (
+                <div key={group.provider}>
+                  {/* Provider header */}
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-[11px] font-semibold uppercase tracking-wider opacity-40">
+                      {group.provider}
+                    </span>
+                    <div className="flex-1 h-px bg-base-content/5" />
+                  </div>
+                  {/* Model cards grid */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {group.models.map((m) => {
+                      const modelProvider = m.provider?.trim() ?? '';
+                      const isSelected =
+                        selectedModel === m.id &&
+                        (selectedProvider ?? '') === modelProvider;
+                      const price = MODEL_PRICES[m.id];
+                      return (
+                        <button
+                          key={`${modelProvider || 'p'}:${m.id}`}
+                          type="button"
+                          className={`
+                            relative flex flex-col items-start gap-1 rounded-xl border-2 px-3.5 py-3
+                            transition-all duration-150 text-left cursor-pointer
+                            ${isSelected
+                              ? 'border-success bg-success/5 shadow-sm'
+                              : 'border-base-content/8 hover:border-base-content/20 hover:bg-base-300/30'
+                            }
+                          `}
+                          onClick={() =>
+                            setPersisted((p) => ({
+                              ...p,
+                              aiModel: m.id,
+                              aiProvider: m.provider?.trim() || undefined,
+                            }))
+                          }
+                          title={m.description ?? undefined}
+                        >
+                          {/* Selected checkmark */}
+                          {isSelected && (
+                            <div className="absolute top-2 right-2 flex h-5 w-5 items-center justify-center rounded-full bg-success text-success-content">
+                              <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                              </svg>
+                            </div>
+                          )}
+                          {/* Model name */}
+                          <span className="text-sm font-semibold leading-tight">{m.name}</span>
+                          {/* Price + badge row */}
+                          <div className="flex items-center gap-2 flex-wrap">
+                            {price != null && (
+                              <span className="text-xs font-medium opacity-50">~{price} TON</span>
+                            )}
+                            {m.isThinking != null && (
+                              <span
+                                className={`inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-medium ${
+                                  m.isThinking
+                                    ? 'bg-info/15 text-info'
+                                    : 'bg-warning/15 text-warning'
+                                }`}
+                              >
+                                {m.isThinking ? 'Thinking' : 'Fast'}
+                              </span>
+                            )}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
 
