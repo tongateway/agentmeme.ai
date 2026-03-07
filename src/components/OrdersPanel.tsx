@@ -6,6 +6,7 @@ import {
   getDexOrderStats,
   getTonPriceUsd,
   resolveCoinSymbols,
+  fromNanoToken,
   type DexOrder,
   type DexOrderStats,
 } from '@/lib/api';
@@ -224,14 +225,17 @@ export function OrdersPanel({ contractAddress }: OrdersPanelProps) {
                 {orders.map((o) => {
                   const fromLabel = coinLabel(o.from_coin_id, coinMap);
                   const toLabel = coinLabel(o.to_coin_id, coinMap);
+                  // Convert nano amounts to human-readable using token decimals
+                  const humanAmount = fromNanoToken(o.initial_amount, fromLabel);
+                  const humanRate = fromNanoToken(o.price_rate, toLabel);
                   // USD value: only when from_coin is TON (coin 0) and we have a price
                   const usdValue =
                     o.from_coin_id === 0 && tonPrice != null
-                      ? o.initial_amount * tonPrice
+                      ? humanAmount * tonPrice
                       : null;
                   // Approximate receive tokens
                   const receiveAmount =
-                    o.price_rate > 0 ? o.initial_amount * o.price_rate : null;
+                    humanRate > 0 ? humanAmount * humanRate : null;
                   return (
                     <tr key={o.id} className="hover">
                       <td className="mono text-xs whitespace-nowrap">{fmtTime(o.created_at)}</td>
@@ -241,13 +245,13 @@ export function OrdersPanel({ contractAddress }: OrdersPanelProps) {
                         <span className="font-medium text-xs">{toLabel}</span>
                       </td>
                       <td className="mono text-xs text-right whitespace-nowrap">
-                        <div>{fmtAmount(o.initial_amount)} {fromLabel}</div>
+                        <div>{fmtAmount(humanAmount)} {fromLabel}</div>
                         {usdValue != null && (
                           <div className="opacity-50 text-[10px]">~${usdValue.toFixed(2)}</div>
                         )}
                       </td>
                       <td className="mono text-xs text-right whitespace-nowrap hidden sm:table-cell">
-                        {o.price_rate ? fmtAmount(o.price_rate) : '—'}
+                        {humanRate > 0 ? fmtAmount(humanRate) : '—'}
                       </td>
                       <td className="mono text-xs text-right whitespace-nowrap hidden sm:table-cell">
                         {receiveAmount != null ? (

@@ -284,7 +284,7 @@ const TOKEN_DECIMALS: Record<string, number> = {
 const DEFAULT_TOKEN_DECIMALS = 9;
 
 /** Convert a nano (smallest-unit) amount to a human-readable number. */
-function fromNanoToken(nano: number, currency?: string): number {
+export function fromNanoToken(nano: number, currency?: string): number {
   const decimals = TOKEN_DECIMALS[(currency ?? '').toUpperCase()] ?? DEFAULT_TOKEN_DECIMALS;
   return nano / 10 ** decimals;
 }
@@ -930,13 +930,18 @@ export async function getDexOrderBook(opts: {
   if (!res.ok) throw new Error(`Open4Dev order book error: ${res.status} ${res.statusText}`);
   const data = (await res.json()) as Record<string, unknown>;
 
+  const toDec = Number(data.to_decimals ?? 9);
+  const fromDec = Number(data.from_decimals ?? 9);
+  const baseFactor = 10 ** toDec;   // to_symbol (base) nano → human
+  const quoteFactor = 10 ** fromDec; // from_symbol (quote) nano → human
+
   const parseLevel = (l: Record<string, unknown>): DexOrderBookLevel => ({
-    price_rate: Number(l.price_rate ?? 0),
-    total_amount: Number(l.total_amount ?? 0),
+    price_rate: Number(l.price_rate ?? 0) / baseFactor,
+    total_amount: Number(l.total_amount ?? 0) / baseFactor,
     order_count: Number(l.order_count ?? 0),
-    total_value: Number(l.total_value ?? 0),
-    cumulative_amount: Number(l.cumulative_amount ?? 0),
-    cumulative_value: Number(l.cumulative_value ?? 0),
+    total_value: Number(l.total_value ?? 0) / quoteFactor,
+    cumulative_amount: Number(l.cumulative_amount ?? 0) / baseFactor,
+    cumulative_value: Number(l.cumulative_value ?? 0) / quoteFactor,
   });
 
   const asks = Array.isArray(data.asks) ? data.asks.map((a: Record<string, unknown>) => parseLevel(a)) : [];
@@ -945,10 +950,10 @@ export async function getDexOrderBook(opts: {
   return {
     from_symbol: String(data.from_symbol ?? opts.fromSymbol),
     to_symbol: String(data.to_symbol ?? opts.toSymbol),
-    from_decimals: Number(data.from_decimals ?? 9),
-    to_decimals: Number(data.to_decimals ?? 9),
-    spread: data.spread != null ? Number(data.spread) : null,
-    mid_price: data.mid_price != null ? Number(data.mid_price) : null,
+    from_decimals: fromDec,
+    to_decimals: toDec,
+    spread: data.spread != null ? Number(data.spread) / baseFactor : null,
+    mid_price: data.mid_price != null ? Number(data.mid_price) / baseFactor : null,
     asks,
     bids,
   };
@@ -1084,6 +1089,7 @@ export async function getDexTradingStats(fromSymbol: string, toSymbol: string): 
   const res = await fetch(`${OPEN4DEV_BASE}/orders/trading-stats?${params}`);
   const data = (await res.json()) as Record<string, unknown>;
 
+  const volFactor = 10 ** Number(data.from_decimals ?? 9); // volumes are in from_symbol nano
   const periodsRaw = Array.isArray(data.periods) ? data.periods as Record<string, unknown>[] : [];
   const periods = periodsRaw.map((p) => {
     const byStatusRaw = p.by_status;
@@ -1093,14 +1099,14 @@ export async function getDexTradingStats(fromSymbol: string, toSymbol: string): 
         if (!val || typeof val !== 'object') continue;
         byStatus[status] = {
           count: Number((val as Record<string, unknown>).count ?? 0),
-          volume: Number((val as Record<string, unknown>).volume ?? 0),
+          volume: Number((val as Record<string, unknown>).volume ?? 0) / volFactor,
         };
       }
     }
     return {
       period: String(p.period ?? ''),
       total_orders: Number(p.total_orders ?? 0),
-      total_volume: Number(p.total_volume ?? 0),
+      total_volume: Number(p.total_volume ?? 0) / volFactor,
       by_status: byStatus,
     };
   });
