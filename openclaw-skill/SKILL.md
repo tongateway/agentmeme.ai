@@ -23,11 +23,7 @@ Trade tokens on the TON blockchain through open4dev order-book contracts. Suppor
 
 ## One-Time Setup
 
-1. **Generate a burner TON wallet** (use Tonkeeper or any TON wallet app) and save the 24-word mnemonic.
-
-2. **Fund the wallet** with a small amount of TON (0.5-1 TON recommended for gas fees).
-
-3. **Install the skill:**
+1. **Install the skill:**
 
 ```bash
 mkdir -p ~/.openclaw/skills/openclaw
@@ -36,11 +32,27 @@ cd ~/.openclaw/skills/openclaw
 npm install
 ```
 
-4. **Add mnemonic to environment:**
+2. **Generate a mnemonic:**
+
+```bash
+npx tsx scripts/generate-mnemonic.ts
+```
+
+This prints a fresh 24-word mnemonic and the corresponding W5 wallet address. Copy the mnemonic line it outputs.
+
+3. **Add mnemonic to environment:**
 
 Add to `~/.openclaw/.env`:
 ```
 TON_MNEMONIC="word1 word2 word3 ... word24"
+```
+
+4. **Fund the wallet** with a small amount of TON (0.5-1 TON recommended for gas fees) to the address shown by the generate command.
+
+5. **Deploy the wallet:**
+
+```bash
+npx tsx scripts/deploy-wallet.ts
 ```
 
 ## Capabilities
@@ -49,6 +61,7 @@ TON_MNEMONIC="word1 word2 word3 ... word24"
 
 | Command | Script | Description |
 |---------|--------|-------------|
+| Generate mnemonic | `npx tsx scripts/generate-mnemonic.ts` | Create new 24-word mnemonic + wallet address |
 | Deploy wallet | `npx tsx scripts/deploy-wallet.ts` | Deploy W5 wallet from mnemonic, show address |
 | Check balance | `npx tsx scripts/get-balance.ts` | TON + jetton balances with USD values |
 

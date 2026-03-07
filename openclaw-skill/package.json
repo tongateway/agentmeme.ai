@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "generate-mnemonic": "npx tsx scripts/generate-mnemonic.ts",
     "deploy-wallet": "npx tsx scripts/deploy-wallet.ts",
     "get-balance": "npx tsx scripts/get-balance.ts",
     "get-tokens": "npx tsx scripts/get-tokens.ts",
