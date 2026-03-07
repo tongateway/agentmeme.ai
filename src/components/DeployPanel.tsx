@@ -9,7 +9,7 @@ import {
   agentWalletV5StateInitBocBase64,
   nanoFromTon,
 } from '@/lib/ton/agentWalletV5';
-import { getRaceAiModels, getPromptVariables, registerRaceContract, type AiModelOption, type PromptVariable, type PublicApiConfig } from '@/lib/api';
+import { getRaceAiModels, getPromptVariables, registerRaceContract, type AiModelOption, type AiModelsByProvider, type PromptVariable, type PublicApiConfig } from '@/lib/api';
 
 function fmtAddr(addr: string): string {
   if (addr.length <= 16) return addr;
@@ -313,7 +313,7 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
 
   const [busy, setBusy] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
-  const [aiModels, setAiModels] = useState<AiModelOption[]>(FALLBACK_AI_MODELS);
+  const [aiModelGroups, setAiModelGroups] = useState<AiModelsByProvider[]>([]);
   const [modelsLoading, setModelsLoading] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [promptVars, setPromptVars] = useState<PromptVariable[]>([]);
@@ -392,28 +392,40 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
       setModelsLoading(true);
       try {
         const grouped = await getRaceAiModels(raceCfg);
-        const all = grouped.flatMap((g) => g.models);
-        const seen = new Set<string>();
-        const unique = all.filter((m) => {
-          const id = m.id.trim();
-          const provider = (m.provider ?? '').trim().toLowerCase();
-          const key = `${provider}::${id.toLowerCase()}`;
-          if (!id || seen.has(key)) return false;
-          seen.add(key);
-          return true;
-        });
-        if (!cancelled && unique.length > 0) {
-          setAiModels(unique);
+        if (!cancelled && grouped.length > 0) {
+          setAiModelGroups(grouped);
         }
       } finally {
         if (!cancelled) setModelsLoading(false);
       }
     };
     void loadModels();
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [raceCfg]);
+
+  const aiModels = useMemo(() => {
+    if (aiModelGroups.length === 0) return FALLBACK_AI_MODELS;
+    const all = aiModelGroups.flatMap((g) => g.models);
+    const seen = new Set<string>();
+    return all.filter((m) => {
+      const key = `${(m.provider ?? '').toLowerCase()}::${m.id.toLowerCase()}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }, [aiModelGroups]);
+
+  const displayGroups = useMemo((): AiModelsByProvider[] => {
+    if (aiModelGroups.length > 0) return aiModelGroups;
+    // Fallback: group FALLBACK_AI_MODELS by provider
+    const map = new Map<string, AiModelOption[]>();
+    for (const m of FALLBACK_AI_MODELS) {
+      const p = m.provider ?? 'Other';
+      if (!map.has(p)) map.set(p, []);
+      map.get(p)!.push(m);
+    }
+    return Array.from(map.entries()).map(([provider, models]) => ({ provider, models }));
+  }, [aiModelGroups]);
 
   // Fetch prompt variables
   useEffect(() => {
