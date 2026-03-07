@@ -278,6 +278,8 @@ const TOKEN_DECIMALS: Record<string, number> = {
   NOT: 9,
   DOGS: 9,
   JETTON: 9,
+  XAUT0: 6,
+  CBBTC: 8,
 };
 const DEFAULT_TOKEN_DECIMALS = 9;
 
