@@ -674,28 +674,13 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
         </div>
 
         <div className="px-6 py-5 space-y-5">
-          {/* Agent Name */}
+          {/* Section 1: Choose AI Model */}
           <div>
-            <label className="text-xs font-medium opacity-60 mb-1.5 block" htmlFor="agentName">
-              Agent Name
-            </label>
-            <input
-              id="agentName"
-              type="text"
-              className="input input-bordered w-full"
-              value={persisted.agentName ?? ''}
-              onChange={(e) => setPersisted((p) => ({ ...p, agentName: e.target.value }))}
-              placeholder="e.g. Moon Hunter, Degen Alpha, TON Shark..."
-              maxLength={40}
-            />
-          </div>
-
-          {/* AI Model Selection */}
-          <div>
-            <label className="text-xs font-medium opacity-60 mb-3 block">
-              AI Model
-              {modelsLoading && <span className="ml-2 loading loading-dots loading-xs" />}
-            </label>
+            <div className="flex items-center gap-2 mb-3">
+              <div className="flex h-6 w-6 items-center justify-center rounded-md bg-base-content/8 text-[10px] font-bold opacity-50">1</div>
+              <span className="text-sm font-semibold">Choose AI Model</span>
+              {modelsLoading && <span className="ml-1 loading loading-dots loading-xs" />}
+            </div>
             <div className="space-y-4">
               {displayGroups.map((group) => (
                 <div key={group.provider}>
@@ -771,12 +756,15 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
             </div>
           </div>
 
-          {/* Trading Strategy */}
+          <div className="divider my-1 opacity-20" />
+
+          {/* Section 2: Trading Strategy */}
           <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <label className="text-xs font-medium opacity-60" htmlFor="prompt">
-                Trading Strategy
-              </label>
+            <div className="flex items-center gap-2 mb-3">
+              <div className="flex h-6 w-6 items-center justify-center rounded-md bg-base-content/8 text-[10px] font-bold opacity-50">2</div>
+              <span className="text-sm font-semibold">Trading Strategy</span>
+            </div>
+            <div className="flex items-center justify-end mb-1.5">
               <div className="dropdown dropdown-end">
                 <div tabIndex={0} role="button" className="btn btn-ghost btn-xs gap-1 opacity-60 hover:opacity-100">
                   <FileText className="h-3 w-3" />
@@ -844,14 +832,32 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
             )}
           </div>
 
-          {/* Separator */}
-          <div className="divider my-0 opacity-30" />
+          <div className="divider my-1 opacity-20" />
 
-          {/* Initial Balance + Deploy */}
+          {/* Section 3: Name & Deploy */}
           <div className="space-y-3">
-            <label className="text-xs font-medium opacity-60 block">
-              Initial Balance (TON)
-            </label>
+            <div className="flex items-center gap-2 mb-3">
+              <div className="flex h-6 w-6 items-center justify-center rounded-md bg-base-content/8 text-[10px] font-bold opacity-50">3</div>
+              <span className="text-sm font-semibold">Name & Deploy</span>
+            </div>
+
+            {/* Agent Name */}
+            <div>
+              <label className="text-xs font-medium opacity-60 mb-1.5 block" htmlFor="agentName">
+                Agent Name
+              </label>
+              <input
+                id="agentName"
+                type="text"
+                className="input input-bordered w-full"
+                value={persisted.agentName ?? ''}
+                onChange={(e) => setPersisted((p) => ({ ...p, agentName: e.target.value }))}
+                placeholder="e.g. Moon Hunter, Degen Alpha, TON Shark..."
+                maxLength={40}
+              />
+            </div>
+
+            <label className="text-xs opacity-50 block">Initial Balance (TON)</label>
             <div className="flex items-center gap-2">
               <button
                 className="btn btn-ghost btn-sm btn-square"
