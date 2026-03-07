@@ -98,13 +98,17 @@ cp -r openclaw-skill ~/.openclaw/skills/openclaw
 cd ~/.openclaw/skills/openclaw
 npm install
 
-# Add mnemonic to environment
+# Generate a mnemonic and wallet address
+npx tsx scripts/generate-mnemonic.ts
+
+# Add the output mnemonic to environment
 echo 'TON_MNEMONIC="your 24 words here"' >> ~/.openclaw/.env
 ```
 
 ### Available Commands
 
 ```bash
+npx tsx scripts/generate-mnemonic.ts          # Generate new mnemonic + address
 npx tsx scripts/deploy-wallet.ts              # Deploy W5 wallet
 npx tsx scripts/get-balance.ts                # Check balances
 npx tsx scripts/get-tokens.ts                 # List tradeable tokens
