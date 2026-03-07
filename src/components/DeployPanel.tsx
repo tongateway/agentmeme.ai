@@ -29,6 +29,20 @@ const FALLBACK_AI_MODELS: AiModelOption[] = [
   { id: 'grok-4', name: 'Grok 4', provider: 'xAI' },
 ];
 
+/** Hardcoded model prices in TON (~500 AI decisions per deploy). Will move to API later. */
+const MODEL_PRICES: Record<string, number> = {
+  'Qwen/Qwen3-32B': 2,
+  'claude-haiku-4-5': 3,
+  'claude-sonnet-4-6': 8,
+  'gemini-3.1-flash-lite': 1,
+  'gemini-3.1-pro-preview': 6,
+  'grok-4': 5,
+  'grok-4.1-fast': 3,
+  'gpt-5.2': 4,
+  'gpt-5.2-pro': 10,
+  'deepseek-chat': 2,
+};
+
 type StrategyTemplate = {
   name: string;
   prompt: string;
