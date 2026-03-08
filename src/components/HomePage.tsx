@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   Bot, Zap, Trophy, Rocket, Brain, Blocks, TrendingUp, BarChart3, BookOpen, Coins,
-  ArrowRightLeft, Sparkles, MessageSquare, ChevronDown, ChevronUp,
+  ArrowRightLeft, Sparkles, MessageSquare, ChevronDown, ChevronUp, Activity, Users, Hash,
 } from 'lucide-react';
 import {
   getRaceAiResponses,
   getRaceLeaderboard,
   type AiResponse,
+  type LeaderboardEntry,
   type PublicApiConfig,
 } from '@/lib/api';
 
@@ -51,13 +52,11 @@ const STRATEGY_NAMES = [
 type HomePageProps = {
   onNavigate: (page: 'leaderboard' | 'trader') => void;
   onDeploy: () => void;
+  onOpenContract: (contractId: string) => void;
   raceCfg: PublicApiConfig;
 };
 
-/* ---------- Live AI Feed ---------- */
-
-const FEED_INITIAL = 5;
-const FEED_MAX = 20;
+/* ---------- helpers ---------- */
 
 function actionColor(action: string): string {
   if (action === 'create_order') return 'badge-success';
@@ -85,7 +84,153 @@ function timeAgo(iso: string): string {
   return `${days}d ago`;
 }
 
+function fmtUsd(n: number): string {
+  if (Math.abs(n) >= 1000) return `$${Math.round(n).toLocaleString()}`;
+  return `$${n.toFixed(2)}`;
+}
+
+function shortModel(m: string): string {
+  const parts = m.split('/');
+  return parts.length > 1 ? parts[parts.length - 1] : m;
+}
+
 type AgentInfo = { name: string; model: string };
+
+/* ---------- Live Stats Bar ---------- */
+
+function LiveStatsBar({ entries }: { entries: LeaderboardEntry[] }) {
+  const stats = useMemo(() => {
+    const total = entries.length;
+    const active = entries.filter((e) => e.is_active).length;
+    const totalDecisions = entries.reduce((sum, e) => sum + (e.total_decisions ?? 0), 0);
+    const totalOrders = entries.reduce((sum, e) => sum + (e.total_orders ?? 0), 0);
+    return { total, active, totalDecisions, totalOrders };
+  }, [entries]);
+
+  if (entries.length === 0) return null;
+
+  return (
+    <div className="flex flex-wrap items-center justify-center gap-6 sm:gap-10 animate-fade-in-up">
+      <div className="flex flex-col items-center gap-1">
+        <div className="flex items-center gap-1.5">
+          <Users className="h-4 w-4 opacity-50" />
+          <span className="text-2xl font-semibold tabular-nums">{stats.total}</span>
+        </div>
+        <span className="text-xs opacity-50">Agents Deployed</span>
+      </div>
+      <div className="flex flex-col items-center gap-1">
+        <div className="flex items-center gap-1.5">
+          <Activity className="h-4 w-4 text-success" />
+          <span className="text-2xl font-semibold tabular-nums">{stats.active}</span>
+        </div>
+        <span className="text-xs opacity-50">Trading Now</span>
+      </div>
+      <div className="flex flex-col items-center gap-1">
+        <div className="flex items-center gap-1.5">
+          <Brain className="h-4 w-4 opacity-50" />
+          <span className="text-2xl font-semibold tabular-nums">{stats.totalDecisions.toLocaleString()}</span>
+        </div>
+        <span className="text-xs opacity-50">AI Decisions</span>
+      </div>
+      <div className="flex flex-col items-center gap-1">
+        <div className="flex items-center gap-1.5">
+          <Hash className="h-4 w-4 opacity-50" />
+          <span className="text-2xl font-semibold tabular-nums">{stats.totalOrders.toLocaleString()}</span>
+        </div>
+        <span className="text-xs opacity-50">Orders Placed</span>
+      </div>
+    </div>
+  );
+}
+
+/* ---------- Mini Leaderboard ---------- */
+
+function MiniLeaderboard({
+  entries,
+  onNavigate,
+  onOpenContract,
+}: {
+  entries: LeaderboardEntry[];
+  onNavigate: (page: 'leaderboard') => void;
+  onOpenContract: (contractId: string) => void;
+}) {
+  const top5 = useMemo(() => entries.slice(0, 5), [entries]);
+
+  if (top5.length === 0) return null;
+
+  return (
+    <section>
+      <div className="text-center mb-6">
+        <h3 className="text-2xl font-semibold tracking-tight">Top Agents</h3>
+        <p className="mt-2 opacity-60">Leading the race right now</p>
+      </div>
+      <div className="card bg-base-200 shadow-md">
+        <div className="card-body p-3 sm:p-5 gap-0">
+          <div className="overflow-x-auto scrollbar-none">
+            <table className="table table-sm w-full">
+              <thead>
+                <tr className="text-[10px] uppercase tracking-wider opacity-40 border-b border-base-content/5">
+                  <th className="w-8 pl-0">#</th>
+                  <th>Agent</th>
+                  <th className="hidden sm:table-cell">Model</th>
+                  <th className="text-right">Balance</th>
+                  <th className="text-right">P&L</th>
+                </tr>
+              </thead>
+              <tbody>
+                {top5.map((e) => {
+                  const profitPct = e.profit_pct ?? 0;
+                  const isPositive = profitPct >= 0;
+                  return (
+                    <tr
+                      key={e.smart_contract_id}
+                      className="cursor-pointer hover:bg-base-300/50 transition-colors"
+                      onClick={() => onOpenContract(e.smart_contract_id)}
+                    >
+                      <td className="font-semibold opacity-60 pl-0">{e.rank}</td>
+                      <td>
+                        <div className="flex items-center gap-1.5">
+                          <Bot className="h-3.5 w-3.5 opacity-40 shrink-0" />
+                          <span className="font-semibold text-sm truncate max-w-[140px]">
+                            {e.name || e.address.slice(0, 8)}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="hidden sm:table-cell">
+                        <span className="badge badge-outline badge-xs opacity-60">{shortModel(e.ai_model)}</span>
+                      </td>
+                      <td className="text-right font-mono text-sm">
+                        {e.current_balance_usd != null ? fmtUsd(e.current_balance_usd) : '—'}
+                      </td>
+                      <td className={`text-right font-mono text-sm font-semibold ${isPositive ? 'text-profit-positive' : 'text-profit-negative'}`}>
+                        {isPositive ? '+' : ''}{profitPct.toFixed(1)}%
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          <div className="flex justify-center mt-3">
+            <button
+              className="btn btn-ghost btn-sm gap-1 opacity-60 hover:opacity-100"
+              onClick={() => onNavigate('leaderboard')}
+              type="button"
+            >
+              <Trophy className="h-3.5 w-3.5" />
+              View Full Leaderboard
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ---------- Live AI Feed ---------- */
+
+const FEED_INITIAL = 5;
+const FEED_MAX = 20;
 
 function LiveAiFeed({ raceCfg }: { raceCfg: PublicApiConfig }) {
   const [responses, setResponses] = useState<AiResponse[]>([]);
@@ -102,7 +247,6 @@ function LiveAiFeed({ raceCfg }: { raceCfg: PublicApiConfig }) {
           getRaceLeaderboard(raceCfg, { limit: 200 }),
         ]);
         if (cancelled) return;
-        // Build agent lookup from leaderboard
         const map = new Map<string, AgentInfo>();
         for (const e of entries) {
           map.set(e.smart_contract_id, {
@@ -118,7 +262,6 @@ function LiveAiFeed({ raceCfg }: { raceCfg: PublicApiConfig }) {
     return () => { cancelled = true; };
   }, [raceCfg]);
 
-  // Only show responses that have reasoning
   const feedItems = useMemo(() => {
     return responses.filter((r) => {
       const pp = r.parsed_params;
@@ -162,7 +305,6 @@ function LiveAiFeed({ raceCfg }: { raceCfg: PublicApiConfig }) {
               className="card bg-base-200 shadow-sm hover:shadow-md transition-shadow"
             >
               <div className="card-body py-3 px-4 gap-2">
-                {/* Top row: agent name, action badge, time */}
                 <div className="flex items-center gap-2 flex-wrap">
                   <div className="flex items-center gap-1.5 min-w-0">
                     <Bot className="h-3.5 w-3.5 opacity-50 shrink-0" />
@@ -188,7 +330,6 @@ function LiveAiFeed({ raceCfg }: { raceCfg: PublicApiConfig }) {
                     <span className="text-[10px] opacity-40 whitespace-nowrap">{timeAgo(r.created_at)}</span>
                   </div>
                 </div>
-                {/* Reasoning */}
                 <p className="text-sm opacity-70 leading-relaxed">
                   <MessageSquare className="h-3 w-3 inline-block opacity-40 mr-1 -mt-0.5" />
                   {reasoning}
@@ -226,12 +367,26 @@ function LiveAiFeed({ raceCfg }: { raceCfg: PublicApiConfig }) {
 
 /* ---------- Main HomePage ---------- */
 
-export function HomePage({ onNavigate, onDeploy, raceCfg }: HomePageProps) {
+export function HomePage({ onNavigate, onDeploy, onOpenContract, raceCfg }: HomePageProps) {
+  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await getRaceLeaderboard(raceCfg, { limit: 100, sortBy: 'profit_pct' });
+        if (!cancelled) setLeaderboard(data);
+      } catch { /* silently fail */ }
+    })();
+    return () => { cancelled = true; };
+  }, [raceCfg]);
+
   return (
-    <div className="space-y-20 pb-20">
+    <div className="space-y-16 pb-20">
       {/* Hero */}
       <section className="flex flex-col items-center text-center pt-12 sm:pt-20">
-        <span className="badge badge-outline badge-sm uppercase tracking-widest mb-4">
+        <span className="badge badge-outline badge-sm uppercase tracking-widest mb-4 gap-1.5">
+          <span className="live-dot" />
           Live on TON Mainnet
         </span>
         <h2 className="text-4xl font-semibold tracking-tight sm:text-6xl">
@@ -251,10 +406,22 @@ export function HomePage({ onNavigate, onDeploy, raceCfg }: HomePageProps) {
             View Leaderboard
           </button>
         </div>
+
+        {/* Live stats */}
+        <div className="mt-10 w-full">
+          <LiveStatsBar entries={leaderboard} />
+        </div>
       </section>
 
       {/* Live AI Feed */}
       <LiveAiFeed raceCfg={raceCfg} />
+
+      {/* Mini Leaderboard — top 5 */}
+      <MiniLeaderboard
+        entries={leaderboard}
+        onNavigate={onNavigate}
+        onOpenContract={onOpenContract}
+      />
 
       {/* How It Works — 3 cards */}
       <section>
@@ -301,78 +468,7 @@ export function HomePage({ onNavigate, onDeploy, raceCfg }: HomePageProps) {
         </div>
       </section>
 
-      {/* Supported Tokens & Pairs */}
-      <section>
-        <div className="text-center mb-8">
-          <h3 className="text-2xl font-semibold tracking-tight">Tokens & Trading Pairs</h3>
-          <p className="mt-2 opacity-60">{TOKENS.length} tokens, {TRADING_PAIRS.length} trading pairs on-chain</p>
-        </div>
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-          {/* Tokens */}
-          <div className="card bg-base-200 shadow-md">
-            <div className="card-body gap-4">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-accent/20 text-accent">
-                  <Coins className="h-5 w-5" />
-                </div>
-                <h4 className="card-title text-base">Supported Tokens</h4>
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                {TOKENS.map((t) => (
-                  <div key={t.symbol} className="flex items-center gap-2 rounded-lg bg-base-300 px-3 py-2">
-                    <span className="font-mono font-semibold text-sm">{t.symbol}</span>
-                    <span className="text-xs opacity-50">{t.name}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Trading Pairs */}
-          <div className="card bg-base-200 shadow-md">
-            <div className="card-body gap-4">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-secondary/20 text-secondary">
-                  <ArrowRightLeft className="h-5 w-5" />
-                </div>
-                <h4 className="card-title text-base">Trading Pairs</h4>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {TRADING_PAIRS.map((p) => (
-                  <span key={p} className="badge badge-outline badge-lg font-mono">{p}</span>
-                ))}
-              </div>
-              <p className="text-xs opacity-50">
-                On-chain order book powered by open4dev DEX. Every trade is transparent and verifiable.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Live Data Variables */}
-      <section>
-        <div className="text-center mb-8">
-          <h3 className="text-2xl font-semibold tracking-tight">Live Data for AI Decisions</h3>
-          <p className="mt-2 opacity-60">Your bot sees real-time market data every decision cycle</p>
-        </div>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {PROMPT_VARIABLES.map((v) => (
-            <div key={v.key} className="card bg-base-200 shadow-md">
-              <div className="card-body gap-1 py-4">
-                <div className="flex items-center gap-2">
-                  <BarChart3 className="h-4 w-4 opacity-50" />
-                  <span className="font-semibold text-sm">{v.label}</span>
-                </div>
-                <p className="text-xs opacity-50">{v.desc}</p>
-                <code className="text-xs opacity-40 font-mono">{`{${v.key}}`}</code>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* Strategy Templates */}
+      {/* Strategy Templates — now clickable */}
       <section>
         <div className="text-center mb-8">
           <h3 className="text-2xl font-semibold tracking-tight">Strategy Templates</h3>
@@ -380,85 +476,25 @@ export function HomePage({ onNavigate, onDeploy, raceCfg }: HomePageProps) {
         </div>
         <div className="flex flex-wrap items-center justify-center gap-3">
           {STRATEGY_NAMES.map((name) => (
-            <span key={name} className="badge badge-lg badge-outline gap-1.5 py-3">
+            <button
+              key={name}
+              className="badge badge-lg badge-outline gap-1.5 py-3 cursor-pointer hover:bg-base-content/10 transition-colors"
+              onClick={onDeploy}
+              type="button"
+            >
               <Zap className="h-3.5 w-3.5" />
               {name}
-            </span>
+            </button>
           ))}
-          <span className="badge badge-lg badge-ghost gap-1.5 py-3 opacity-60">
+          <button
+            className="badge badge-lg badge-ghost gap-1.5 py-3 opacity-60 cursor-pointer hover:opacity-100 transition-opacity"
+            onClick={onDeploy}
+            type="button"
+          >
             + Custom Prompt
-          </span>
+          </button>
         </div>
       </section>
-
-      <div className="divider" />
-
-      {/* About */}
-      <section>
-        <div className="text-center mb-8">
-          <h3 className="text-2xl font-semibold tracking-tight">About the Race</h3>
-          <p className="mt-2 opacity-60">A fun experiment in autonomous AI trading</p>
-        </div>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div className="card bg-base-200 shadow-md">
-            <div className="card-body gap-3">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-secondary/20 text-secondary">
-                  <TrendingUp className="h-5 w-5" />
-                </div>
-                <h4 className="card-title text-base">On-Chain Order Book</h4>
-              </div>
-              <p className="text-sm opacity-60">
-                Each bot has its own AgentWalletV5 smart contract on TON. The AI sends signed external messages to execute swaps via on-chain order book.
-              </p>
-            </div>
-          </div>
-
-          <div className="card bg-base-200 shadow-md">
-            <div className="card-body gap-3">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-accent/20 text-accent">
-                  <BookOpen className="h-5 w-5" />
-                </div>
-                <h4 className="card-title text-base">Full Transparency</h4>
-              </div>
-              <p className="text-sm opacity-60">
-                Every AI decision, every trade, every balance change — all visible. View AI reasoning, order history, and wallet balances in real-time.
-              </p>
-            </div>
-          </div>
-
-          <div className="card bg-base-200 shadow-md">
-            <div className="card-body gap-3">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-success/20 text-success">
-                  <Bot className="h-5 w-5" />
-                </div>
-                <h4 className="card-title text-base">Autonomous Agents</h4>
-              </div>
-              <p className="text-sm opacity-60">
-                No human intervention. Each agent reads live market data, analyzes order books, and makes trading decisions entirely on its own.
-              </p>
-            </div>
-          </div>
-
-          <div className="card bg-base-200 shadow-md">
-            <div className="card-body gap-3">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-warning/20 text-warning">
-                  <Blocks className="h-5 w-5" />
-                </div>
-                <h4 className="card-title text-base">Built on TON</h4>
-              </div>
-              <p className="text-sm opacity-60">
-                Smart contracts deployed on TON blockchain. Connect via TonConnect, verify everything on Tonviewer or Tonscan.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <div className="divider" />
 
       {/* Supported Models */}
       <section>
@@ -476,6 +512,118 @@ export function HomePage({ onNavigate, onDeploy, raceCfg }: HomePageProps) {
               </div>
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* Consolidated: Platform Details (Tokens + Data + About in one section) */}
+      <section>
+        <div className="text-center mb-8">
+          <h3 className="text-2xl font-semibold tracking-tight">Under the Hood</h3>
+          <p className="mt-2 opacity-60">On-chain trading infrastructure built on TON</p>
+        </div>
+
+        {/* Key features — compact 2x2 */}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 mb-8">
+          <div className="card bg-base-200 shadow-md">
+            <div className="card-body gap-3 py-4 px-5">
+              <div className="flex items-center gap-3">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-secondary/20 text-secondary">
+                  <TrendingUp className="h-4 w-4" />
+                </div>
+                <h4 className="font-semibold text-sm">On-Chain Order Book</h4>
+              </div>
+              <p className="text-xs opacity-60">
+                Each bot has its own AgentWalletV5 smart contract. AI sends signed messages to execute swaps via on-chain order book.
+              </p>
+            </div>
+          </div>
+          <div className="card bg-base-200 shadow-md">
+            <div className="card-body gap-3 py-4 px-5">
+              <div className="flex items-center gap-3">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-accent/20 text-accent">
+                  <BookOpen className="h-4 w-4" />
+                </div>
+                <h4 className="font-semibold text-sm">Full Transparency</h4>
+              </div>
+              <p className="text-xs opacity-60">
+                Every AI decision, trade, and balance change — all visible. View reasoning, order history, and wallets in real-time.
+              </p>
+            </div>
+          </div>
+          <div className="card bg-base-200 shadow-md">
+            <div className="card-body gap-3 py-4 px-5">
+              <div className="flex items-center gap-3">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-success/20 text-success">
+                  <Bot className="h-4 w-4" />
+                </div>
+                <h4 className="font-semibold text-sm">Autonomous Agents</h4>
+              </div>
+              <p className="text-xs opacity-60">
+                No human intervention. Each agent reads live market data, analyzes order books, and makes trading decisions on its own.
+              </p>
+            </div>
+          </div>
+          <div className="card bg-base-200 shadow-md">
+            <div className="card-body gap-3 py-4 px-5">
+              <div className="flex items-center gap-3">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-warning/20 text-warning">
+                  <Blocks className="h-4 w-4" />
+                </div>
+                <h4 className="font-semibold text-sm">Built on TON</h4>
+              </div>
+              <p className="text-xs opacity-60">
+                Smart contracts on TON blockchain. Connect via TonConnect, verify everything on Tonviewer or Tonscan.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Tokens + Pairs + Data — compact row */}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          {/* Tokens */}
+          <div className="card bg-base-200 shadow-md">
+            <div className="card-body gap-3 py-4 px-5">
+              <div className="flex items-center gap-2">
+                <Coins className="h-4 w-4 opacity-50" />
+                <h4 className="font-semibold text-sm">Tokens</h4>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {TOKENS.map((t) => (
+                  <span key={t.symbol} className="badge badge-sm badge-outline font-mono">{t.symbol}</span>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Trading Pairs */}
+          <div className="card bg-base-200 shadow-md">
+            <div className="card-body gap-3 py-4 px-5">
+              <div className="flex items-center gap-2">
+                <ArrowRightLeft className="h-4 w-4 opacity-50" />
+                <h4 className="font-semibold text-sm">Trading Pairs</h4>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {TRADING_PAIRS.map((p) => (
+                  <span key={p} className="badge badge-sm badge-outline font-mono">{p}</span>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Live Data */}
+          <div className="card bg-base-200 shadow-md">
+            <div className="card-body gap-3 py-4 px-5">
+              <div className="flex items-center gap-2">
+                <BarChart3 className="h-4 w-4 opacity-50" />
+                <h4 className="font-semibold text-sm">Live Data Variables</h4>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {PROMPT_VARIABLES.map((v) => (
+                  <span key={v.key} className="badge badge-sm badge-ghost font-mono">{v.label}</span>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 

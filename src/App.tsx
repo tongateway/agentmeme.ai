@@ -411,7 +411,7 @@ export default function App() {
 
       <main className="mx-auto max-w-6xl px-4 sm:px-6 pb-10 pt-6">
         {page === 'home' ? (
-          <HomePage onNavigate={setPage} onDeploy={openDeploy} raceCfg={raceCfg} />
+          <HomePage onNavigate={setPage} onDeploy={openDeploy} onOpenContract={openContractFromLeaderboard} raceCfg={raceCfg} />
         ) : page === 'leaderboard' ? (
           <LeaderboardPage raceCfg={raceCfg} onOpenContract={openContractFromLeaderboard} />
         ) : page === 'stats' ? (
