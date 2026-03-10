@@ -844,9 +844,12 @@ export async function getTonPriceUsd(): Promise<number | null> {
  * open4dev DEX API — Order Book
  * ========================================================================== */
 
-/* ---------- Order Scanner (order-scanner.reist01.workers.dev) ---------- */
+/* ---------- Order Scanner (custom domain) ---------- */
 
-const ORDER_SCANNER_BASE = 'https://order-scanner.reist01.workers.dev';
+const ORDER_SCANNER_BASE = (
+  (import.meta.env.VITE_ORDER_SCANNER_URL as string | undefined) ??
+  'https://scanner.jarvis-agent.workers.dev'
+).trim().replace(/\/$/, '');
 
 export type ScannerLevel = {
   price: number;       // base per quote (raw float)
