@@ -20,4 +20,5 @@ npm run dev
 Notes:
 
 - API calls go to `VITE_RACE_API_URL` (default `https://ai-api.open4dev.xyz`).
+- Order scanner calls go to `VITE_ORDER_SCANNER_URL` (default `https://scanner.jarvis-agent.workers.dev`).
 - TON Connect requires `public/tonconnect-manifest.json`. For mobile wallets you typically need an HTTPS URL for the manifest.
