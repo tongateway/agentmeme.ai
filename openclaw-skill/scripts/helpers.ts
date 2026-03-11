@@ -7,6 +7,23 @@ export const RACE_API = process.env.OPEN4DEV_RACE_API ?? "https://ai-api.open4de
 export const DEX_API = process.env.OPEN4DEV_DEX_API ?? "https://api.open4dev.xyz/api/v1";
 export const TONCENTER = process.env.TONCENTER_API ?? "https://toncenter.com";
 
+type ToncenterAddressBook = Record<string, { user_friendly?: string }>;
+
+function toFriendlyOrRaw(rawAddress: string): string {
+  try {
+    return Address.parse(rawAddress).toString({ bounceable: false });
+  } catch {
+    return rawAddress;
+  }
+}
+
+export function normalizeRawAddress(address: string): string {
+  const trimmed = (address ?? "").trim();
+  if (!trimmed) throw new Error("Address is empty");
+  if (/^-?\d:[0-9a-fA-F]{64}$/.test(trimmed)) return trimmed.toLowerCase();
+  return Address.parse(trimmed).toRawString().toLowerCase();
+}
+
 export function getMnemonic(): string[] {
   const raw = process.env.TON_MNEMONIC;
   if (!raw || raw.trim().split(/\s+/).length < 24) {
@@ -53,36 +70,74 @@ export async function getAddressInfo(address: string): Promise<{ balance: bigint
 
 export type JettonWallet = {
   jettonAddress: string;
+  jettonRawAddress: string;
+  walletAddress: string;
+  walletRawAddress: string;
   balance: string;
 };
 
-export async function getJettonBalances(ownerAddress: string): Promise<JettonWallet[]> {
+export async function getJettonBalances(ownerAddress: string, opts?: { includeZero?: boolean }): Promise<JettonWallet[]> {
   const res = await fetch(
-    `${TONCENTER}/api/v3/jetton/wallets?owner_address=${encodeURIComponent(ownerAddress)}&limit=50`
+    `${TONCENTER}/api/v3/jetton/wallets?owner_address=${encodeURIComponent(ownerAddress)}&limit=200`
   );
-  const data = await res.json() as { jetton_wallets?: { jetton: string; balance: string }[] };
+  const data = await res.json() as {
+    jetton_wallets?: { address: string; jetton: string; balance: string }[];
+    address_book?: ToncenterAddressBook;
+  };
+
+  const includeZero = Boolean(opts?.includeZero);
+  const friendlyByRaw = new Map<string, string>();
+  for (const [raw, entry] of Object.entries(data.address_book ?? {})) {
+    if (!entry?.user_friendly) continue;
+    try {
+      friendlyByRaw.set(normalizeRawAddress(raw), entry.user_friendly);
+    } catch {
+      // skip invalid address book entries
+    }
+  }
+
   return (data.jetton_wallets ?? [])
-    .filter(w => w.balance && w.balance !== "0")
-    .map(w => ({ jettonAddress: w.jetton, balance: w.balance }));
+    .filter(w => includeZero || (w.balance && w.balance !== "0"))
+    .map(w => {
+      const jettonRawAddress = normalizeRawAddress(w.jetton);
+      const walletRawAddress = normalizeRawAddress(w.address);
+      return {
+        jettonAddress: friendlyByRaw.get(jettonRawAddress) ?? toFriendlyOrRaw(jettonRawAddress),
+        jettonRawAddress,
+        walletAddress: friendlyByRaw.get(walletRawAddress) ?? toFriendlyOrRaw(walletRawAddress),
+        walletRawAddress,
+        balance: String(w.balance ?? "0"),
+      };
+    });
 }
 
 // --- Race API helpers ---
 
 export type RaceToken = {
-  id: string; address: string; name: string; symbol: string; decimals: number; price_usd: number;
+  id: string; address: string; raw_address: string; name: string; symbol: string; decimals: number; price_usd: number;
 };
 
 export async function fetchRaceTokens(): Promise<RaceToken[]> {
   const res = await fetch(`${RACE_API}/api/tokens`);
   const data = await res.json() as Record<string, unknown>[];
-  return (Array.isArray(data) ? data : []).map(t => ({
-    id: String(t.id ?? ""),
-    address: String(t.address ?? ""),
-    name: String(t.name ?? ""),
-    symbol: String(t.symbol ?? ""),
-    decimals: Number(t.decimals ?? 9),
-    price_usd: Number(t.price_usd ?? 0),
-  }));
+  return (Array.isArray(data) ? data : []).map(t => {
+    const address = String(t.address ?? "");
+    return {
+      id: String(t.id ?? ""),
+      address,
+      raw_address: (() => {
+        try {
+          return normalizeRawAddress(address);
+        } catch {
+          return "";
+        }
+      })(),
+      name: String(t.name ?? ""),
+      symbol: String(t.symbol ?? "").toUpperCase(),
+      decimals: Number(t.decimals ?? 9),
+      price_usd: Number(t.price_usd ?? 0),
+    };
+  }).filter(t => t.symbol.length > 0);
 }
 
 // --- DEX API helpers ---
@@ -147,8 +202,54 @@ export async function fetchDexCoins(): Promise<DexCoin[]> {
   const coins = (data as Record<string, unknown>).coins;
   if (!Array.isArray(coins)) return [];
   return coins.map((c: Record<string, unknown>) => ({
-    id: Number(c.id ?? 0), name: String(c.name ?? ""), symbol: String(c.symbol ?? ""),
+    id: Number(c.id ?? 0), name: String(c.name ?? ""), symbol: String(c.symbol ?? "").toUpperCase(),
   }));
+}
+
+export type DexVault = {
+  id: number;
+  raw_address: string;
+  jetton_minter_address: string | null;
+  type: string;
+};
+
+export async function fetchDexVaults(opts?: { type?: "ton" | "jetton"; jettonMinterAddress?: string; limit?: number }): Promise<DexVault[]> {
+  const params = new URLSearchParams({ limit: String(opts?.limit ?? 50) });
+  if (opts?.type) params.set("type", opts.type);
+  if (opts?.jettonMinterAddress) params.set("jetton_minter_address", normalizeRawAddress(opts.jettonMinterAddress));
+
+  const res = await fetch(`${DEX_API}/vaults?${params}`);
+  if (!res.ok) throw new Error(`Vaults error: ${res.status}`);
+  const data = await res.json() as Record<string, unknown>;
+  const vaults = (data as Record<string, unknown>).vaults;
+  if (!Array.isArray(vaults)) return [];
+
+  return vaults
+    .map((v: Record<string, unknown>) => {
+      const raw_address = String(v.RawAddress ?? v.raw_address ?? "");
+      const jetton_minter_address = v.JettonMinterAddress ?? v.jetton_minter_address;
+      let normalizedRawAddress = "";
+      try {
+        normalizedRawAddress = normalizeRawAddress(raw_address);
+      } catch {
+        normalizedRawAddress = "";
+      }
+      return {
+        id: Number(v.ID ?? v.id ?? 0),
+        raw_address: normalizedRawAddress,
+        jetton_minter_address: jetton_minter_address == null
+          ? null
+          : (() => {
+            try {
+              return normalizeRawAddress(String(jetton_minter_address));
+            } catch {
+              return null;
+            }
+          })(),
+        type: String(v.Type ?? v.type ?? "").toLowerCase(),
+      } satisfies DexVault;
+    })
+    .filter(v => v.raw_address.length > 0);
 }
 
 // --- Formatting ---
