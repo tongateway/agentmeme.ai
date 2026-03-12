@@ -227,7 +227,7 @@ export function OrdersPanel({ contractAddress }: OrdersPanelProps) {
                   const toLabel = coinLabel(o.to_coin_id, coinMap);
                   // Convert nano amounts to human-readable using token decimals
                   const humanAmount = fromNanoToken(o.initial_amount, fromLabel);
-                  const humanRate = fromNanoToken(o.price_rate, toLabel);
+                  const humanRate = o.price_rate / 1e18;
                   // USD value: only when from_coin is TON (coin 0) and we have a price
                   const usdValue =
                     o.from_coin_id === 0 && tonPrice != null
