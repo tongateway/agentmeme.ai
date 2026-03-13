@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { TonConnectButton, useTonAddress, useTonWallet } from '@tonconnect/ui-react';
 import { Address } from '@ton/core';
 import { Sun, Moon, AlertTriangle, ShieldAlert, RefreshCw } from 'lucide-react';
-import { listContractsFromLeaderboard, listRaceContracts, registerRaceContract, updateRaceContract, type ContractListItem } from './lib/api';
+import { listContractsFromLeaderboard, listRaceContracts, updateRaceContract, type ContractListItem } from './lib/api';
 import type { PublicApiConfig } from './lib/api';
 import { useLocalStorageState } from './lib/storage';
 import { useAuth } from './lib/useAuth';
@@ -58,7 +58,6 @@ function hashFromRoute(page: Page, tab: TabKey, statsPair?: string | null): stri
 
 const LS_KEY = 'ai-trader-race:v3';
 const MY_CONTRACTS_KEY = 'ai-trader-race:my-contracts';
-const PENDING_DEPLOY_KEY = 'ai-trader-race:pending-deploy';
 
 function normalizeTonAddress(addr: string): string {
   try {
@@ -68,18 +67,6 @@ function normalizeTonAddress(addr: string): string {
   }
 }
 
-/** Stores everything needed to retry a backend registration after the on-chain tx was sent. */
-export type PendingDeploy = {
-  address: string;
-  publicKey: string;
-  secretKey: string;
-  prompt: string;
-  ownerAddress: string; // non-bounceable
-  aiModel: string;
-  aiProvider?: string;
-  name?: string;
-  createdAt: number; // Date.now()
-};
 
 export default function App() {
   const raceApiUrl = ((import.meta.env.VITE_RACE_API_URL as string | undefined) ?? 'https://ai-api.open4dev.xyz').trim().replace(/\/$/, '');
@@ -98,7 +85,7 @@ export default function App() {
   const walletStorageScope = tonAddress ? normalizeTonAddress(tonAddress) : 'disconnected';
   const persistedStorageKey = `${LS_KEY}:${walletStorageScope}`;
   const myContractsStorageKey = `${MY_CONTRACTS_KEY}:${walletStorageScope}`;
-  const pendingDeployStorageKey = `${PENDING_DEPLOY_KEY}:${walletStorageScope}`;
+
 
   const initialRoute = routeFromHash();
   const [page, setPageState] = useState<Page>(initialRoute.page);
@@ -159,7 +146,6 @@ export default function App() {
 
   const [persisted, setPersisted] = useLocalStorageState<Persisted>(persistedStorageKey, createInitialPersisted);
   const [myContractIds, setMyContractIds] = useLocalStorageState<string[]>(myContractsStorageKey, []);
-  const [pendingDeploy, setPendingDeploy] = useLocalStorageState<PendingDeploy | null>(pendingDeployStorageKey, null);
   const [allContracts, setAllContracts] = useState<ContractListItem[] | null>(null);
   const [contractsBusy, setContractsBusy] = useState(false);
   const walletRawAddress = useMemo(
@@ -210,47 +196,6 @@ export default function App() {
   useEffect(() => {
     void refreshContracts();
   }, [refreshContracts]);
-
-  // Auto-retry pending deployment registration on mount
-  useEffect(() => {
-    if (!pendingDeploy) return;
-    // Expire pending deploys older than 1 hour
-    if (Date.now() - pendingDeploy.createdAt > 3_600_000) {
-      setPendingDeploy(null);
-      return;
-    }
-    let cancelled = false;
-    (async () => {
-      try {
-        const created = await registerRaceContract(raceCfg, {
-          address: pendingDeploy.address,
-          public_key: pendingDeploy.publicKey,
-          secret_key: pendingDeploy.secretKey,
-          wallet_id: 0,
-          prompt: pendingDeploy.prompt,
-          owner_address: pendingDeploy.ownerAddress,
-          ai_model: pendingDeploy.aiModel,
-          ...(pendingDeploy.aiProvider ? { ai_provider: pendingDeploy.aiProvider } : {}),
-          ...(pendingDeploy.name?.trim() ? { name: pendingDeploy.name.trim() } : {}),
-        });
-        if (cancelled) return;
-        // Success — clear pending and record the contract
-        setPendingDeploy(null);
-        setPersisted((p) => ({ ...p, contractAddress: pendingDeploy.address, raceContractId: created.id }));
-        setMyContractIds((prev) => (prev.includes(created.id) ? prev : [...prev, created.id]));
-        await refreshContracts();
-        setTab({ kind: 'contract', contractId: created.id });
-      } catch {
-        // Registration failed — keep pending so user can retry manually or it retries next visit
-        if (!cancelled) {
-          // If the contract already exists on the backend, clear the pending
-          // (the user might have re-deployed or it was already registered)
-        }
-      }
-    })();
-    return () => { cancelled = true; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   // When switching to deploy tab, reset keys if a contract was FULLY deployed (registered)
   const handleTabChange = useCallback(
@@ -469,7 +414,6 @@ export default function App() {
                 setPersisted={setPersisted}
                 raceCfg={raceCfg}
                 onContractRegistered={(id) => void handleContractRegistered(id)}
-                setPendingDeploy={setPendingDeploy}
               />
             )}
           </>

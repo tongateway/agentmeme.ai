@@ -2,11 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTonAddress, useTonConnectUI, useTonWallet } from '@tonconnect/ui-react';
 import { Address } from '@ton/core';
 import { Rocket, Wallet, ChevronDown, ChevronUp, ExternalLink, Minus, Plus, FileText } from 'lucide-react';
-import { agentKeypairFromSecretOrSeedHex, generateAgentKeypair } from '@/lib/crypto';
-import { sha256BigInt } from '@/lib/hash';
 import {
-  agentWalletV5Address,
-  agentWalletV5StateInitBocBase64,
   nanoFromTon,
 } from '@/lib/ton/agentWalletV5';
 import { getRaceAiModels, getPromptVariables, registerRaceContract, type AiModelOption, type AiModelsByProvider, type PromptVariable, type PublicApiConfig } from '@/lib/api';
@@ -375,17 +371,14 @@ export type Persisted = {
   agentName?: string;
 };
 
-import type { PendingDeploy } from '../App';
-
 type DeployPanelProps = {
   persisted: Persisted;
   setPersisted: React.Dispatch<React.SetStateAction<Persisted>>;
   raceCfg: PublicApiConfig;
   onContractRegistered?: (contractId: string) => void;
-  setPendingDeploy?: React.Dispatch<React.SetStateAction<PendingDeploy | null>>;
 };
 
-export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegistered, setPendingDeploy }: DeployPanelProps) {
+export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegistered }: DeployPanelProps) {
   const wallet = useTonWallet();
   const tonAddress = useTonAddress();
   const [tonConnectUI] = useTonConnectUI();
@@ -421,49 +414,6 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
     () => ownerAddressParsed?.toString({ bounceable: false }) ?? null,
     [ownerAddressParsed],
   );
-
-  const agentPublicKeyHexRaw = (persisted as Partial<Persisted>).agentPublicKeyHex;
-  const agentSecretKeyHexRaw = (persisted as Partial<Persisted>).agentSecretKeyHex;
-
-  const agentPublicKeyOk = useMemo(() => /^[0-9a-fA-F]{64}$/.test((agentPublicKeyHexRaw ?? '').trim()), [agentPublicKeyHexRaw]);
-  const agentSecretKeyOk = useMemo(
-    () => /^[0-9a-fA-F]{64}$/.test((agentSecretKeyHexRaw ?? '').trim()) || /^[0-9a-fA-F]{128}$/.test((agentSecretKeyHexRaw ?? '').trim()),
-    [agentSecretKeyHexRaw],
-  );
-
-  // Auto-generate keys if missing
-  useEffect(() => {
-    const pubRaw = typeof agentPublicKeyHexRaw === 'string' ? agentPublicKeyHexRaw.trim() : '';
-    const secRaw = typeof agentSecretKeyHexRaw === 'string' ? agentSecretKeyHexRaw.trim() : '';
-    const pubOk = /^[0-9a-fA-F]{64}$/.test(pubRaw);
-    const secOk = /^[0-9a-fA-F]{64}$/.test(secRaw) || /^[0-9a-fA-F]{128}$/.test(secRaw);
-
-    if (pubOk && secOk) return;
-
-    if (!pubOk && !secOk) {
-      const kp = generateAgentKeypair();
-      setPersisted((p) => ({
-        ...p,
-        agentPublicKeyHex: kp.publicKeyHex,
-        agentSecretKeyHex: kp.secretKeyHex,
-        contractAddress: null,
-        raceContractId: null,
-      }));
-      return;
-    }
-
-    if (!pubOk && secOk) {
-      const derived = agentKeypairFromSecretOrSeedHex(secRaw);
-      if (!derived) return;
-      setPersisted((p) => ({
-        ...p,
-        agentPublicKeyHex: derived.publicKeyHex,
-        agentSecretKeyHex: secRaw,
-        contractAddress: null,
-        raceContractId: null,
-      }));
-    }
-  }, [agentPublicKeyHexRaw, agentSecretKeyHexRaw, setPersisted]);
 
   useEffect(() => {
     let cancelled = false;
@@ -569,14 +519,10 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
     }
   }, [persisted.aiModel, persisted.aiProvider, selectedModel, selectedProvider, setPersisted]);
 
-  const registerOnly = useCallback(async (addressToRegister: string) => {
+  const registerOnly = useCallback(async () => {
     setErr(null);
     if (!isConnected || !tonAddress || !ownerAddressNonBounce) {
       setErr('Connect a TON wallet first.');
-      return;
-    }
-    if (!agentPublicKeyOk || !agentSecretKeyOk) {
-      setErr('Agent keys are invalid. Please refresh the page.');
       return;
     }
     if (!persisted.prompt.trim()) {
@@ -587,17 +533,13 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
     try {
       setBusy('register');
       const created = await registerRaceContract(raceCfg, {
-        address: addressToRegister,
-        public_key: persisted.agentPublicKeyHex,
-        secret_key: persisted.agentSecretKeyHex,
-        wallet_id: 0,
         prompt: persisted.prompt,
         owner_address: ownerAddressNonBounce,
         ai_model: selectedModel,
         ...(selectedProvider ? { ai_provider: selectedProvider } : {}),
         ...(persisted.agentName?.trim() ? { name: persisted.agentName.trim() } : {}),
       });
-      setPersisted((p) => ({ ...p, contractAddress: addressToRegister, raceContractId: created.id }));
+      setPersisted((p) => ({ ...p, contractAddress: created.address, raceContractId: created.id }));
       onContractRegistered?.(created.id);
     } catch (e) {
       setErr(e instanceof Error ? e.message : String(e));
@@ -608,11 +550,7 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
     isConnected,
     tonAddress,
     ownerAddressNonBounce,
-    agentPublicKeyOk,
-    agentSecretKeyOk,
     persisted.prompt,
-    persisted.agentPublicKeyHex,
-    persisted.agentSecretKeyHex,
     persisted.agentName,
     raceCfg,
     selectedModel,
@@ -657,12 +595,8 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
   const deployAndRegister = useCallback(async () => {
     setErr(null);
 
-    if (!ownerAddressParsed || !ownerAddressNonBounce) {
+    if (!ownerAddressNonBounce) {
       setErr('Connect a TON wallet first.');
-      return;
-    }
-    if (!agentPublicKeyOk || !agentSecretKeyOk) {
-      setErr('Agent keys are invalid. Please refresh the page.');
       return;
     }
     if (!persisted.prompt.trim()) {
@@ -681,57 +615,37 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
 
     try {
       setBusy('deploy');
-      const promptHash = await sha256BigInt(persisted.prompt);
-      const addr = agentWalletV5Address({
-        ownerAddress: ownerAddressParsed,
-        walletId: 0,
-        publicKeyHex: persisted.agentPublicKeyHex,
-        promptHash,
-      });
-      const addrStr = addr.toString({ bounceable: true });
-      const stateInit = agentWalletV5StateInitBocBase64({
-        ownerAddress: ownerAddressParsed,
-        walletId: 0,
-        publicKeyHex: persisted.agentPublicKeyHex,
-        promptHash,
-      });
 
-      setPersisted((p) => ({ ...p, contractAddress: addrStr, raceContractId: null }));
-
-      // Save pending deploy BEFORE sending tx — so if window closes after tx but before
-      // backend registration, we can auto-retry on next visit
-      setPendingDeploy?.({
-        address: addrStr,
-        publicKey: persisted.agentPublicKeyHex,
-        secretKey: persisted.agentSecretKeyHex,
+      // 1. Register with backend — it creates the contract and returns the address
+      const created = await registerRaceContract(raceCfg, {
         prompt: persisted.prompt,
-        ownerAddress: ownerAddressNonBounce,
-        aiModel: selectedModel,
-        aiProvider: selectedProvider,
-        name: persisted.agentName?.trim() || undefined,
-        createdAt: Date.now(),
+        owner_address: ownerAddressNonBounce,
+        ai_model: selectedModel,
+        ...(selectedProvider ? { ai_provider: selectedProvider } : {}),
+        ...(persisted.agentName?.trim() ? { name: persisted.agentName.trim() } : {}),
       });
 
+      const contractAddr = created.address;
+      setPersisted((p) => ({ ...p, contractAddress: contractAddr, raceContractId: created.id }));
+
+      // 2. Send TON to the contract address
       await tonConnectUI.sendTransaction({
         validUntil: Math.floor(Date.now() / 1000) + 10 * 60,
         messages: [
           {
-            address: addrStr,
+            address: contractAddr,
             amount: nanoFromTon(persisted.deployAmountTon || '1'),
-            stateInit,
           },
         ],
       });
 
-      await registerOnly(addrStr);
-      // Clear pending after successful registration
-      setPendingDeploy?.(null);
+      onContractRegistered?.(created.id);
     } catch (e) {
       setErr(e instanceof Error ? e.message : String(e));
     } finally {
       setBusy(null);
     }
-  }, [ownerAddressParsed, ownerAddressNonBounce, agentPublicKeyOk, agentSecretKeyOk, persisted, setPersisted, tonConnectUI, isConnected, tonAddress, registerOnly]);
+  }, [ownerAddressNonBounce, persisted, setPersisted, tonConnectUI, isConnected, tonAddress, raceCfg, selectedModel, selectedProvider, onContractRegistered]);
 
   const busyLabel = busy === 'deploy' ? 'Deploying contract...' : busy === 'register' ? 'Registering agent...' : busy === 'topup' ? 'Sending TON...' : null;
   const canRetryRegisterOnly = !!persisted.contractAddress && !persisted.raceContractId;
@@ -981,7 +895,7 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
             {canRetryRegisterOnly && (
               <button
                 className={`btn btn-ghost btn-sm w-full opacity-60 ${busy ? 'btn-disabled' : ''}`}
-                onClick={() => void registerOnly(persisted.contractAddress!)}
+                onClick={() => void registerOnly()}
                 type="button"
               >
                 {busy === 'register' && <span className="loading loading-spinner loading-xs" />}
