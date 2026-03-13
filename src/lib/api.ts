@@ -91,10 +91,6 @@ export type RegisterContractRequest = {
 };
 
 export type RegisterRaceContractRequest = {
-  address: string;
-  public_key: string;
-  secret_key: string;
-  wallet_id: number;
   prompt: string;
   owner_address: string;
   is_active?: boolean;
