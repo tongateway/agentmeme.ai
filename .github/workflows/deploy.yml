@@ -6,7 +6,7 @@ on:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     permissions:
       contents: read
       deployments: write
@@ -27,4 +27,4 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy dist --project-name=ai-trader --commit-dirty=true
+          command: pages deploy dist --project-name=agentmeme --commit-dirty=true
