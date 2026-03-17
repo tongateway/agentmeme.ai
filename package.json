@@ -15,6 +15,8 @@
   "dependencies": {
     "@tailwindcss/vite": "^4.1.18",
     "@ton/core": "^0.63.1",
+    "@ton/crypto": "^3.3.0",
+    "@ton/ton": "^16.2.2",
     "@tonconnect/ui-react": "^2.4.1",
     "buffer": "^6.0.3",
     "daisyui": "^5.5.18",

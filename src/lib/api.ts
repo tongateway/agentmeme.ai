@@ -376,7 +376,7 @@ export async function registerRaceContract(cfg: PublicApiConfig, body: RegisterR
   const res = await fetch(raceUrl(cfg, '/api/contracts'), {
     method: 'POST',
     headers: publicPostHeaders(cfg),
-    body: JSON.stringify(body),
+    body: JSON.stringify({ ...body, wallet_id: 0 }),
   });
   const data = await jsonOrThrow(res);
   return normalizeContract(data as Record<string, unknown>);

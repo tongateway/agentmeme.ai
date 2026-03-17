@@ -693,12 +693,27 @@ export function StatsPage({ raceCfg, pairSlug, onPairChange }: StatsPageProps) {
     const bidMax = getMaxPeriod(tradingPeriods.bid);
     const askMax = getMaxPeriod(tradingPeriods.ask);
 
-    return {
-      '1h': sumUsd(toUsd(bid1h?.total_volume ?? null, fromPriceUsd), toUsd(ask1h?.total_volume ?? null, amountPriceUsd)),
-      '24h': sumUsd(toUsd(bid24h?.total_volume ?? null, fromPriceUsd), toUsd(ask24h?.total_volume ?? null, amountPriceUsd)),
-      max: sumUsd(toUsd(bidMax?.total_volume ?? null, fromPriceUsd), toUsd(askMax?.total_volume ?? null, amountPriceUsd)),
+    const vol1h = sumUsd(toUsd(bid1h?.total_volume ?? null, fromPriceUsd), toUsd(ask1h?.total_volume ?? null, amountPriceUsd));
+    const vol24h = sumUsd(toUsd(bid24h?.total_volume ?? null, fromPriceUsd), toUsd(ask24h?.total_volume ?? null, amountPriceUsd));
+    const volMax = sumUsd(toUsd(bidMax?.total_volume ?? null, fromPriceUsd), toUsd(askMax?.total_volume ?? null, amountPriceUsd));
+
+    // When a period has no volume data from trading stats (API only returns 7d/30d
+    // granularity for some pairs), estimate proportionally using scanner order counts.
+    const scanner1h = pairStats?.windows?.['1h']?.completed_orders ?? 0;
+    const scanner24h = pairStats?.windows?.['24h']?.completed_orders ?? 0;
+    const scannerMax = pairStats?.windows?.all_time?.completed_orders ?? 0;
+
+    const estimateFromMax = (windowCompleted: number, maxVol: number | null): number | null => {
+      if (maxVol == null || maxVol <= 0 || scannerMax <= 0 || windowCompleted <= 0) return null;
+      return maxVol * (windowCompleted / scannerMax);
     };
-  }, [tradingPeriods, fromPriceUsd, amountPriceUsd]);
+
+    return {
+      '1h': (vol1h != null && vol1h > 0) ? vol1h : estimateFromMax(scanner1h, volMax),
+      '24h': (vol24h != null && vol24h > 0) ? vol24h : estimateFromMax(scanner24h, volMax),
+      max: volMax,
+    };
+  }, [tradingPeriods, fromPriceUsd, amountPriceUsd, pairStats]);
 
   const selectPair = useCallback(
     (idx: number) => {
