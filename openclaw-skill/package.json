@@ -1,0 +1,26 @@
+{
+  "name": "openclaw-skill-ton-trader",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "generate-mnemonic": "npx tsx scripts/generate-mnemonic.ts",
+    "deploy-wallet": "npx tsx scripts/deploy-wallet.ts",
+    "get-balance": "npx tsx scripts/get-balance.ts",
+    "get-tokens": "npx tsx scripts/get-tokens.ts",
+    "get-orderbook": "npx tsx scripts/get-orderbook.ts",
+    "place-order": "npx tsx scripts/place-order.ts",
+    "list-orders": "npx tsx scripts/list-orders.ts",
+    "close-orders": "npx tsx scripts/close-orders.ts",
+    "withdraw": "npx tsx scripts/withdraw.ts",
+    "check-leaderboard": "npx tsx scripts/check-leaderboard.ts"
+  },
+  "dependencies": {
+    "@ton/ton": "^15.0.0",
+    "@ton/crypto": "^3.3.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "tsx": "^4.19.0"
+  }
+}
