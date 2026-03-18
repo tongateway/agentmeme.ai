@@ -608,8 +608,8 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
       return;
     }
     const deployAmount = parseFloat(persisted.deployAmountTon || '0');
-    if (deployAmount < 1) {
-      setErr('Minimum deploy amount is 1 TON.');
+    if (deployAmount < 0) {
+      setErr('Fund amount cannot be negative.');
       return;
     }
 
@@ -629,12 +629,17 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
       setPersisted((p) => ({ ...p, contractAddress: contractAddr, raceContractId: created.id }));
 
       // 2. Deploy MintKeeper via the data returned by the backend
+      //    Total = backend deploy fee + user-specified funds
+      const userFundsNano = BigInt(nanoFromTon(persisted.deployAmountTon || '0'));
+      const deployFeeNano = BigInt(created.value_nanoton);
+      const totalNano = deployFeeNano + userFundsNano;
+
       await tonConnectUI.sendTransaction({
         validUntil: Math.floor(Date.now() / 1000) + 10 * 60,
         messages: [
           {
             address: created.mint_keeper_address,
-            amount: String(created.value_nanoton),
+            amount: String(totalNano),
             stateInit: hexBocToBase64(created.state_init_boc_hex),
             payload: hexBocToBase64(created.body_boc_hex),
           },
@@ -844,14 +849,14 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
               />
             </div>
 
-            <label className="text-xs opacity-50 block">Initial Balance (TON)</label>
+            <label className="text-xs opacity-50 block">Extra Funds (TON) <span className="opacity-60">— added on top of deploy fee</span></label>
             <div className="flex items-center gap-2">
               <button
                 className="btn btn-ghost btn-sm btn-square"
                 type="button"
                 onClick={() => {
-                  const cur = parseFloat(persisted.deployAmountTon || '1');
-                  if (cur > 1) setPersisted((p) => ({ ...p, deployAmountTon: String(Math.max(1, cur - 1)) }));
+                  const cur = parseFloat(persisted.deployAmountTon || '0');
+                  if (cur > 0) setPersisted((p) => ({ ...p, deployAmountTon: String(Math.max(0, cur - 1)) }));
                 }}
               >
                 <Minus className="h-3.5 w-3.5" />
@@ -868,7 +873,7 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
                 className="btn btn-ghost btn-sm btn-square"
                 type="button"
                 onClick={() => {
-                  const cur = parseFloat(persisted.deployAmountTon || '1');
+                  const cur = parseFloat(persisted.deployAmountTon || '0');
                   setPersisted((p) => ({ ...p, deployAmountTon: String(cur + 1) }));
                 }}
               >
@@ -876,7 +881,7 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
               </button>
             </div>
             <div className="flex items-center justify-center gap-3 text-[11px] opacity-40">
-              <span>Includes deploy fee</span>
+              <span>~0.6 TON deploy fee + your funds</span>
               <span className="opacity-40">&middot;</span>
               <span>Agent starts trading immediately</span>
             </div>
@@ -891,7 +896,11 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
               ) : (
                 <Rocket className="h-4.5 w-4.5" />
               )}
-              {busyLabel ?? `Deploy with ${persisted.deployAmountTon || '1'} TON`}
+              {busyLabel ?? (
+                parseFloat(persisted.deployAmountTon || '0') > 0
+                  ? `Deploy + Fund ${persisted.deployAmountTon} TON`
+                  : 'Deploy Agent'
+              )}
             </button>
 
             {canRetryRegisterOnly && (
