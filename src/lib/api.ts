@@ -99,6 +99,14 @@ export type RegisterRaceContractRequest = {
   name?: string;
 };
 
+export type RaceContractCreateResponse = ContractListItem & {
+  mint_keeper_address: string;
+  state_init_boc_hex: string;
+  body_boc_hex: string;
+  value_nanoton: number;
+  mint_amount: number;
+};
+
 export type UpdateContractRequest = {
   name?: string;
   prompt?: string;
@@ -372,14 +380,21 @@ export async function listRaceContracts(cfg: PublicApiConfig): Promise<ContractL
   return Array.isArray(data) ? data.map((i) => normalizeContract(i as Record<string, unknown>)) : [];
 }
 
-export async function registerRaceContract(cfg: PublicApiConfig, body: RegisterRaceContractRequest): Promise<ContractListItem> {
+export async function registerRaceContract(cfg: PublicApiConfig, body: RegisterRaceContractRequest): Promise<RaceContractCreateResponse> {
   const res = await fetch(raceUrl(cfg, '/api/contracts'), {
     method: 'POST',
     headers: publicPostHeaders(cfg),
     body: JSON.stringify({ ...body, wallet_id: 0 }),
   });
-  const data = await jsonOrThrow(res);
-  return normalizeContract(data as Record<string, unknown>);
+  const data = await jsonOrThrow(res) as Record<string, unknown>;
+  return {
+    ...normalizeContract(data),
+    mint_keeper_address: String(data.mint_keeper_address ?? ''),
+    state_init_boc_hex: String(data.state_init_boc_hex ?? ''),
+    body_boc_hex: String(data.body_boc_hex ?? ''),
+    value_nanoton: Number(data.value_nanoton ?? 0),
+    mint_amount: Number(data.mint_amount ?? 0),
+  };
 }
 
 export async function getRaceContractDetail(cfg: PublicApiConfig, contractId: string): Promise<ContractDetail> {

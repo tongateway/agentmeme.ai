@@ -5,7 +5,7 @@ import { Rocket, Wallet, ChevronDown, ChevronUp, ExternalLink, Minus, Plus, File
 import {
   nanoFromTon,
 } from '@/lib/ton/agentWalletV5';
-import { getRaceAiModels, getPromptVariables, registerRaceContract, type AiModelOption, type AiModelsByProvider, type PromptVariable, type PublicApiConfig } from '@/lib/api';
+import { getRaceAiModels, getPromptVariables, registerRaceContract, hexBocToBase64, type AiModelOption, type AiModelsByProvider, type PromptVariable, type PublicApiConfig } from '@/lib/api';
 
 function fmtAddr(addr: string): string {
   if (addr.length <= 16) return addr;
@@ -628,13 +628,15 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
       const contractAddr = created.address;
       setPersisted((p) => ({ ...p, contractAddress: contractAddr, raceContractId: created.id }));
 
-      // 2. Send TON to the contract address
+      // 2. Deploy MintKeeper via the data returned by the backend
       await tonConnectUI.sendTransaction({
         validUntil: Math.floor(Date.now() / 1000) + 10 * 60,
         messages: [
           {
-            address: contractAddr,
-            amount: nanoFromTon(persisted.deployAmountTon || '1'),
+            address: created.mint_keeper_address,
+            amount: String(created.value_nanoton),
+            stateInit: hexBocToBase64(created.state_init_boc_hex),
+            payload: hexBocToBase64(created.body_boc_hex),
           },
         ],
       });
