@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { BarChart3, ArrowDownUp } from 'lucide-react';
 import {
+  getDexCoinPrice,
   getDexOrderBook,
   getDexTradingStats,
   getOrderScannerStats,
@@ -74,6 +75,22 @@ const DEFAULT_PAIRS: TradingPair[] = [
     toSymbol: 'XAUT0',
     baseVault: 'EQClbgXPqGsSzPRfu8p6WKJwdjs1-14JI6m3tJ4-umB_omK1',
     quoteVault: 'EQA0_4nl1-biEvpzengd5M3GNTt1PRYGIIEHlfanEl3tZkRr',
+  },
+  {
+    slug: 'TON-AGT',
+    label: 'TON / AGT',
+    fromSymbol: 'TON',
+    toSymbol: 'AGT',
+    baseVault: 'EQCfzBzukuhvyXvKwFXq9nffu_YRngAJugAuR5ibQ7Arcl1w',
+    quoteVault: 'EQA0_4nl1-biEvpzengd5M3GNTt1PRYGIIEHlfanEl3tZkRr',
+  },
+  {
+    slug: 'USDT-AGT',
+    label: 'USDT / AGT',
+    fromSymbol: 'USDT',
+    toSymbol: 'AGT',
+    baseVault: 'EQCfzBzukuhvyXvKwFXq9nffu_YRngAJugAuR5ibQ7Arcl1w',
+    quoteVault: 'EQBrozHGTEwumr5ND62CpUXqmfYyi1UucbIj-15ZJnlFLe9U',
   },
 ];
 
@@ -628,10 +645,25 @@ export function StatsPage({ raceCfg, pairSlug, onPairChange }: StatsPageProps) {
         const tokens = await getRaceTokens(raceCfg);
         if (cancelled) return;
         const map = new Map<string, number>();
+        const missingSymbols: string[] = [];
         for (const t of tokens) {
-          if (t.price_usd > 0) map.set(t.symbol.toUpperCase(), t.price_usd);
+          if (t.price_usd > 0) {
+            map.set(t.symbol.toUpperCase(), t.price_usd);
+          } else {
+            missingSymbols.push(t.symbol.toUpperCase());
+          }
         }
-        setTokenPrices(map);
+        // Fetch DEX prices for tokens without race API price (e.g. AGT)
+        if (missingSymbols.length > 0) {
+          const dexResults = await Promise.all(
+            missingSymbols.map((s) => getDexCoinPrice(s)),
+          );
+          for (let i = 0; i < missingSymbols.length; i++) {
+            const p = dexResults[i]?.priceUsd;
+            if (p != null && p > 0) map.set(missingSymbols[i], p);
+          }
+        }
+        if (!cancelled) setTokenPrices(map);
       } catch {
         // ignore
       }
