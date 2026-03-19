@@ -674,19 +674,53 @@ export type DexCoinPrice = {
   priceUsd: number | null;
 };
 
-const _coinPriceCache = new Map<string, { data: DexCoinPrice; fetchedAt: number }>();
-const COIN_PRICE_TTL = 120_000; // 2 min
+const COIN_PRICE_LS_PREFIX = 'atr_cache:dex_price:';
+const COIN_PRICE_TTL = 120_000; // 2 min — controls when to refetch, not when to discard
+
+function readCoinPriceLS(key: string): { data: DexCoinPrice; fetchedAt: number } | null {
+  try {
+    const raw = localStorage.getItem(COIN_PRICE_LS_PREFIX + key);
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+}
+
+function writeCoinPriceLS(key: string, data: DexCoinPrice, fetchedAt: number): void {
+  try { localStorage.setItem(COIN_PRICE_LS_PREFIX + key, JSON.stringify({ data, fetchedAt })); } catch { /* ignore */ }
+}
+
+// In-memory layer (avoids repeated JSON.parse per render)
+const _coinPriceMem = new Map<string, { data: DexCoinPrice; fetchedAt: number }>();
 
 /** Fetch coin price from DEX orderbook via /coins/price endpoint.
- *  Derives USD price from the best ask/bid against a USD-pegged counter coin. */
+ *  Returns cached (localStorage) value instantly; refreshes in background after TTL. */
 export async function getDexCoinPrice(symbol: string): Promise<DexCoinPrice | null> {
   const key = symbol.toUpperCase();
-  const cached = _coinPriceCache.get(key);
-  if (cached && Date.now() - cached.fetchedAt < COIN_PRICE_TTL) return cached.data;
 
+  // 1. Try in-memory cache
+  let cached = _coinPriceMem.get(key) ?? null;
+  // 2. Fall back to localStorage
+  if (!cached) {
+    cached = readCoinPriceLS(key);
+    if (cached) _coinPriceMem.set(key, cached);
+  }
+
+  const fresh = !cached || Date.now() - cached.fetchedAt >= COIN_PRICE_TTL;
+  if (!fresh) return cached!.data;
+
+  // Return stale data immediately, fetch in background if we have a cached value
+  if (cached) {
+    fetchDexCoinPriceRemote(key).catch(() => {});
+    return cached.data;
+  }
+
+  // No cache at all — must await
+  return fetchDexCoinPriceRemote(key);
+}
+
+async function fetchDexCoinPriceRemote(key: string): Promise<DexCoinPrice | null> {
   try {
-    const res = await fetch(`${OPEN4DEV_BASE}/coins/price?symbol=${encodeURIComponent(symbol)}`);
-    if (!res.ok) return null;
+    const res = await fetch(`${OPEN4DEV_BASE}/coins/price?symbol=${encodeURIComponent(key)}`);
+    if (!res.ok) return _coinPriceMem.get(key)?.data ?? null;
     const data = (await res.json()) as {
       coin: { symbol: string; decimals: number };
       pairs?: {
@@ -699,11 +733,10 @@ export async function getDexCoinPrice(symbol: string): Promise<DexCoinPrice | nu
     };
 
     let priceUsd: number | null = null;
-    const PRICE_FACTOR = 1e18; // vault price_rate is always 18-decimal
+    const PRICE_FACTOR = 1e18;
 
     for (const pair of data.pairs ?? []) {
       const cs = pair.counter_coin_symbol.toUpperCase();
-      // Use USD-pegged pairs to derive price
       if (cs !== 'USDT' && cs !== 'USDC') continue;
 
       const mid = pair.mid_price ? Number(pair.mid_price) / PRICE_FACTOR : null;
@@ -715,10 +748,12 @@ export async function getDexCoinPrice(symbol: string): Promise<DexCoinPrice | nu
     }
 
     const result: DexCoinPrice = { symbol: key, decimals: data.coin.decimals, priceUsd };
-    _coinPriceCache.set(key, { data: result, fetchedAt: Date.now() });
+    const now = Date.now();
+    _coinPriceMem.set(key, { data: result, fetchedAt: now });
+    writeCoinPriceLS(key, result, now);
     return result;
   } catch {
-    return cached?.data ?? null;
+    return _coinPriceMem.get(key)?.data ?? null;
   }
 }
 
@@ -886,15 +921,34 @@ export async function resolveCoinSymbols(coinIds: number[]): Promise<Map<number,
  * TON price via CoinGecko (free, no auth)
  * ========================================================================== */
 
-let _tonPriceUsd: number | null = null;
-let _tonPriceFetchedAt = 0;
-const TON_PRICE_TTL = 60_000; // cache for 1 minute
+const TON_PRICE_LS_KEY = 'atr_cache:ton_price';
+const TON_PRICE_TTL = 60_000; // 1 min
 
-/** Fetch current TON/USD price. Cached for 1 min. */
+// Bootstrap from localStorage
+let _tonPriceUsd: number | null = (() => {
+  try { const r = localStorage.getItem(TON_PRICE_LS_KEY); return r ? (JSON.parse(r) as { price: number; ts: number }).price : null; } catch { return null; }
+})();
+let _tonPriceFetchedAt: number = (() => {
+  try { const r = localStorage.getItem(TON_PRICE_LS_KEY); return r ? (JSON.parse(r) as { price: number; ts: number }).ts : 0; } catch { return 0; }
+})();
+
+/** Fetch current TON/USD price. Returns cached value instantly, refreshes after TTL. */
 export async function getTonPriceUsd(): Promise<number | null> {
-  if (_tonPriceUsd !== null && Date.now() - _tonPriceFetchedAt < TON_PRICE_TTL) {
+  const stale = Date.now() - _tonPriceFetchedAt >= TON_PRICE_TTL;
+
+  if (!stale) return _tonPriceUsd;
+
+  // Have a cached value — return it and refresh in background
+  if (_tonPriceUsd !== null) {
+    fetchTonPriceRemote().catch(() => {});
     return _tonPriceUsd;
   }
+
+  // No cached value — must await
+  return fetchTonPriceRemote();
+}
+
+async function fetchTonPriceRemote(): Promise<number | null> {
   try {
     const res = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=the-open-network&vs_currencies=usd');
     const data = (await res.json()) as Record<string, Record<string, number>>;
@@ -902,10 +956,11 @@ export async function getTonPriceUsd(): Promise<number | null> {
     if (price != null) {
       _tonPriceUsd = price;
       _tonPriceFetchedAt = Date.now();
+      try { localStorage.setItem(TON_PRICE_LS_KEY, JSON.stringify({ price, ts: _tonPriceFetchedAt })); } catch { /* ignore */ }
     }
     return price;
   } catch {
-    return _tonPriceUsd; // return stale cache on error
+    return _tonPriceUsd;
   }
 }
 
