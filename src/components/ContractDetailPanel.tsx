@@ -10,6 +10,7 @@ import {
   getRaceTokens,
   getJettonBalances,
   getTonPriceUsd,
+  getDexCoinPrice,
   updateRaceContract,
   withdrawJetton,
   withdrawTon,
@@ -305,19 +306,40 @@ export function ContractDetailPanel({ contract, raceCfg, theme, onDeleted, onSta
         tokenByRaw.set(friendlyToRawHex(t.address), t);
       }
 
-      // Jetton rows
+      // Jetton rows — collect tokens needing DEX price lookup
+      const needsDexPrice: { symbol: string; index: number }[] = [];
+
       for (const j of jettons) {
         const rawHex = normalizeRaw(j.jettonAddress);
         const meta = tokenByRaw.get(rawHex);
         const decimals = meta?.decimals ?? 9;
         const amt = Number(BigInt(j.balance)) / 10 ** decimals;
         if (amt <= 0) continue;
+        const symbol = meta?.symbol ?? 'Unknown';
+        const hasPrice = meta?.price_usd != null && meta.price_usd > 0;
         rows.push({
-          symbol: meta?.symbol ?? 'Unknown',
+          symbol,
           name: meta?.name ?? 'Unknown token',
           amount: amt,
-          usdValue: meta?.price_usd ? amt * meta.price_usd : 0,
+          usdValue: hasPrice ? amt * meta!.price_usd : 0,
         });
+        if (!hasPrice && symbol !== 'Unknown') {
+          needsDexPrice.push({ symbol, index: rows.length - 1 });
+        }
+      }
+
+      // Fetch DEX prices for tokens without race API price (e.g. AgentM)
+      if (needsDexPrice.length > 0) {
+        const priceResults = await Promise.all(
+          needsDexPrice.map((t) => getDexCoinPrice(t.symbol)),
+        );
+        for (let i = 0; i < needsDexPrice.length; i++) {
+          const price = priceResults[i]?.priceUsd;
+          if (price != null && price > 0) {
+            const row = rows[needsDexPrice[i].index];
+            row.usdValue = row.amount * price;
+          }
+        }
       }
 
       setTokenBalances(rows);

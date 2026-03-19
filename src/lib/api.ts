@@ -665,6 +665,64 @@ export async function getPromptVariables(cfg: PublicApiConfig): Promise<PromptVa
 }
 
 /* ==========================================================================
+ * open4dev DEX API — coin price (for tokens without price_usd)
+ * ========================================================================== */
+
+export type DexCoinPrice = {
+  symbol: string;
+  decimals: number;
+  priceUsd: number | null;
+};
+
+const _coinPriceCache = new Map<string, { data: DexCoinPrice; fetchedAt: number }>();
+const COIN_PRICE_TTL = 120_000; // 2 min
+
+/** Fetch coin price from DEX orderbook via /coins/price endpoint.
+ *  Derives USD price from the best ask/bid against a USD-pegged counter coin. */
+export async function getDexCoinPrice(symbol: string): Promise<DexCoinPrice | null> {
+  const key = symbol.toUpperCase();
+  const cached = _coinPriceCache.get(key);
+  if (cached && Date.now() - cached.fetchedAt < COIN_PRICE_TTL) return cached.data;
+
+  try {
+    const res = await fetch(`${OPEN4DEV_BASE}/coins/price?symbol=${encodeURIComponent(symbol)}`);
+    if (!res.ok) return null;
+    const data = (await res.json()) as {
+      coin: { symbol: string; decimals: number };
+      pairs?: {
+        counter_coin_symbol: string;
+        counter_coin_decimals: number;
+        best_ask: string | null;
+        best_bid: string | null;
+        mid_price: string | null;
+      }[];
+    };
+
+    let priceUsd: number | null = null;
+    const PRICE_FACTOR = 1e18; // vault price_rate is always 18-decimal
+
+    for (const pair of data.pairs ?? []) {
+      const cs = pair.counter_coin_symbol.toUpperCase();
+      // Use USD-pegged pairs to derive price
+      if (cs !== 'USDT' && cs !== 'USDC') continue;
+
+      const mid = pair.mid_price ? Number(pair.mid_price) / PRICE_FACTOR : null;
+      const ask = pair.best_ask ? Number(pair.best_ask) / PRICE_FACTOR : null;
+      const bid = pair.best_bid ? Number(pair.best_bid) / PRICE_FACTOR : null;
+
+      priceUsd = mid ?? (ask != null && bid != null ? (ask + bid) / 2 : (ask ?? bid));
+      if (priceUsd != null) break;
+    }
+
+    const result: DexCoinPrice = { symbol: key, decimals: data.coin.decimals, priceUsd };
+    _coinPriceCache.set(key, { data: result, fetchedAt: Date.now() });
+    return result;
+  } catch {
+    return cached?.data ?? null;
+  }
+}
+
+/* ==========================================================================
  * Race API — token list (for prices & metadata)
  * ========================================================================== */
 
