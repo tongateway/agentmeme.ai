@@ -24,10 +24,29 @@ type TradingPair = {
   toSymbol: string; // base symbol (the asset, e.g. NOT)
   baseVault: string;
   quoteVault: string;
+  hot?: boolean;
 };
 
 /** Only pairs whose both vaults exist */
 const DEFAULT_PAIRS: TradingPair[] = [
+  {
+    slug: 'TON-AGT',
+    label: 'TON / AGT',
+    fromSymbol: 'TON',
+    toSymbol: 'AGT',
+    baseVault: 'EQCfzBzukuhvyXvKwFXq9nffu_YRngAJugAuR5ibQ7Arcl1w',
+    quoteVault: 'EQA0_4nl1-biEvpzengd5M3GNTt1PRYGIIEHlfanEl3tZkRr',
+    hot: true,
+  },
+  {
+    slug: 'USDT-AGT',
+    label: 'USDT / AGT',
+    fromSymbol: 'USDT',
+    toSymbol: 'AGT',
+    baseVault: 'EQCfzBzukuhvyXvKwFXq9nffu_YRngAJugAuR5ibQ7Arcl1w',
+    quoteVault: 'EQBrozHGTEwumr5ND62CpUXqmfYyi1UucbIj-15ZJnlFLe9U',
+    hot: true,
+  },
   {
     slug: 'TON-NOT',
     label: 'TON / NOT',
@@ -75,22 +94,6 @@ const DEFAULT_PAIRS: TradingPair[] = [
     toSymbol: 'XAUT0',
     baseVault: 'EQClbgXPqGsSzPRfu8p6WKJwdjs1-14JI6m3tJ4-umB_omK1',
     quoteVault: 'EQA0_4nl1-biEvpzengd5M3GNTt1PRYGIIEHlfanEl3tZkRr',
-  },
-  {
-    slug: 'TON-AGT',
-    label: 'TON / AGT',
-    fromSymbol: 'TON',
-    toSymbol: 'AGT',
-    baseVault: 'EQCfzBzukuhvyXvKwFXq9nffu_YRngAJugAuR5ibQ7Arcl1w',
-    quoteVault: 'EQA0_4nl1-biEvpzengd5M3GNTt1PRYGIIEHlfanEl3tZkRr',
-  },
-  {
-    slug: 'USDT-AGT',
-    label: 'USDT / AGT',
-    fromSymbol: 'USDT',
-    toSymbol: 'AGT',
-    baseVault: 'EQCfzBzukuhvyXvKwFXq9nffu_YRngAJugAuR5ibQ7Arcl1w',
-    quoteVault: 'EQBrozHGTEwumr5ND62CpUXqmfYyi1UucbIj-15ZJnlFLe9U',
   },
 ];
 
@@ -775,18 +778,27 @@ export function StatsPage({ raceCfg, pairSlug, onPairChange }: StatsPageProps) {
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        {pairs.map((p, idx) => (
-          <button
-            key={p.slug}
-            className={`btn btn-xs ${
-              selectedPairIdx === idx && !reversed ? 'btn-primary' : 'btn-ghost border border-base-content/10'
-            }`}
-            onClick={() => selectPair(idx)}
-            type="button"
-          >
-            {p.label}
-          </button>
-        ))}
+        {pairs.map((p, idx) => {
+          const isSelected = selectedPairIdx === idx && !reversed;
+          const isHot = p.hot && !isSelected;
+          return (
+            <button
+              key={p.slug}
+              className={`btn btn-xs ${
+                isSelected
+                  ? 'btn-primary'
+                  : isHot
+                    ? 'border-2 border-orange-500/60 bg-orange-500/10 text-orange-300 hover:bg-orange-500/20 hover:border-orange-400'
+                    : 'btn-ghost border border-base-content/10'
+              }`}
+              onClick={() => selectPair(idx)}
+              type="button"
+            >
+              {p.hot && <span className="text-orange-400 mr-0.5">*</span>}
+              {p.label}
+            </button>
+          );
+        })}
         <button
           className="btn btn-ghost btn-xs gap-1 opacity-60 hover:opacity-100"
           onClick={() => setReversed((r) => !r)}
