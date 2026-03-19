@@ -357,6 +357,13 @@ CRITICAL: Each round-trip costs ~0.03 TON. With 1-3% targets, minimum trade size
   },
 ];
 
+export type PendingDeploy = {
+  mint_keeper_address: string;
+  state_init_boc_hex: string;
+  body_boc_hex: string;
+  value_nanoton: number;
+};
+
 export type Persisted = {
   prompt: string;
   deployAmountTon: string;
@@ -369,6 +376,7 @@ export type Persisted = {
   aiModel?: string;
   aiProvider?: string;
   agentName?: string;
+  pendingDeploy?: PendingDeploy | null;
 };
 
 type DeployPanelProps = {
@@ -616,37 +624,60 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
     try {
       setBusy('deploy');
 
-      // 1. Register with backend — it creates the contract and returns the address
-      const created = await registerRaceContract(raceCfg, {
-        prompt: persisted.prompt,
-        owner_address: ownerAddressNonBounce,
-        ai_model: selectedModel,
-        ...(selectedProvider ? { ai_provider: selectedProvider } : {}),
-        ...(persisted.agentName?.trim() ? { name: persisted.agentName.trim() } : {}),
-      });
+      let deployData: PendingDeploy;
+      let contractId: string;
 
-      const contractAddr = created.address;
-      setPersisted((p) => ({ ...p, contractAddress: contractAddr, raceContractId: created.id }));
+      // Reuse cached registration if user cancelled the previous transaction
+      if (persisted.raceContractId && persisted.pendingDeploy) {
+        deployData = persisted.pendingDeploy;
+        contractId = persisted.raceContractId;
+      } else {
+        // 1. Register with backend — it creates the contract and returns the address
+        const created = await registerRaceContract(raceCfg, {
+          prompt: persisted.prompt,
+          owner_address: ownerAddressNonBounce,
+          ai_model: selectedModel,
+          ...(selectedProvider ? { ai_provider: selectedProvider } : {}),
+          ...(persisted.agentName?.trim() ? { name: persisted.agentName.trim() } : {}),
+        });
+
+        contractId = created.id;
+        deployData = {
+          mint_keeper_address: created.mint_keeper_address,
+          state_init_boc_hex: created.state_init_boc_hex,
+          body_boc_hex: created.body_boc_hex,
+          value_nanoton: created.value_nanoton,
+        };
+
+        setPersisted((p) => ({
+          ...p,
+          contractAddress: created.address,
+          raceContractId: contractId,
+          pendingDeploy: deployData,
+        }));
+      }
 
       // 2. Deploy MintKeeper via the data returned by the backend
       //    Total = backend deploy fee + user-specified funds
       const userFundsNano = BigInt(nanoFromTon(persisted.deployAmountTon || '0'));
-      const deployFeeNano = BigInt(created.value_nanoton);
+      const deployFeeNano = BigInt(deployData.value_nanoton);
       const totalNano = deployFeeNano + userFundsNano;
 
       await tonConnectUI.sendTransaction({
         validUntil: Math.floor(Date.now() / 1000) + 10 * 60,
         messages: [
           {
-            address: created.mint_keeper_address,
+            address: deployData.mint_keeper_address,
             amount: String(totalNano),
-            stateInit: hexBocToBase64(created.state_init_boc_hex),
-            payload: hexBocToBase64(created.body_boc_hex),
+            stateInit: hexBocToBase64(deployData.state_init_boc_hex),
+            payload: hexBocToBase64(deployData.body_boc_hex),
           },
         ],
       });
 
-      onContractRegistered?.(created.id);
+      // Transaction signed — clear pending state
+      setPersisted((p) => ({ ...p, pendingDeploy: null }));
+      onContractRegistered?.(contractId);
     } catch (e) {
       setErr(e instanceof Error ? e.message : String(e));
     } finally {

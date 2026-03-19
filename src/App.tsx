@@ -212,6 +212,7 @@ export default function App() {
               agentSecretKeyHex: kp.secretKeyHex,
               contractAddress: null,
               raceContractId: null,
+              pendingDeploy: null,
               agentName: '',
             };
           }
