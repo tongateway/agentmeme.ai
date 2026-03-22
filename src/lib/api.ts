@@ -693,8 +693,11 @@ const _coinPriceMem = new Map<string, { data: DexCoinPrice; fetchedAt: number }>
 
 /** Fetch coin price from DEX orderbook via /coins/price endpoint.
  *  Returns cached (localStorage) value instantly; refreshes in background after TTL. */
+// Map display symbols back to DEX symbols for API lookups
+const DEX_SYMBOL_REMAP: Record<string, string> = { AGNT: 'AGT' };
+
 export async function getDexCoinPrice(symbol: string): Promise<DexCoinPrice | null> {
-  const key = symbol.toUpperCase();
+  const key = DEX_SYMBOL_REMAP[symbol.toUpperCase()] ?? symbol.toUpperCase();
 
   // 1. Try in-memory cache
   let cached = _coinPriceMem.get(key) ?? null;
@@ -734,17 +737,23 @@ async function fetchDexCoinPriceRemote(key: string): Promise<DexCoinPrice | null
 
     let priceUsd: number | null = null;
     const PRICE_FACTOR = 1e18;
+    const MAX_SANE_PRICE = 1e12; // skip obviously broken values
 
     for (const pair of data.pairs ?? []) {
       const cs = pair.counter_coin_symbol.toUpperCase();
       if (cs !== 'USDT' && cs !== 'USDC') continue;
+      // Skip thin orderbooks — require both sides for a reliable price
+      if ((pair.bid_order_count ?? 0) === 0 || (pair.ask_order_count ?? 0) === 0) continue;
 
       const mid = pair.mid_price ? Number(pair.mid_price) / PRICE_FACTOR : null;
       const ask = pair.best_ask ? Number(pair.best_ask) / PRICE_FACTOR : null;
       const bid = pair.best_bid ? Number(pair.best_bid) / PRICE_FACTOR : null;
 
-      priceUsd = mid ?? (ask != null && bid != null ? (ask + bid) / 2 : (ask ?? bid));
-      if (priceUsd != null) break;
+      const candidate = mid ?? (ask != null && bid != null ? (ask + bid) / 2 : null);
+      if (candidate != null && candidate > 0 && candidate < MAX_SANE_PRICE) {
+        priceUsd = candidate;
+        break;
+      }
     }
 
     const result: DexCoinPrice = { symbol: key, decimals: data.coin.decimals, priceUsd };
@@ -784,14 +793,18 @@ export async function getRaceTokens(cfg: PublicApiConfig): Promise<RaceToken[]> 
     headers: publicGetHeaders(cfg),
   });
   const data = await jsonOrThrow(res);
-  const tokens = (Array.isArray(data) ? data : []).map((t: Record<string, unknown>) => ({
-    id: String(t.id ?? ''),
-    address: String(t.address ?? ''),
-    name: String(t.name ?? ''),
-    symbol: String(t.symbol ?? ''),
-    decimals: Number(t.decimals ?? 9),
-    price_usd: Number(t.price_usd ?? 0),
-  }));
+  const SYMBOL_REMAP: Record<string, string> = { AGT: 'AGNT' };
+  const tokens = (Array.isArray(data) ? data : []).map((t: Record<string, unknown>) => {
+    const rawSymbol = String(t.symbol ?? '');
+    return {
+      id: String(t.id ?? ''),
+      address: String(t.address ?? ''),
+      name: String(t.name ?? ''),
+      symbol: SYMBOL_REMAP[rawSymbol] ?? rawSymbol,
+      decimals: Number(t.decimals ?? 9),
+      price_usd: Number(t.price_usd ?? 0),
+    };
+  });
   _raceTokensCache = tokens;
   _raceTokensFetchedAt = Date.now();
   return tokens;
@@ -908,7 +921,8 @@ export async function resolveCoinSymbols(coinIds: number[]): Promise<Map<number,
   const unique = [...new Set(coinIds)].filter((id) => !_coinCache.has(id));
   for (const id of unique) {
     const coin = await getDexCoin(id);
-    _coinCache.set(id, coin?.symbol?.toUpperCase() || `#${id}`);
+    const sym = coin?.symbol?.toUpperCase() || `#${id}`;
+    _coinCache.set(id, sym === 'AGT' ? 'AGNT' : sym);
     // Respect 1 RPS rate limit between fetches
     if (unique.indexOf(id) < unique.length - 1) {
       await new Promise((r) => setTimeout(r, 1100));

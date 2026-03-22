@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { TonConnectButton, useTonAddress, useTonWallet } from '@tonconnect/ui-react';
 import { Address } from '@ton/core';
-import { Sun, Moon, AlertTriangle, ShieldAlert, RefreshCw } from 'lucide-react';
+import { Sun, Moon, ShieldAlert, RefreshCw } from 'lucide-react';
 import { listContractsFromLeaderboard, listRaceContracts, updateRaceContract, type ContractListItem } from './lib/api';
 import type { PublicApiConfig } from './lib/api';
 import { useLocalStorageState } from './lib/storage';
@@ -297,6 +297,11 @@ export default function App() {
 
   return (
     <div className="min-h-dvh">
+      <div className="w-full bg-warning/10 border-b border-warning/20 py-1.5 px-4 text-center text-xs sm:text-sm text-warning-content">
+        <span className="font-semibold">Beta Notice:</span>{' '}
+        We are currently in development and auditing smart contracts. Please use with caution — trade at your own risk.
+      </div>
+
       <header className="navbar mx-auto max-w-6xl px-4 sm:px-6 pt-6 flex-col gap-3 sm:flex-row">
         <div className="flex-1">
           <div className="flex items-center gap-2 cursor-pointer" onClick={() => setPage('home')}>
@@ -344,16 +349,6 @@ export default function App() {
           </div>
         </div>
       </header>
-
-      <div className="mx-auto max-w-6xl px-4 sm:px-6 pt-4">
-        <div role="alert" className="alert alert-warning text-sm">
-          <AlertTriangle className="h-5 w-5 shrink-0" />
-          <div>
-            <span className="font-semibold">Beta Notice:</span>{' '}
-            We are currently in development and auditing smart contracts. Please use with caution — trade at your own risk.
-          </div>
-        </div>
-      </div>
 
       <main className="mx-auto max-w-6xl px-4 sm:px-6 pb-10 pt-6">
         {page === 'home' ? (
