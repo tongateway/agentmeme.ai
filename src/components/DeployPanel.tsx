@@ -32,91 +32,18 @@ function shortModelName(name: string): string {
   return sep > 0 ? name.slice(0, sep).trim() : name;
 }
 
-/** Brand colors & SVG logos per provider */
+/** Brand colors (dot) per provider */
 const PROVIDER_COLORS: Record<string, string> = {
-  anthropic: '#D97706',
-  openai: '#10A37F',
-  google: '#4285F4',
-  grok: '#000000',
-  xai: '#000000',
-  qwen: '#7C3AED',
+  anthropic: '#888780',
+  openai: '#0F6E56',
+  google: '#D85A30',
+  grok: '#7F77DD',
+  xai: '#7F77DD',
+  qwen: '#D4537E',
   openrouter: '#6366F1',
-  deepseek: '#0EA5E9',
+  deepseek: '#378ADD',
+  gonka: '#D4537E',
 };
-
-function ProviderLogo({ provider, size = 18 }: { provider: string; size?: number }) {
-  const p = provider.toLowerCase();
-  const color = PROVIDER_COLORS[p] ?? '#888';
-
-  // Anthropic — abstract "A" mark (two crossing strokes)
-  if (p === 'anthropic') return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <path d="M14.2 3.5L21 20.5h-4.1L10.1 3.5h4.1z" fill={color} />
-      <path d="M9.8 3.5L3 20.5h4.1l6.8-17h-4.1z" fill={color} />
-    </svg>
-  );
-
-  // OpenAI — hexagonal knot
-  if (p === 'openai') return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <path d="M12 2L21.5 7.5V16.5L12 22L2.5 16.5V7.5L12 2Z" stroke={color} strokeWidth="1.4" />
-      <path d="M12 2V22M2.5 7.5L21.5 16.5M21.5 7.5L2.5 16.5" stroke={color} strokeWidth="1.2" />
-    </svg>
-  );
-
-  // Google — multicolor G
-  if (p === 'google') return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <path d="M22 12.23c0-.79-.07-1.55-.2-2.28H12v4.51h5.62a4.86 4.86 0 0 1-2.09 3.18v2.61h3.36C21.09 18.28 22 15.53 22 12.23z" fill="#4285F4" />
-      <path d="M12 23c2.82 0 5.19-.94 6.92-2.54l-3.36-2.61c-.94.63-2.14 1-3.56 1-2.73 0-5.05-1.84-5.88-4.32H2.64v2.7A10.97 10.97 0 0 0 12 23z" fill="#34A853" />
-      <path d="M6.12 14.53A6.62 6.62 0 0 1 5.77 12c0-.88.15-1.73.35-2.53v-2.7H2.64A10.97 10.97 0 0 0 1 12c0 1.78.43 3.46 1.18 4.95l3.94-2.42z" fill="#FBBC05" />
-      <path d="M12 5.15c1.54 0 2.92.53 4.01 1.56l2.99-2.99C17.18 1.79 14.82.77 12 .77A10.97 10.97 0 0 0 2.64 6.77l3.48 2.7C6.95 7 9.27 5.15 12 5.15z" fill="#EA4335" />
-    </svg>
-  );
-
-  // xAI / Grok — bold X
-  if (p === 'grok' || p === 'xai') return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <path d="M4.5 4L12 12.5L19.5 4" stroke={color} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M4.5 20L12 11.5L19.5 20" stroke={color} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-
-  // Qwen — cloud shape (Alibaba Cloud)
-  if (p === 'qwen') return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <path d="M6 19a4 4 0 0 1-.68-7.95A5.5 5.5 0 0 1 16.15 8 4.5 4.5 0 1 1 18 17H6z" fill={color} />
-    </svg>
-  );
-
-  // OpenRouter — three connected nodes
-  if (p === 'openrouter') return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <circle cx="12" cy="5" r="2.5" fill={color} />
-      <circle cx="5" cy="19" r="2.5" fill={color} />
-      <circle cx="19" cy="19" r="2.5" fill={color} />
-      <path d="M12 7.5V12M12 12L5.5 17M12 12L18.5 17" stroke={color} strokeWidth="1.8" />
-    </svg>
-  );
-
-  // DeepSeek — whale tail / sea wave
-  if (p === 'deepseek') return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <path d="M3 12c2-4 5-6 9-6s7 2 9 6c-2 4-5 6-9 6s-7-2-9-6z" stroke={color} strokeWidth="2" />
-      <circle cx="12" cy="12" r="3" fill={color} />
-    </svg>
-  );
-
-  // Fallback — colored circle with first letter
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <circle cx="12" cy="12" r="10" fill={color} />
-      <text x="12" y="16" textAnchor="middle" fontSize="12" fontWeight="bold" fill="#fff">
-        {provider.charAt(0).toUpperCase()}
-      </text>
-    </svg>
-  );
-}
 
 type StrategyTemplate = {
   name: string;
@@ -712,27 +639,25 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
               <span className="text-sm font-semibold">Choose AI Model</span>
               {modelsLoading && <span className="ml-1 loading loading-dots loading-xs" />}
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2" style={{ gap: 6 }}>
               {displayGroups.flatMap((group) =>
                 group.models.map((m) => {
                   const modelProvider = m.provider?.trim() ?? '';
                   const isSelected =
                     selectedModel === m.id &&
                     (selectedProvider ?? '') === modelProvider;
-                  const price = m.price ?? 0;
-                  const currency = m.priceCurrency ?? 'TON';
+                  const dotColor = PROVIDER_COLORS[modelProvider.toLowerCase()] ?? '#888';
                   return (
                     <button
                       key={`${modelProvider || 'p'}:${m.id}`}
                       type="button"
-                      className={`
-                        relative flex flex-col items-start gap-1.5 rounded-lg border-2 px-3 py-2.5
-                        transition-all duration-150 text-left cursor-pointer
-                        ${isSelected
-                          ? 'border-success bg-success/5 shadow-sm'
-                          : 'border-base-content/8 hover:border-base-content/20 hover:bg-base-300/30'
-                        }
-                      `}
+                      className="flex items-center text-left cursor-pointer transition-all duration-150"
+                      style={{
+                        padding: '10px 12px',
+                        borderRadius: 8,
+                        border: isSelected ? '2px solid #1D9E75' : '0.5px solid oklch(var(--bc) / 0.12)',
+                        background: isSelected ? 'oklch(0.85 0.08 165 / 0.08)' : 'transparent',
+                      }}
                       onClick={() =>
                         setPersisted((p) => ({
                           ...p,
@@ -742,36 +667,40 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
                       }
                       title={m.description ?? undefined}
                     >
-                      {isSelected && (
-                        <div className="absolute top-2 right-2 flex h-4.5 w-4.5 items-center justify-center rounded-full bg-success text-success-content">
-                          <svg className="h-2.5 w-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                          </svg>
-                        </div>
-                      )}
-                      <div className="flex items-center gap-2">
-                        <div className="flex-shrink-0">
-                          <ProviderLogo provider={modelProvider} size={20} />
-                        </div>
-                        <span className="text-sm font-bold leading-tight">{shortModelName(m.name)}</span>
-                      </div>
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        {m.isThinking != null && (
-                          <span
-                            className={`rounded-full px-1.5 py-0.5 text-[10px] font-medium ${
-                              m.isThinking
-                                ? 'bg-info/15 text-info'
-                                : 'bg-warning/15 text-warning'
-                            }`}
-                          >
-                            {m.isThinking ? 'Thinking' : 'Fast'}
-                          </span>
-                        )}
-                        <span className="text-[10px] opacity-40 ml-auto">
-                          {price > 0 ? `${parseFloat(price.toFixed(4))} ${currency}` : `Free`}
-                          {' '}<span className="opacity-70">(500 dec.)</span>
+                      {/* Provider dot */}
+                      <span
+                        className="flex-shrink-0 rounded-full"
+                        style={{ width: 8, height: 8, background: dotColor, marginRight: 10 }}
+                      />
+                      {/* Provider + model name */}
+                      <div className="flex flex-col min-w-0 flex-1">
+                        <span className="text-[10px] font-medium leading-tight opacity-50 capitalize truncate">
+                          {modelProvider || 'Unknown'}
+                        </span>
+                        <span className="text-xs font-bold leading-tight truncate">
+                          {shortModelName(m.name)}
                         </span>
                       </div>
+                      {/* Speed badge */}
+                      {m.isThinking != null && (
+                        <span
+                          className="flex-shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ml-2"
+                          style={
+                            m.isThinking
+                              ? { background: '#E6F1FB', color: '#185FA5' }
+                              : { background: '#FAEEDA', color: '#854F0B' }
+                          }
+                        >
+                          {m.isThinking ? 'Thinking' : 'Fast'}
+                        </span>
+                      )}
+                      {/* Checkmark */}
+                      {isSelected && (
+                        <svg className="flex-shrink-0 ml-2" width={16} height={16} viewBox="0 0 24 24" fill="none">
+                          <circle cx="12" cy="12" r="11" fill="#1D9E75" />
+                          <path d="M7 12.5l3 3 7-7" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      )}
                     </button>
                   );
                 })
