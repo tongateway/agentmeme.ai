@@ -30,19 +30,19 @@ type TradingPair = {
 /** Only pairs whose both vaults exist */
 const DEFAULT_PAIRS: TradingPair[] = [
   {
-    slug: 'TON-AGT',
-    label: 'TON / AGT',
+    slug: 'TON-AGNT',
+    label: 'TON / AGNT',
     fromSymbol: 'TON',
-    toSymbol: 'AGT',
+    toSymbol: 'AGNT',
     baseVault: 'EQCfzBzukuhvyXvKwFXq9nffu_YRngAJugAuR5ibQ7Arcl1w',
     quoteVault: 'EQA0_4nl1-biEvpzengd5M3GNTt1PRYGIIEHlfanEl3tZkRr',
     hot: true,
   },
   {
-    slug: 'USDT-AGT',
-    label: 'USDT / AGT',
+    slug: 'USDT-AGNT',
+    label: 'USDT / AGNT',
     fromSymbol: 'USDT',
-    toSymbol: 'AGT',
+    toSymbol: 'AGNT',
     baseVault: 'EQCfzBzukuhvyXvKwFXq9nffu_YRngAJugAuR5ibQ7Arcl1w',
     quoteVault: 'EQBrozHGTEwumr5ND62CpUXqmfYyi1UucbIj-15ZJnlFLe9U',
     hot: true,
@@ -656,7 +656,7 @@ export function StatsPage({ raceCfg, pairSlug, onPairChange }: StatsPageProps) {
             missingSymbols.push(t.symbol.toUpperCase());
           }
         }
-        // Fetch DEX prices for tokens without race API price (e.g. AGT)
+        // Fetch DEX prices for tokens without race API price (e.g. AGNT)
         if (missingSymbols.length > 0) {
           const dexResults = await Promise.all(
             missingSymbols.map((s) => getDexCoinPrice(s)),

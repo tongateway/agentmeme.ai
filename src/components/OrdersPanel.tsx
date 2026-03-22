@@ -97,7 +97,9 @@ export function OrdersPanel({ contractAddress }: OrdersPanelProps) {
     cachedCoinEntries ? new Map(cachedCoinEntries) : new Map([[0, 'TON']]),
   );
   const [tonPrice, setTonPrice] = useState<number | null>(null);
+  const [showAll, setShowAll] = useState(false);
   const ACTIVE_SET = useMemo(() => new Set(['created', 'deployed', 'pending_match']), []);
+  const INITIAL_LIMIT = 10;
 
   // Load stats + all orders in sequence (1 RPS limit)
   const loadAll = useCallback(async (isBackground = false) => {
@@ -146,10 +148,19 @@ export function OrdersPanel({ contractAddress }: OrdersPanelProps) {
   }, [loadAll, cachedOrders]);
 
   // Client-side filter
-  const orders = useMemo(() => {
+  const filteredOrders = useMemo(() => {
     if (tab === 'active') return allOrders.filter((o) => ACTIVE_SET.has(o.status));
     return allOrders.filter((o) => !ACTIVE_SET.has(o.status));
   }, [allOrders, tab, ACTIVE_SET]);
+
+  const orders = useMemo(
+    () => showAll ? filteredOrders : filteredOrders.slice(0, INITIAL_LIMIT),
+    [filteredOrders, showAll],
+  );
+  const hasMore = filteredOrders.length > INITIAL_LIMIT;
+
+  // Reset "show all" when switching tabs
+  useEffect(() => { setShowAll(false); }, [tab]);
 
   return (
     <div className="card bg-base-200 shadow-md sm:col-span-2">
@@ -283,6 +294,17 @@ export function OrdersPanel({ contractAddress }: OrdersPanelProps) {
                 })}
               </tbody>
             </table>
+            {hasMore && (
+              <div className="flex justify-center mt-3">
+                <button
+                  type="button"
+                  className="btn btn-sm btn-ghost"
+                  onClick={() => setShowAll((v) => !v)}
+                >
+                  {showAll ? 'Show less' : `Show all ${filteredOrders.length} orders`}
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>
