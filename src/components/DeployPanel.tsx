@@ -344,9 +344,9 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
     }
   }, [isConnected, tonAddress]);
 
-  // Non-bounceable friendly form for API registration
-  const ownerAddressNonBounce = useMemo(
-    () => ownerAddressParsed?.toString({ bounceable: false }) ?? null,
+  // Raw format (0:hex) for API registration
+  const ownerAddressRaw = useMemo(
+    () => ownerAddressParsed?.toRawString() ?? null,
     [ownerAddressParsed],
   );
 
@@ -456,7 +456,7 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
 
   const registerOnly = useCallback(async () => {
     setErr(null);
-    if (!isConnected || !tonAddress || !ownerAddressNonBounce) {
+    if (!isConnected || !tonAddress || !ownerAddressRaw) {
       setErr('Connect a TON wallet first.');
       return;
     }
@@ -469,7 +469,7 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
       setBusy('register');
       const created = await registerRaceContract(raceCfg, {
         prompt: persisted.prompt,
-        owner_address: ownerAddressNonBounce,
+        owner_address: ownerAddressRaw,
         ai_model: selectedModel,
         ...(selectedProvider ? { ai_provider: selectedProvider } : {}),
         ...(persisted.agentName?.trim() ? { name: persisted.agentName.trim() } : {}),
@@ -484,7 +484,7 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
   }, [
     isConnected,
     tonAddress,
-    ownerAddressNonBounce,
+    ownerAddressRaw,
     persisted.prompt,
     persisted.agentName,
     raceCfg,
@@ -530,7 +530,7 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
   const deployAndRegister = useCallback(async () => {
     setErr(null);
 
-    if (!ownerAddressNonBounce) {
+    if (!ownerAddressRaw) {
       setErr('Connect a TON wallet first.');
       return;
     }
@@ -562,7 +562,7 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
         // 1. Register with backend — it creates the contract and returns the address
         const created = await registerRaceContract(raceCfg, {
           prompt: persisted.prompt,
-          owner_address: ownerAddressNonBounce,
+          owner_address: ownerAddressRaw,
           ai_model: selectedModel,
           ...(selectedProvider ? { ai_provider: selectedProvider } : {}),
           ...(persisted.agentName?.trim() ? { name: persisted.agentName.trim() } : {}),
@@ -610,7 +610,7 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
     } finally {
       setBusy(null);
     }
-  }, [ownerAddressNonBounce, persisted, setPersisted, tonConnectUI, isConnected, tonAddress, raceCfg, selectedModel, selectedProvider, onContractRegistered]);
+  }, [ownerAddressRaw, persisted, setPersisted, tonConnectUI, isConnected, tonAddress, raceCfg, selectedModel, selectedProvider, onContractRegistered]);
 
   const busyLabel = busy === 'deploy' ? 'Deploying contract...' : busy === 'register' ? 'Registering agent...' : busy === 'topup' ? 'Sending TON...' : null;
   const canRetryRegisterOnly = !!persisted.contractAddress && !persisted.raceContractId;

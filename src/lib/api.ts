@@ -540,6 +540,56 @@ export async function getRaceLeaderboard(
   return Array.isArray(data) ? data.map((i) => normalizeLeaderboardEntry(i as Record<string, unknown>)) : [];
 }
 
+/* Token-specific leaderboard (e.g. /api/leaderboard/agnt) */
+
+export type TokenLeaderboardEntry = {
+  rank: number;
+  smart_contract_id: string;
+  address: string;
+  name?: string | null;
+  owner_address: string;
+  ai_model: string;
+  status?: string;
+  max_decisions: number;
+  used_decisions: number;
+  buy_volume: number;
+  sell_volume: number;
+  completed_orders: number;
+  deployed_orders: number;
+  total_orders: number;
+  completed_volume: number;
+};
+
+function normalizeTokenLeaderboardEntry(item: Record<string, unknown>, tokenKey: string): TokenLeaderboardEntry {
+  const prefix = tokenKey.toLowerCase() + '_';
+  return {
+    rank: Number(item.rank ?? 0),
+    smart_contract_id: String(item.smart_contract_id ?? ''),
+    address: String(item.address ?? ''),
+    name: typeof item.name === 'string' ? item.name : null,
+    owner_address: String(item.owner_address ?? ''),
+    ai_model: String(item.ai_model ?? ''),
+    status: typeof item.status === 'string' ? item.status : undefined,
+    max_decisions: Number(item.max_decisions ?? 0),
+    used_decisions: Number(item.used_decisions ?? 0),
+    buy_volume: Number(item[`${prefix}buy_volume`] ?? 0),
+    sell_volume: Number(item[`${prefix}sell_volume`] ?? 0),
+    completed_orders: Number(item[`${prefix}completed_orders`] ?? 0),
+    deployed_orders: Number(item[`${prefix}deployed_orders`] ?? 0),
+    total_orders: Number(item[`${prefix}total_orders`] ?? 0),
+    completed_volume: Number(item[`${prefix}completed_volume`] ?? 0),
+  };
+}
+
+export async function getTokenLeaderboard(cfg: PublicApiConfig, token: string): Promise<TokenLeaderboardEntry[]> {
+  const res = await fetch(raceUrl(cfg, `/api/leaderboard/${token.toLowerCase()}`), {
+    method: 'GET',
+    headers: publicGetHeaders(cfg),
+  });
+  const data = await jsonOrThrow(res);
+  return Array.isArray(data) ? data.map((i) => normalizeTokenLeaderboardEntry(i as Record<string, unknown>, token)) : [];
+}
+
 /**
  * Fetch all contracts by converting leaderboard entries to ContractListItem.
  * Used as a fallback because /api/contracts returns empty.
