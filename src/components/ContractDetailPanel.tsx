@@ -446,33 +446,35 @@ export function ContractDetailPanel({ contract, raceCfg, theme, onDeleted, onSta
     setWithdrawBusy('withdraw');
     setError(null);
     try {
-      // Call both APIs in parallel
-      const [jettonResult, tonResult] = await Promise.allSettled([
-        withdrawJetton(raceCfg, contract.id),
-        withdrawTon(raceCfg, contract.id),
-      ]);
-
       const bounceable = Address.parse(contract.address).toString({ bounceable: true });
       const messages: { address: string; amount: string; payload?: string }[] = [];
 
-      // Jetton message
-      if (jettonResult.status === 'fulfilled') {
-        setJettonInfo(jettonResult.value);
-        if (jettonResult.value.body_hex) {
-          messages.push({
-            address: bounceable,
-            amount: nanoFromTon('0.1'),
-            payload: hexBocToBase64(jettonResult.value.body_hex),
-          });
+      // Fetch jetton balances to get master addresses, then withdraw each
+      const jettons = await getJettonBalances(contract.address).catch(() => []);
+      if (jettons.length > 0) {
+        const jettonResults = await Promise.allSettled(
+          jettons.map((j) => withdrawJetton(raceCfg, contract.id, j.jettonAddress)),
+        );
+        for (const jr of jettonResults) {
+          if (jr.status === 'fulfilled' && jr.value.body_hex) {
+            setJettonInfo(jr.value);
+            messages.push({
+              address: bounceable,
+              amount: nanoFromTon('0.1'),
+              payload: hexBocToBase64(jr.value.body_hex),
+            });
+          }
         }
         setWithdrawDone((s) => new Set(s).add('jetton'));
       } else {
-        const msg = jettonResult.reason instanceof Error ? jettonResult.reason.message : String(jettonResult.reason);
-        if (msg.includes('No jetton balances')) {
-          setWithdrawDone((s) => new Set(s).add('jetton'));
-        }
-        // non-fatal — continue with TON
+        setWithdrawDone((s) => new Set(s).add('jetton'));
       }
+
+      // TON withdraw
+      const tonResult = await withdrawTon(raceCfg, contract.id).then(
+        (v) => ({ status: 'fulfilled' as const, value: v }),
+        (e) => ({ status: 'rejected' as const, reason: e }),
+      );
 
       // TON message
       if (tonResult.status === 'fulfilled' && tonResult.value.body_hex) {

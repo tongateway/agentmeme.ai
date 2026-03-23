@@ -495,10 +495,11 @@ export type CloseAllOrdersResult = {
   body_hex: string;
 };
 
-export async function withdrawJetton(cfg: PublicApiConfig, contractId: string): Promise<WithdrawJettonResult> {
+export async function withdrawJetton(cfg: PublicApiConfig, contractId: string, jettonMasterAddress: string): Promise<WithdrawJettonResult> {
   const res = await fetch(raceUrl(cfg, `/api/contracts/${contractId}/withdraw-jetton`), {
     method: 'POST',
     headers: publicPostHeaders(cfg),
+    body: JSON.stringify({ jetton_master_address: jettonMasterAddress }),
   });
   return jsonOrThrow(res);
 }
