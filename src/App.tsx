@@ -174,12 +174,7 @@ export default function App() {
   const refreshContracts = useCallback(async () => {
     try {
       setContractsBusy(true);
-      // Fetch active + paused contracts in parallel
-      const [active, paused] = await Promise.all([
-        listRaceContracts(raceCfg, 'active').catch(() => [] as ContractListItem[]),
-        listRaceContracts(raceCfg, 'paused').catch(() => [] as ContractListItem[]),
-      ]);
-      let all = [...active, ...paused];
+      let all = await listRaceContracts(raceCfg, 'active,paused,deploying');
       if (all.length === 0) {
         all = await listContractsFromLeaderboard(raceCfg);
       }
