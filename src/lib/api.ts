@@ -60,6 +60,8 @@ export type ContractListItem = {
   created_at: string;
   updated_at: string;
   total_decisions?: number | null;
+  max_decisions?: number | null;
+  used_decisions?: number | null;
 };
 
 export type ContractDetail = {
@@ -227,6 +229,8 @@ function normalizeContract(item: Record<string, unknown>): ContractListItem {
     created_at: String(item.created_at ?? ''),
     updated_at: String(item.updated_at ?? ''),
     total_decisions: typeof item.total_decisions === 'number' ? item.total_decisions : null,
+    max_decisions: typeof item.max_decisions === 'number' ? item.max_decisions : null,
+    used_decisions: typeof item.used_decisions === 'number' ? item.used_decisions : null,
   };
 }
 

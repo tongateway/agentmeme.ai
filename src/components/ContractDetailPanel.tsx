@@ -608,6 +608,25 @@ export function ContractDetailPanel({ contract, raceCfg, theme, onDeleted, onSta
           </div>
           <div className="divider my-0" />
           <div className="flex items-center justify-between gap-4">
+            <div className="text-sm opacity-60">Decisions</div>
+            <div className="flex items-center gap-2">
+              <span className="mono text-xs">
+                {contract.used_decisions ?? 0}
+                {contract.max_decisions != null && contract.max_decisions > 0
+                  ? ` / ${contract.max_decisions}`
+                  : ' / \u221E'}
+              </span>
+              {contract.max_decisions != null && contract.max_decisions > 0 && (
+                <progress
+                  className="progress progress-success w-16 h-2"
+                  value={contract.used_decisions ?? 0}
+                  max={contract.max_decisions}
+                />
+              )}
+            </div>
+          </div>
+          <div className="divider my-0" />
+          <div className="flex items-center justify-between gap-4">
             <div className="text-sm opacity-60">Explorer</div>
             <div className="flex items-center gap-2 text-xs">
               <a

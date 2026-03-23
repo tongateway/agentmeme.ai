@@ -130,7 +130,7 @@ export function ContractTabBar({ contracts, activeTab, onTabChange, loading, onR
             ) : (
               <span className="mono text-xs">{(c.name && c.name.trim()) || fmtAddrShort(c.address)}</span>
             )}
-            {c.is_active && (c.total_decisions == null || c.total_decisions === 0) ? (
+            {c.status === 'deploying' ? (
               <span className="badge badge-xs badge-warning animate-pulse">DEPLOYING</span>
             ) : (
               <span className={`badge badge-xs ${c.is_active ? 'badge-success' : 'badge-ghost'}`}>
