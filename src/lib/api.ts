@@ -193,6 +193,12 @@ export type ReactionResponse = {
   bearish_count: number;
 };
 
+export type PricingTier = {
+  cntDecisions: number;
+  price: number;
+  currency: string;
+};
+
 export type AiModelOption = {
   id: string;
   name: string;
@@ -201,6 +207,7 @@ export type AiModelOption = {
   isThinking?: boolean;
   price?: number;
   priceCurrency?: string;
+  pricing?: PricingTier[];
 };
 
 export type AiModelsByProvider = {
@@ -315,12 +322,25 @@ function normalizeAiModelOption(item: Record<string, unknown>, providerHint?: st
   const provider = typeof providerRaw === 'string' && providerRaw.trim() ? providerRaw.trim() : undefined;
   const isThinkingRaw = item.is_thinking;
   const isThinking = typeof isThinkingRaw === 'boolean' ? isThinkingRaw : undefined;
+  // Extract pricing tiers from the pricing array
+  const pricingRaw = Array.isArray(item.pricing) ? item.pricing : [];
+  const pricing: PricingTier[] = pricingRaw
+    .filter((t): t is Record<string, unknown> => t != null && typeof t === 'object')
+    .map((t) => ({
+      cntDecisions: Number(t.cnt_decisions ?? 0),
+      price: Number(t.price ?? 0),
+      currency: typeof t.currency === 'string' ? t.currency : 'TON',
+    }))
+    .filter((t) => t.cntDecisions > 0)
+    .sort((a, b) => a.cntDecisions - b.cntDecisions);
+
+  // Fallback to flat price field
   const priceRaw = item.price;
   const priceCurrencyRaw = item.price_currency;
   const priceCurrency = typeof priceCurrencyRaw === 'string' && priceCurrencyRaw.trim() ? priceCurrencyRaw.trim() : undefined;
   const price = typeof priceRaw === 'number' ? fromNanoToken(priceRaw, priceCurrency) : undefined;
 
-  return { id, name, provider, description, isThinking, price, priceCurrency };
+  return { id, name, provider, description, isThinking, price, priceCurrency, pricing: pricing.length > 0 ? pricing : undefined };
 }
 
 function normalizeAiModelsGroup(item: Record<string, unknown>): AiModelsByProvider | null {

@@ -32,18 +32,6 @@ function shortModelName(name: string): string {
   return sep > 0 ? name.slice(0, sep).trim() : name;
 }
 
-/** Brand colors (dot) per provider */
-const PROVIDER_COLORS: Record<string, string> = {
-  anthropic: '#888780',
-  openai: '#0F6E56',
-  google: '#D85A30',
-  grok: '#7F77DD',
-  xai: '#7F77DD',
-  qwen: '#D4537E',
-  openrouter: '#6366F1',
-  deepseek: '#378ADD',
-  gonka: '#D4537E',
-};
 
 type StrategyTemplate = {
   name: string;
@@ -322,6 +310,7 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
   const [err, setErr] = useState<string | null>(null);
   const [aiModelGroups, setAiModelGroups] = useState<AiModelsByProvider[]>([]);
   const [modelsLoading, setModelsLoading] = useState(false);
+  const [modelListOpen, setModelListOpen] = useState(!persisted.aiModel);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [promptVars, setPromptVars] = useState<PromptVariable[]>([]);
   const promptRef = useRef<HTMLTextAreaElement>(null);
@@ -639,73 +628,123 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
               <span className="text-sm font-semibold">Choose AI Model</span>
               {modelsLoading && <span className="ml-1 loading loading-dots loading-xs" />}
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2" style={{ gap: 6 }}>
-              {displayGroups.flatMap((group) =>
-                group.models.map((m) => {
-                  const modelProvider = m.provider?.trim() ?? '';
-                  const isSelected =
-                    selectedModel === m.id &&
-                    (selectedProvider ?? '') === modelProvider;
-                  const dotColor = PROVIDER_COLORS[modelProvider.toLowerCase()] ?? '#888';
-                  return (
-                    <button
-                      key={`${modelProvider || 'p'}:${m.id}`}
-                      type="button"
-                      className="flex items-center text-left cursor-pointer transition-all duration-150"
-                      style={{
-                        padding: '10px 12px',
-                        borderRadius: 8,
-                        border: isSelected ? '2px solid #1D9E75' : '0.5px solid oklch(var(--bc) / 0.12)',
-                        background: isSelected ? 'oklch(0.85 0.08 165 / 0.08)' : 'transparent',
-                      }}
-                      onClick={() =>
-                        setPersisted((p) => ({
-                          ...p,
-                          aiModel: m.id,
-                          aiProvider: m.provider?.trim() || undefined,
-                        }))
-                      }
-                      title={m.description ?? undefined}
-                    >
-                      {/* Provider dot */}
-                      <span
-                        className="flex-shrink-0 rounded-full"
-                        style={{ width: 8, height: 8, background: dotColor, marginRight: 10 }}
-                      />
-                      {/* Provider + model name */}
-                      <div className="flex flex-col min-w-0 flex-1">
-                        <span className="text-[10px] font-medium leading-tight opacity-50 capitalize truncate">
-                          {modelProvider || 'Unknown'}
-                        </span>
-                        <span className="text-xs font-bold leading-tight truncate">
-                          {shortModelName(m.name)}
-                        </span>
-                      </div>
-                      {/* Speed badge */}
-                      {m.isThinking != null && (
-                        <span
-                          className="flex-shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ml-2"
-                          style={
-                            m.isThinking
-                              ? { background: '#E6F1FB', color: '#185FA5' }
-                              : { background: '#FAEEDA', color: '#854F0B' }
-                          }
-                        >
-                          {m.isThinking ? 'Thinking' : 'Fast'}
-                        </span>
-                      )}
-                      {/* Checkmark */}
-                      {isSelected && (
-                        <svg className="flex-shrink-0 ml-2" width={16} height={16} viewBox="0 0 24 24" fill="none">
-                          <circle cx="12" cy="12" r="11" fill="#1D9E75" />
-                          <path d="M7 12.5l3 3 7-7" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
-                      )}
-                    </button>
-                  );
-                })
-              )}
-            </div>
+
+            {/* Collapsed: show selected model */}
+            {!modelListOpen && selectedModelOption && (
+              <button
+                type="button"
+                className="flex items-center w-full text-left cursor-pointer"
+                style={{
+                  padding: '10px 12px',
+                  borderRadius: 8,
+                  border: '2px solid #1D9E75',
+                  background: 'oklch(0.85 0.08 165 / 0.08)',
+                }}
+                onClick={() => setModelListOpen(true)}
+              >
+                <div className="flex flex-col min-w-0 flex-1">
+                  <span className="text-[10px] font-medium leading-tight opacity-50 capitalize truncate">
+                    {selectedModelOption.provider?.trim() || 'Unknown'}
+                  </span>
+                  <span className="text-xs font-bold leading-tight truncate">
+                    {shortModelName(selectedModelOption.name)}
+                  </span>
+                </div>
+                {selectedModelOption.isThinking != null && (
+                  <span
+                    className="flex-shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ml-2"
+                    style={
+                      selectedModelOption.isThinking
+                        ? { background: '#E6F1FB', color: '#185FA5' }
+                        : { background: '#FAEEDA', color: '#854F0B' }
+                    }
+                  >
+                    {selectedModelOption.isThinking ? 'Thinking' : 'Fast'}
+                  </span>
+                )}
+                {selectedModelOption.pricing?.[0] && (
+                  <span className="flex-shrink-0 text-[10px] opacity-40 ml-2 mono">
+                    {selectedModelOption.pricing[0].price} {selectedModelOption.pricing[0].currency}/{selectedModelOption.pricing[0].cntDecisions} dec
+                  </span>
+                )}
+                <svg className="flex-shrink-0 ml-2 opacity-40" width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                  <path d="M6 9l6 6 6-6" />
+                </svg>
+              </button>
+            )}
+
+            {/* Expanded: show all models */}
+            {modelListOpen && (
+              <div className="grid grid-cols-1 sm:grid-cols-2" style={{ gap: 6 }}>
+                {displayGroups.flatMap((group) =>
+                  group.models.map((m) => {
+                    const modelProvider = m.provider?.trim() ?? '';
+                    const isSelected =
+                      selectedModel === m.id &&
+                      (selectedProvider ?? '') === modelProvider;
+                    const lowestTier = m.pricing?.[0];
+                    return (
+                      <button
+                        key={`${modelProvider || 'p'}:${m.id}`}
+                        type="button"
+                        className="flex items-center text-left cursor-pointer"
+                        style={{
+                          padding: '10px 12px',
+                          borderRadius: 8,
+                          border: isSelected ? '2px solid #1D9E75' : '0.5px solid oklch(var(--bc) / 0.12)',
+                          background: isSelected ? 'oklch(0.85 0.08 165 / 0.08)' : 'transparent',
+                        }}
+                        onClick={() => {
+                          setPersisted((p) => ({
+                            ...p,
+                            aiModel: m.id,
+                            aiProvider: m.provider?.trim() || undefined,
+                          }));
+                          setModelListOpen(false);
+                        }}
+                        title={m.description ?? undefined}
+                      >
+                        {/* Provider + model name */}
+                        <div className="flex flex-col min-w-0 flex-1">
+                          <span className="text-[10px] font-medium leading-tight opacity-50 capitalize truncate">
+                            {modelProvider || 'Unknown'}
+                          </span>
+                          <span className="text-xs font-bold leading-tight truncate">
+                            {shortModelName(m.name)}
+                          </span>
+                        </div>
+                        {/* Speed badge */}
+                        {m.isThinking != null && (
+                          <span
+                            className="flex-shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ml-2"
+                            style={
+                              m.isThinking
+                                ? { background: '#E6F1FB', color: '#185FA5' }
+                                : { background: '#FAEEDA', color: '#854F0B' }
+                            }
+                          >
+                            {m.isThinking ? 'Thinking' : 'Fast'}
+                          </span>
+                        )}
+                        {/* Price */}
+                        {lowestTier && (
+                          <span className="flex-shrink-0 text-[10px] opacity-40 ml-2 mono">
+                            {lowestTier.price} {lowestTier.currency}/{lowestTier.cntDecisions}
+                          </span>
+                        )}
+                        {/* Checkmark */}
+                        {isSelected && (
+                          <svg className="flex-shrink-0 ml-2" width={16} height={16} viewBox="0 0 24 24" fill="none">
+                            <circle cx="12" cy="12" r="11" fill="#1D9E75" />
+                            <path d="M7 12.5l3 3 7-7" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                        )}
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+            )}
           </div>
 
           <div className="divider my-1 opacity-20" />
