@@ -821,7 +821,7 @@ export function ContractDetailPanel({ contract, raceCfg, theme, onDeleted, onSta
             </div>
 
             {/* Jetton info */}
-            {jettonInfo && jettonInfo.jettons.length > 0 && (
+            {jettonInfo && jettonInfo.jettons?.length > 0 && (
               <div className="text-xs opacity-60">
                 Jettons: {jettonInfo.jettons.map((j) => `${(j.balance / 10 ** j.decimals).toFixed(j.decimals > 4 ? 4 : j.decimals)} ${j.symbol}`).join(', ')}
               </div>
