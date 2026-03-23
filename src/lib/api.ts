@@ -395,8 +395,9 @@ export async function getOrders(cfg: BackendConfig, contractId: string, limit = 
 
 // --- Public (no auth) API ---
 
-export async function listRaceContracts(cfg: PublicApiConfig): Promise<ContractListItem[]> {
-  const res = await fetch(raceUrl(cfg, '/api/contracts'), {
+export async function listRaceContracts(cfg: PublicApiConfig, status?: string): Promise<ContractListItem[]> {
+  const qs = status ? `?status=${encodeURIComponent(status)}` : '';
+  const res = await fetch(raceUrl(cfg, `/api/contracts${qs}`), {
     method: 'GET',
     headers: publicGetHeaders(cfg),
   });

@@ -174,8 +174,12 @@ export default function App() {
   const refreshContracts = useCallback(async () => {
     try {
       setContractsBusy(true);
-      // Try /api/contracts first; fall back to leaderboard if empty
-      let all = await listRaceContracts(raceCfg);
+      // Fetch active + paused contracts in parallel
+      const [active, paused] = await Promise.all([
+        listRaceContracts(raceCfg, 'active').catch(() => [] as ContractListItem[]),
+        listRaceContracts(raceCfg, 'paused').catch(() => [] as ContractListItem[]),
+      ]);
+      let all = [...active, ...paused];
       if (all.length === 0) {
         all = await listContractsFromLeaderboard(raceCfg);
       }
