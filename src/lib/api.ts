@@ -736,6 +736,8 @@ async function fetchDexCoinPriceRemote(key: string): Promise<DexCoinPrice | null
         best_ask: string | null;
         best_bid: string | null;
         mid_price: string | null;
+        bid_order_count?: number;
+        ask_order_count?: number;
       }[];
     };
 
