@@ -118,9 +118,17 @@ export function OrdersPanel({ contractAddress }: OrdersPanelProps) {
       setStats(statsData);
       writeCache(statsCacheKey, statsData);
       if (price != null) setTonPrice(price);
-      // Small delay to respect 1 RPS
+      // Fetch active (deployed) orders + recent history in parallel
       await new Promise((r) => setTimeout(r, 1100));
-      const orders = await getDexOrders(rawAddress, { limit: 200 });
+      const [activeOrders, recentOrders] = await Promise.all([
+        getDexOrders(rawAddress, { status: 'deployed', limit: 100 }),
+        getDexOrders(rawAddress, { limit: 200 }),
+      ]);
+      // Merge and deduplicate by id
+      const byId = new Map<number, DexOrder>();
+      for (const o of recentOrders) byId.set(o.id, o);
+      for (const o of activeOrders) byId.set(o.id, o);
+      const orders = Array.from(byId.values());
       orders.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
       setAllOrders(orders);
       writeCache(ordCacheKey, orders);
