@@ -301,7 +301,7 @@ export default function App() {
     <div className="min-h-dvh">
       <div className="w-full bg-warning/10 border-b border-warning/20 py-1.5 px-4 text-center text-xs sm:text-sm text-warning-content">
         <span className="font-semibold">Beta Notice:</span>{' '}
-        We are currently in development and auditing smart contracts. Please use with caution — trade at your own risk.
+        We are currently in Beta. Please use with caution and remember — trade at your own risk, even with AI.
       </div>
 
       <header className="navbar mx-auto max-w-6xl px-4 sm:px-6 pt-6 flex-col gap-3 sm:flex-row">
