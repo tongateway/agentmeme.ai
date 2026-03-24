@@ -470,9 +470,9 @@ export function ContractDetailPanel({ contract, raceCfg, theme, onDeleted, onSta
         setWithdrawDone((s) => new Set(s).add('jetton'));
       }
 
-      // TON withdraw — fetch fresh balance, keep 0.01 TON for gas
+      // TON withdraw — send full balance, attach 0.11 TON for gas
       const tonBal = await fetchTonBalance(contract.address);
-      const tonAmount = Math.max(0, (parseFloat(tonBal) || 0) - 0.11);
+      const tonAmount = parseFloat(tonBal) || 0;
       const tonResult = await withdrawTon(raceCfg, contract.id, tonAmount).then(
         (v) => ({ status: 'fulfilled' as const, value: v }),
         (e) => ({ status: 'rejected' as const, reason: e }),
@@ -482,7 +482,7 @@ export function ContractDetailPanel({ contract, raceCfg, theme, onDeleted, onSta
       if (tonResult.status === 'fulfilled' && tonResult.value.body_hex) {
         messages.push({
           address: bounceable,
-          amount: nanoFromTon('0.05'),
+          amount: nanoFromTon('0.11'),
           payload: hexBocToBase64(tonResult.value.body_hex),
         });
         setWithdrawDone((s) => new Set(s).add('ton'));
