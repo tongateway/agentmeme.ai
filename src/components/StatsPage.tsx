@@ -505,7 +505,7 @@ function PairActivityRow({ stats, fromSymbol, toSymbol, volumeUsdByWindow }: {
         <div className="flex items-center gap-2">
           <div className="w-1 h-3.5 rounded-full bg-info/60" />
           <span className="text-[11px] font-bold tracking-tight opacity-70">
-            {fromSymbol}/{toSymbol} Open Orders / Filled Orders / Volume
+            {fromSymbol}/{toSymbol} Order Stats
           </span>
         </div>
         <div className="h-2 w-2 rounded-full bg-success/50 animate-pulse" />
@@ -772,7 +772,7 @@ export function StatsPage({ raceCfg, pairSlug, onPairChange }: StatsPageProps) {
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75" />
               <span className="relative inline-flex rounded-full h-2 w-2 bg-success" />
             </span>
-            <p className="text-xs opacity-50">Live from open4dev orderbook</p>
+            <p className="text-xs opacity-50">Live from open4dev DEX</p>
           </div>
         </div>
       </div>
