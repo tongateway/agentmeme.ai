@@ -796,42 +796,105 @@ export async function getDexCoinPrice(symbol: string): Promise<DexCoinPrice | nu
   return fetchDexCoinPriceRemote(key);
 }
 
+type DexPairRaw = {
+  counter_coin_symbol: string;
+  counter_coin_decimals: number;
+  best_ask: string | null;
+  best_bid: string | null;
+  mid_price: string | null;
+  bid_order_count?: number;
+  ask_order_count?: number;
+};
+
+/**
+ * Build a map of known token USD prices from race API + TON price.
+ * Used to convert DEX pair prices to USD.
+ */
+let _knownPricesCache: Map<string, number> | null = null;
+let _knownPricesFetchedAt = 0;
+const KNOWN_PRICES_TTL = 120_000;
+
+async function getKnownUsdPrices(cfg?: PublicApiConfig): Promise<Map<string, number>> {
+  if (_knownPricesCache && Date.now() - _knownPricesFetchedAt < KNOWN_PRICES_TTL) {
+    return _knownPricesCache;
+  }
+  const map = new Map<string, number>();
+  try {
+    const [tonPrice, tokens] = await Promise.all([
+      getTonPriceUsd(),
+      cfg ? getRaceTokens(cfg) : Promise.resolve([]),
+    ]);
+    if (tonPrice) map.set('TON', tonPrice);
+    map.set('USDT', 1);
+    map.set('USDC', 1);
+    for (const t of tokens) {
+      if (t.price_usd > 0) map.set(t.symbol.toUpperCase(), t.price_usd);
+    }
+  } catch { /* use whatever we got */ }
+  _knownPricesCache = map;
+  _knownPricesFetchedAt = Date.now();
+  return map;
+}
+
+/** Expose setter so views that already have a raceCfg can prime the cache. */
+export function primeKnownPrices(cfg: PublicApiConfig): void {
+  getKnownUsdPrices(cfg).catch(() => {});
+}
+
+/**
+ * Calculate USD price from a DEX pair using known counter-coin prices.
+ * Uses mid_price for valuation. Returns null if the pair data is unreliable.
+ */
+function pairToUsd(pair: DexPairRaw, knownPrices: Map<string, number>): number | null {
+  const cs = pair.counter_coin_symbol.toUpperCase();
+  const counterUsd = knownPrices.get(cs);
+  if (counterUsd == null) return null;
+
+  // Require both sides
+  const bidCount = pair.bid_order_count ?? 0;
+  const askCount = pair.ask_order_count ?? 0;
+  if (bidCount === 0 || askCount === 0) return null;
+
+  const PRICE_FACTOR = 1e18;
+  const mid = pair.mid_price ? Number(pair.mid_price) / PRICE_FACTOR : null;
+  if (mid == null || mid <= 0) return null;
+
+  const usd = mid * counterUsd;
+  // Sanity cap
+  if (usd > 1000) return null;
+  return usd;
+}
+
 async function fetchDexCoinPriceRemote(key: string): Promise<DexCoinPrice | null> {
   try {
     const res = await fetch(`${OPEN4DEV_BASE}/coins/price?symbol=${encodeURIComponent(key)}`);
     if (!res.ok) return _coinPriceMem.get(key)?.data ?? null;
     const data = (await res.json()) as {
       coin: { symbol: string; decimals: number };
-      pairs?: {
-        counter_coin_symbol: string;
-        counter_coin_decimals: number;
-        best_ask: string | null;
-        best_bid: string | null;
-        mid_price: string | null;
-        bid_order_count?: number;
-        ask_order_count?: number;
-      }[];
+      pairs?: DexPairRaw[];
     };
 
-    let priceUsd: number | null = null;
-    const PRICE_FACTOR = 1e18;
-    const MAX_SANE_PRICE = 1e12; // skip obviously broken values
+    const knownPrices = await getKnownUsdPrices();
+    const estimates: { usd: number; weight: number }[] = [];
 
     for (const pair of data.pairs ?? []) {
-      const cs = pair.counter_coin_symbol.toUpperCase();
-      if (cs !== 'USDT' && cs !== 'USDC') continue;
-      // Skip thin orderbooks — require both sides for a reliable price
-      if ((pair.bid_order_count ?? 0) === 0 || (pair.ask_order_count ?? 0) === 0) continue;
-
-      const mid = pair.mid_price ? Number(pair.mid_price) / PRICE_FACTOR : null;
-      const ask = pair.best_ask ? Number(pair.best_ask) / PRICE_FACTOR : null;
-      const bid = pair.best_bid ? Number(pair.best_bid) / PRICE_FACTOR : null;
-
-      const candidate = mid ?? (ask != null && bid != null ? (ask + bid) / 2 : null);
-      if (candidate != null && candidate > 0 && candidate < MAX_SANE_PRICE) {
-        priceUsd = candidate;
-        break;
+      const usd = pairToUsd(pair, knownPrices);
+      if (usd != null) {
+        const cs = pair.counter_coin_symbol.toUpperCase();
+        // Stablecoin pairs get 10x weight — most direct USD proxy
+        const stableBoost = (cs === 'USDT' || cs === 'USDC') ? 10 : 1;
+        const weight = ((pair.bid_order_count ?? 0) + (pair.ask_order_count ?? 0)) * stableBoost;
+        estimates.push({ usd, weight });
       }
+    }
+
+    // Weighted average across all valid pairs
+    let priceUsd: number | null = null;
+    if (estimates.length > 0) {
+      const totalWeight = estimates.reduce((s, e) => s + e.weight, 0);
+      priceUsd = totalWeight > 0
+        ? estimates.reduce((s, e) => s + e.usd * e.weight, 0) / totalWeight
+        : estimates.reduce((s, e) => s + e.usd, 0) / estimates.length;
     }
 
     const result: DexCoinPrice = { symbol: key, decimals: data.coin.decimals, priceUsd };

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { TonConnectButton, useTonAddress, useTonWallet } from '@tonconnect/ui-react';
 import { Address } from '@ton/core';
 import { Sun, Moon, ShieldAlert, RefreshCw } from 'lucide-react';
-import { listContractsFromLeaderboard, listRaceContracts, updateRaceContract, type ContractListItem } from './lib/api';
+import { listContractsFromLeaderboard, listRaceContracts, updateRaceContract, primeKnownPrices, type ContractListItem } from './lib/api';
 import type { PublicApiConfig } from './lib/api';
 import { useLocalStorageState } from './lib/storage';
 import { useAuth } from './lib/useAuth';
@@ -78,6 +78,9 @@ export default function App() {
     () => ({ baseUrl: raceApiUrl, jwtToken }),
     [raceApiUrl, jwtToken],
   );
+
+  // Prime known USD prices cache early for DEX price calculations
+  useEffect(() => { primeKnownPrices(raceCfg); }, [raceCfg]);
 
   const wallet = useTonWallet();
   const tonAddress = useTonAddress();
