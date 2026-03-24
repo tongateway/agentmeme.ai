@@ -470,8 +470,10 @@ export function ContractDetailPanel({ contract, raceCfg, theme, onDeleted, onSta
         setWithdrawDone((s) => new Set(s).add('jetton'));
       }
 
-      // TON withdraw
-      const tonResult = await withdrawTon(raceCfg, contract.id).then(
+      // TON withdraw — send human-readable amount
+      const tonRow = tokenBalances.find((t) => t.symbol === 'TON');
+      const tonAmount = tonRow?.amount ?? 0;
+      const tonResult = await withdrawTon(raceCfg, contract.id, tonAmount).then(
         (v) => ({ status: 'fulfilled' as const, value: v }),
         (e) => ({ status: 'rejected' as const, reason: e }),
       );

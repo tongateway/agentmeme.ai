@@ -505,10 +505,11 @@ export async function withdrawJetton(cfg: PublicApiConfig, contractId: string, j
   return jsonOrThrow(res);
 }
 
-export async function withdrawTon(cfg: PublicApiConfig, contractId: string): Promise<WithdrawTonResult> {
+export async function withdrawTon(cfg: PublicApiConfig, contractId: string, amount: number): Promise<WithdrawTonResult> {
   const res = await fetch(raceUrl(cfg, `/api/contracts/${contractId}/withdraw-ton`), {
     method: 'POST',
     headers: publicPostHeaders(cfg),
+    body: JSON.stringify({ amount }),
   });
   return jsonOrThrow(res);
 }
