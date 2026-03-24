@@ -62,6 +62,7 @@ export type ContractListItem = {
   total_decisions?: number | null;
   max_decisions?: number | null;
   used_decisions?: number | null;
+  trading_pairs?: string | null;
 };
 
 export type ContractDetail = {
@@ -117,6 +118,7 @@ export type UpdateContractRequest = {
   status?: 'active' | 'paused';
   ai_model?: string;
   ai_provider?: string;
+  trading_pairs?: string;
 };
 
 export type AiHistoryItem = {
@@ -239,6 +241,7 @@ function normalizeContract(item: Record<string, unknown>): ContractListItem {
     total_decisions: typeof item.total_decisions === 'number' ? item.total_decisions : null,
     max_decisions: typeof item.max_decisions === 'number' ? item.max_decisions : null,
     used_decisions: typeof item.used_decisions === 'number' ? item.used_decisions : null,
+    trading_pairs: typeof item.trading_pairs === 'string' ? item.trading_pairs : null,
   };
 }
 

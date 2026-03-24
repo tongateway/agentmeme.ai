@@ -70,6 +70,79 @@ function tonscanLink(addr: string): string {
   return `https://tonscan.org/address/${addr}`;
 }
 
+const ALL_TOKENS = ['AGNT', 'TON', 'NOT', 'BUILD', 'USDT'];
+
+function parseTradingTokens(pairs: string | null | undefined): Set<string> {
+  const tokens = new Set<string>(['AGNT']);
+  if (!pairs) return tokens;
+  for (const pair of pairs.split(',')) {
+    for (const t of pair.trim().split('/')) {
+      if (t.trim()) tokens.add(t.trim().toUpperCase());
+    }
+  }
+  return tokens;
+}
+
+function tokensToTradingPairs(tokens: Set<string>): string {
+  const arr = Array.from(tokens);
+  const pairs: string[] = [];
+  for (let i = 0; i < arr.length; i++) {
+    for (let j = i + 1; j < arr.length; j++) {
+      pairs.push(`${arr[i]}/${arr[j]}`);
+    }
+  }
+  return pairs.join(',');
+}
+
+function TradingPairsRow({ contract, raceCfg }: { contract: ContractListItem; raceCfg: PublicApiConfig }) {
+  const [tokens, setTokens] = useState(() => parseTradingTokens(contract.trading_pairs));
+  const [saving, setSaving] = useState(false);
+
+  // Sync if contract changes
+  useEffect(() => {
+    setTokens(parseTradingTokens(contract.trading_pairs));
+  }, [contract.trading_pairs]);
+
+  const toggle = useCallback(async (token: string) => {
+    if (token === 'AGNT') return;
+    const next = new Set(tokens);
+    if (next.has(token)) next.delete(token); else next.add(token);
+    setTokens(next);
+    setSaving(true);
+    try {
+      await updateRaceContract(raceCfg, contract.id, { trading_pairs: tokensToTradingPairs(next) });
+    } catch {
+      setTokens(parseTradingTokens(contract.trading_pairs)); // revert
+    } finally {
+      setSaving(false);
+    }
+  }, [tokens, raceCfg, contract.id, contract.trading_pairs]);
+
+  return (
+    <div className="flex items-center justify-between gap-4">
+      <div className="text-sm opacity-60 shrink-0">Trading Pairs</div>
+      <div className="flex items-center gap-1 flex-wrap justify-end">
+        {ALL_TOKENS.map((t) => {
+          const isAgnt = t === 'AGNT';
+          const active = tokens.has(t);
+          return (
+            <button
+              key={t}
+              type="button"
+              disabled={saving || isAgnt}
+              className={`btn btn-xs ${active ? (isAgnt ? 'btn-primary cursor-default' : 'btn-primary') : 'btn-ghost border border-base-content/10'}`}
+              onClick={() => void toggle(t)}
+            >
+              {t}
+            </button>
+          );
+        })}
+        {saving && <span className="loading loading-spinner loading-xs ml-1" />}
+      </div>
+    </div>
+  );
+}
+
 type ContractDetailPanelProps = {
   contract: ContractListItem;
   raceCfg: PublicApiConfig;
@@ -588,6 +661,8 @@ export function ContractDetailPanel({ contract, raceCfg, theme, onDeleted, onSta
               )}
             </div>
           </div>
+          <div className="divider my-0" />
+          <TradingPairsRow contract={contract} raceCfg={raceCfg} />
           <div className="divider my-0" />
           <div className="flex items-center justify-between gap-4">
             <div className="text-sm opacity-60">Prompt</div>
