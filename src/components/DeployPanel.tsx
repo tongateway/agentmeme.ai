@@ -778,7 +778,7 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
             <div className="flex items-center gap-2 mb-3">
               <div className="flex h-6 w-6 items-center justify-center rounded-md bg-base-content/8 text-[10px] font-bold opacity-50">2</div>
               <span className="text-sm font-semibold">Trading Tokens</span>
-              <span className="text-[10px] opacity-40 ml-1">Select which tokens the agent will trade</span>
+              <span className="text-[10px] opacity-40 ml-1">(AGNT token will trade by default)</span>
             </div>
             <div className="flex flex-wrap gap-1.5">
               {TRADABLE_TOKENS.map((token) => {
