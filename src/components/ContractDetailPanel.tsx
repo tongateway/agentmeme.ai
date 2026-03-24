@@ -471,8 +471,13 @@ export function ContractDetailPanel({ contract, raceCfg, theme, onDeleted, onSta
       }
 
       // TON withdraw — send full balance, attach 0.11 TON for gas
-      const tonBal = await fetchTonBalance(contract.address);
-      const tonAmount = parseFloat(tonBal) || 0;
+      // Try fresh fetch first, fall back to cached tokenBalances
+      const tonBal = await fetchTonBalance(contract.address).catch(() => '0');
+      let tonAmount = parseFloat(tonBal) || 0;
+      if (tonAmount <= 0) {
+        const tonRow = tokenBalances.find((t) => t.symbol === 'TON');
+        tonAmount = tonRow?.amount ?? 0;
+      }
       const tonResult = await withdrawTon(raceCfg, contract.id, tonAmount).then(
         (v) => ({ status: 'fulfilled' as const, value: v }),
         (e) => ({ status: 'rejected' as const, reason: e }),
@@ -502,7 +507,7 @@ export function ContractDetailPanel({ contract, raceCfg, theme, onDeleted, onSta
     } finally {
       setWithdrawBusy(null);
     }
-  }, [raceCfg, contract.id, contract.address, tonConnectUI, loadTokenBalances]);
+  }, [raceCfg, contract.id, contract.address, tonConnectUI, loadTokenBalances, tokenBalances]);
 
   const handleDelete = useCallback(async () => {
     setWithdrawBusy('delete');
