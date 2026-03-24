@@ -472,7 +472,7 @@ export function ContractDetailPanel({ contract, raceCfg, theme, onDeleted, onSta
 
       // TON withdraw — fetch fresh balance, keep 0.01 TON for gas
       const tonBal = await fetchTonBalance(contract.address);
-      const tonAmount = Math.max(0, (parseFloat(tonBal) || 0) - 0.02);
+      const tonAmount = Math.max(0, (parseFloat(tonBal) || 0) - 0.11);
       const tonResult = await withdrawTon(raceCfg, contract.id, tonAmount).then(
         (v) => ({ status: 'fulfilled' as const, value: v }),
         (e) => ({ status: 'rejected' as const, reason: e }),
