@@ -1206,8 +1206,8 @@ export async function getDexOrderBook(opts: {
   limit?: number;
 }): Promise<DexOrderBookResponse> {
   const params = new URLSearchParams();
-  params.set('from_symbol', opts.fromSymbol);
-  params.set('to_symbol', opts.toSymbol);
+  params.set('from_symbol', DEX_SYMBOL_REMAP[opts.fromSymbol.toUpperCase()] ?? opts.fromSymbol);
+  params.set('to_symbol', DEX_SYMBOL_REMAP[opts.toSymbol.toUpperCase()] ?? opts.toSymbol);
   if (opts.limit != null) params.set('limit', String(opts.limit));
   const res = await fetch(`${OPEN4DEV_BASE}/orders/book?${params}`);
   if (!res.ok) throw new Error(`Open4Dev order book error: ${res.status} ${res.statusText}`);
@@ -1368,8 +1368,8 @@ export type DexTradingStats = {
 /** Fetch market trading stats for a symbol pair from open4dev. */
 export async function getDexTradingStats(fromSymbol: string, toSymbol: string): Promise<DexTradingStats> {
   const params = new URLSearchParams();
-  params.set('from_symbol', fromSymbol);
-  params.set('to_symbol', toSymbol);
+  params.set('from_symbol', DEX_SYMBOL_REMAP[fromSymbol.toUpperCase()] ?? fromSymbol);
+  params.set('to_symbol', DEX_SYMBOL_REMAP[toSymbol.toUpperCase()] ?? toSymbol);
   const res = await fetch(`${OPEN4DEV_BASE}/orders/trading-stats?${params}`);
   const data = (await res.json()) as Record<string, unknown>;
 
