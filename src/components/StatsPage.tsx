@@ -71,30 +71,6 @@ const DEFAULT_PAIRS: TradingPair[] = [
     baseVault: '',
     quoteVault: '',
   },
-  {
-    slug: 'TON-DOGS',
-    label: 'TON / DOGS',
-    fromSymbol: 'TON',
-    toSymbol: 'DOGS',
-    baseVault: 'EQClIJo99DbIH56sUAnTK0wrdH3_i-_rcxl24CmIhlmGl17i',
-    quoteVault: 'EQA0_4nl1-biEvpzengd5M3GNTt1PRYGIIEHlfanEl3tZkRr',
-  },
-  {
-    slug: 'TON-NOTPIXEL',
-    label: 'TON / NOT PIXEL',
-    fromSymbol: 'TON',
-    toSymbol: 'PX',
-    baseVault: 'EQC1dcxtmYFpKETQ_TA6fA5LfnmLwPYqAWg2M94WWSajEF_Y',
-    quoteVault: 'EQA0_4nl1-biEvpzengd5M3GNTt1PRYGIIEHlfanEl3tZkRr',
-  },
-  {
-    slug: 'TON-XAUT',
-    label: 'TON / XAUt',
-    fromSymbol: 'TON',
-    toSymbol: 'XAUT0',
-    baseVault: 'EQClbgXPqGsSzPRfu8p6WKJwdjs1-14JI6m3tJ4-umB_omK1',
-    quoteVault: 'EQA0_4nl1-biEvpzengd5M3GNTt1PRYGIIEHlfanEl3tZkRr',
-  },
 ];
 
 function pairIdxFromSlug(slug: string | null): number {
