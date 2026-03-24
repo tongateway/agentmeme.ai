@@ -16,6 +16,23 @@ function explorerLink(addr: string): string {
   return `https://tonviewer.com/${addr}`;
 }
 
+const TRADABLE_TOKENS = ['AGNT', 'TON', 'NOT', 'BUILD', 'USDT'];
+const DEFAULT_TRADING_TOKENS = ['AGNT', 'TON', 'NOT'];
+
+/** Build trading_pairs string from selected tokens. Pairs each non-AGNT token with AGNT + cross-pairs. */
+function buildTradingPairs(tokens: string[]): string {
+  const set = new Set(tokens.map((t) => t.toUpperCase()));
+  set.add('AGNT'); // always included
+  const pairs: string[] = [];
+  const arr = Array.from(set);
+  for (let i = 0; i < arr.length; i++) {
+    for (let j = i + 1; j < arr.length; j++) {
+      pairs.push(`${arr[i]}/${arr[j]}`);
+    }
+  }
+  return pairs.join(',');
+}
+
 const FALLBACK_AI_MODELS: AiModelOption[] = [
   { id: 'Qwen/Qwen3-32B', name: 'Qwen3-32B', provider: 'Qwen' },
   { id: 'gpt-5.2', name: 'GPT 5.2', provider: 'OpenAI' },
@@ -254,7 +271,7 @@ IMPORTANT: Each round-trip costs ~0.03 TON. Only trade when expected gain > gas 
   },
   {
     name: 'Scalper',
-    prompt: `You are a high-frequency scalper on TON. Use live data: {market_prices}, {wallet_balances}, {open_orders}, {order_book:TON/USDT,TON/NOT}, {price_changes}. Target small 1-3% gains per trade. Open and close positions quickly. Use the full portfolio but split across 2-3 simultaneous orders max. Prefer high-volume tokens with tight spreads. Use low slippage (1-2%). Close orders as soon as they reach target profit OR if they go 2% against you. Never hold positions longer than necessary. Check open orders before opening new ones — close stale ones first.
+    prompt: `You are a high-frequency scalper on TON. Use live data: {market_prices}, {wallet_balances}, {open_orders}, {order_book}, {price_changes}. Target small 1-3% gains per trade. Open and close positions quickly. Use the full portfolio but split across 2-3 simultaneous orders max. Prefer high-volume tokens with tight spreads. Use low slippage (1-2%). Close orders as soon as they reach target profit OR if they go 2% against you. Never hold positions longer than necessary. Check open orders before opening new ones — close stale ones first.
 
 === GAS INFO ===
 Create order(from=ton): 0.022 TON | Close Order(): 0.006 TON
@@ -291,6 +308,7 @@ export type Persisted = {
   aiModel?: string;
   aiProvider?: string;
   agentName?: string;
+  tradingTokens?: string[];
   pendingDeploy?: PendingDeploy | null;
 };
 
@@ -456,12 +474,15 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
 
     try {
       setBusy('register');
+      const tokens = persisted.tradingTokens ?? DEFAULT_TRADING_TOKENS;
+      const tradingPairs = buildTradingPairs(tokens);
       const created = await registerRaceContract(raceCfg, {
         prompt: persisted.prompt,
         owner_address: ownerAddressRaw,
         ai_model: selectedModel,
         ...(selectedProvider ? { ai_provider: selectedProvider } : {}),
         ...(persisted.agentName?.trim() ? { name: persisted.agentName.trim() } : {}),
+        ...(tradingPairs ? { trading_pairs: tradingPairs } : {}),
       });
       setPersisted((p) => ({ ...p, contractAddress: created.address, raceContractId: created.id }));
       onContractRegistered?.(created.id);
@@ -549,12 +570,15 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
         contractId = persisted.raceContractId;
       } else {
         // 1. Register with backend — it creates the contract and returns the address
+        const tokens2 = persisted.tradingTokens ?? DEFAULT_TRADING_TOKENS;
+        const tradingPairs2 = buildTradingPairs(tokens2);
         const created = await registerRaceContract(raceCfg, {
           prompt: persisted.prompt,
           owner_address: ownerAddressRaw,
           ai_model: selectedModel,
           ...(selectedProvider ? { ai_provider: selectedProvider } : {}),
           ...(persisted.agentName?.trim() ? { name: persisted.agentName.trim() } : {}),
+          ...(tradingPairs2 ? { trading_pairs: tradingPairs2 } : {}),
         });
 
         contractId = created.id;
@@ -749,10 +773,51 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
 
           <div className="divider my-1 opacity-20" />
 
-          {/* Section 2: Trading Strategy */}
+          {/* Section 2: Trading Tokens */}
           <div>
             <div className="flex items-center gap-2 mb-3">
               <div className="flex h-6 w-6 items-center justify-center rounded-md bg-base-content/8 text-[10px] font-bold opacity-50">2</div>
+              <span className="text-sm font-semibold">Trading Tokens</span>
+              <span className="text-[10px] opacity-40 ml-1">Select which tokens the agent will trade</span>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {TRADABLE_TOKENS.map((token) => {
+                const isAgnt = token === 'AGNT';
+                const selected = isAgnt || (persisted.tradingTokens ?? DEFAULT_TRADING_TOKENS).includes(token);
+                return (
+                  <button
+                    key={token}
+                    type="button"
+                    className={`btn btn-xs ${
+                      selected
+                        ? isAgnt ? 'btn-primary cursor-default' : 'btn-primary'
+                        : 'btn-ghost border border-base-content/10'
+                    }`}
+                    onClick={() => {
+                      if (isAgnt) return;
+                      setPersisted((p) => {
+                        const current = p.tradingTokens ?? [...DEFAULT_TRADING_TOKENS];
+                        const next = selected
+                          ? current.filter((t) => t !== token)
+                          : [...current, token];
+                        return { ...p, tradingTokens: next };
+                      });
+                    }}
+                  >
+                    {token}
+                    {isAgnt && <span className="text-[9px] opacity-60 ml-0.5">(always)</span>}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="divider my-1 opacity-20" />
+
+          {/* Section 3: Trading Strategy */}
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <div className="flex h-6 w-6 items-center justify-center rounded-md bg-base-content/8 text-[10px] font-bold opacity-50">3</div>
               <span className="text-sm font-semibold">Trading Strategy</span>
             </div>
             <div className="flex items-center justify-end mb-1.5">
@@ -828,7 +893,7 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
           {/* Section 3: Name & Deploy */}
           <div className="space-y-3">
             <div className="flex items-center gap-2 mb-3">
-              <div className="flex h-6 w-6 items-center justify-center rounded-md bg-base-content/8 text-[10px] font-bold opacity-50">3</div>
+              <div className="flex h-6 w-6 items-center justify-center rounded-md bg-base-content/8 text-[10px] font-bold opacity-50">4</div>
               <span className="text-sm font-semibold">Name & Deploy</span>
             </div>
 

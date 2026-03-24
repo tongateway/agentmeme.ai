@@ -99,6 +99,7 @@ export type RegisterRaceContractRequest = {
   ai_model?: string;
   ai_provider?: string;
   name?: string;
+  trading_pairs?: string;
 };
 
 export type RaceContractCreateResponse = ContractListItem & {
