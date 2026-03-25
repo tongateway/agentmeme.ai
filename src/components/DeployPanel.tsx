@@ -658,6 +658,11 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
         </div>
 
         <div className="px-6 py-5 space-y-5">
+          <div className="flex items-center gap-2 rounded-lg bg-success/5 border border-success/15 px-3 py-2">
+            <span className="h-2 w-2 rounded-full bg-success animate-pulse shrink-0" />
+            <span className="text-xs opacity-60">Prices update every 10s, AI reasons each cycle</span>
+          </div>
+
           {/* Section 1: Choose AI Model */}
           <div>
             <div className="flex items-center gap-2 mb-3">

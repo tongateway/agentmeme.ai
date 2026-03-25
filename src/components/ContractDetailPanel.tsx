@@ -710,14 +710,6 @@ export function ContractDetailPanel({ contract, raceCfg, theme, onDeleted, onSta
           </div>
           <div className="divider my-0" />
           <div className="flex items-center justify-between gap-4">
-            <div className="text-sm opacity-60">AI Sync</div>
-            <div className="flex items-center gap-1.5">
-              <span className="h-1.5 w-1.5 rounded-full bg-success animate-pulse" />
-              <span className="text-xs opacity-50">Prices update every 10s, AI reasons each cycle</span>
-            </div>
-          </div>
-          <div className="divider my-0" />
-          <div className="flex items-center justify-between gap-4">
             <div className="text-sm opacity-60">Explorer</div>
             <div className="flex items-center gap-2 text-xs">
               <a
