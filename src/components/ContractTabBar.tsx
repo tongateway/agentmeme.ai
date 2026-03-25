@@ -132,9 +132,11 @@ export function ContractTabBar({ contracts, activeTab, onTabChange, loading, onR
             )}
             {c.status === 'deploying' ? (
               <span className="badge badge-xs badge-warning animate-pulse">DEPLOYING</span>
+            ) : c.status === 'paused' ? (
+              <span className="badge badge-xs badge-ghost">PAUSED</span>
             ) : (
-              <span className={`badge badge-xs ${c.is_active ? 'badge-success' : 'badge-ghost'}`}>
-                {c.is_active ? 'ON' : 'OFF'}
+              <span className={`badge badge-xs ${c.status === 'active' ? 'badge-success' : 'badge-ghost'}`}>
+                {(c.status ?? 'active').toUpperCase()}
               </span>
             )}
           </button>
