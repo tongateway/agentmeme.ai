@@ -770,7 +770,7 @@ export type DexCoinPrice = {
   priceUsd: number | null;
 };
 
-const COIN_PRICE_LS_PREFIX = 'atr_cache:dex_price:';
+const COIN_PRICE_LS_PREFIX = 'atr_cache:dex_price_v2:';
 const COIN_PRICE_TTL = 120_000; // 2 min — controls when to refetch, not when to discard
 
 function readCoinPriceLS(key: string): { data: DexCoinPrice; fetchedAt: number } | null {
