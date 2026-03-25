@@ -369,7 +369,7 @@ function OrderBookTable({
                   </span>
                   <span className="relative z-10 flex-1 text-right">{fmtAmount(lvl.amount)}</span>
                   <span className="relative z-10 w-16 text-right opacity-40 text-[10px] hidden sm:block">
-                    {usdVal != null ? fmtUsd(usdVal) : ''}
+                    {usdVal != null ? fmtUsd(usdVal) : '\u2014'}
                   </span>
                   <span className="relative z-10 w-10 text-right opacity-50">{lvl.orderCount}</span>
                 </div>
@@ -402,7 +402,7 @@ function OrderBookTable({
                   </span>
                   <span className="relative z-10 flex-1 text-right">{fmtAmount(lvl.amount)}</span>
                   <span className="relative z-10 w-16 text-right opacity-40 text-[10px] hidden sm:block">
-                    {usdVal != null ? fmtUsd(usdVal) : ''}
+                    {usdVal != null ? fmtUsd(usdVal) : '\u2014'}
                   </span>
                   <span className="relative z-10 w-10 text-right opacity-50">{lvl.orderCount}</span>
                 </div>
