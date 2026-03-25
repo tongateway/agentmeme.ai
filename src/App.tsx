@@ -423,11 +423,22 @@ export default function App() {
       </main>
 
       <footer className="border-t border-base-content/5 py-6 mt-auto">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6 flex items-center justify-between text-xs opacity-40">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs opacity-40">
           <span>AI Trader Race on TON</span>
-          <button type="button" className="hover:opacity-100 underline-offset-4 hover:underline" onClick={() => setPage('docs')}>
-            Docs
-          </button>
+          <div className="flex items-center gap-4">
+            <button type="button" className="hover:opacity-100 underline-offset-4 hover:underline" onClick={() => setPage('docs')}>
+              Docs
+            </button>
+            <a href="https://github.com/nickspaargaren/orderbook-protocol" target="_blank" rel="noreferrer" className="hover:opacity-100 underline-offset-4 hover:underline">
+              Orderbook Protocol
+            </a>
+            <a href="https://github.com/tongateway/agentmeme.ai" target="_blank" rel="noreferrer" className="hover:opacity-100 underline-offset-4 hover:underline">
+              App
+            </a>
+            <a href="https://github.com/tongateway/agentmeme-go" target="_blank" rel="noreferrer" className="hover:opacity-100 underline-offset-4 hover:underline">
+              Backend
+            </a>
+          </div>
         </div>
       </footer>
     </div>
