@@ -509,6 +509,21 @@ export async function withdrawJetton(cfg: PublicApiConfig, contractId: string, j
   return jsonOrThrow(res);
 }
 
+export type GenerateStrategyResponse = {
+  prompt: string;
+  stats: Record<string, unknown>;
+  suggested_pairs: string;
+};
+
+export async function generateStrategy(cfg: PublicApiConfig, ownerAddress: string): Promise<GenerateStrategyResponse> {
+  const res = await fetch(raceUrl(cfg, '/api/strategy/generate'), {
+    method: 'POST',
+    headers: publicPostHeaders(cfg),
+    body: JSON.stringify({ owner_address: ownerAddress }),
+  });
+  return jsonOrThrow(res);
+}
+
 export async function withdrawTon(cfg: PublicApiConfig, contractId: string, amount: number): Promise<WithdrawTonResult> {
   const res = await fetch(raceUrl(cfg, `/api/contracts/${contractId}/withdraw-ton`), {
     method: 'POST',

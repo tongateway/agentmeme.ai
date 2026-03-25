@@ -5,7 +5,7 @@ import { Rocket, Wallet, ChevronDown, ChevronUp, ExternalLink, Minus, Plus, File
 import {
   nanoFromTon,
 } from '@/lib/ton/agentWalletV5';
-import { getRaceAiModels, getPromptVariables, registerRaceContract, hexBocToBase64, type AiModelOption, type AiModelsByProvider, type PromptVariable, type PublicApiConfig } from '@/lib/api';
+import { getRaceAiModels, getPromptVariables, registerRaceContract, generateStrategy, hexBocToBase64, type AiModelOption, type AiModelsByProvider, type PromptVariable, type PublicApiConfig } from '@/lib/api';
 
 function fmtAddr(addr: string): string {
   if (addr.length <= 16) return addr;
@@ -18,6 +18,18 @@ function explorerLink(addr: string): string {
 
 const TRADABLE_TOKENS = ['AGNT', 'TON', 'NOT', 'BUILD', 'USDT'];
 const DEFAULT_TRADING_TOKENS = ['AGNT', 'TON', 'NOT'];
+
+/** Parse suggested_pairs from API into a token set for tradingTokens state. */
+function parseSuggestedTokens(pairs: string): string[] {
+  const tokens = new Set<string>(['AGNT']);
+  for (const pair of pairs.split(',')) {
+    for (const t of pair.trim().split('/')) {
+      const upper = t.trim().toUpperCase();
+      if (upper && TRADABLE_TOKENS.includes(upper)) tokens.add(upper);
+    }
+  }
+  return Array.from(tokens);
+}
 
 /** Build trading_pairs string from selected tokens. Pairs each non-AGNT token with AGNT + cross-pairs. */
 function buildTradingPairs(tokens: string[]): string {
@@ -331,6 +343,7 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
   const [modelListOpen, setModelListOpen] = useState(!persisted.aiModel);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [promptVars, setPromptVars] = useState<PromptVariable[]>([]);
+  const [generating, setGenerating] = useState(false);
   const promptRef = useRef<HTMLTextAreaElement>(null);
 
   const isConnected = !!wallet && !!tonAddress;
@@ -820,7 +833,40 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
               <div className="flex h-6 w-6 items-center justify-center rounded-md bg-base-content/8 text-[10px] font-bold opacity-50">3</div>
               <span className="text-sm font-semibold">Trading Strategy</span>
             </div>
-            <div className="flex items-center justify-end mb-1.5">
+            <div className="flex items-center justify-end gap-1.5 mb-1.5">
+              {isConnected && (
+                <button
+                  type="button"
+                  className="btn btn-ghost btn-xs gap-1 opacity-60 hover:opacity-100"
+                  disabled={generating}
+                  onClick={async () => {
+                    if (!ownerAddressRaw) return;
+                    setGenerating(true);
+                    setErr(null);
+                    try {
+                      const result = await generateStrategy(raceCfg, ownerAddressRaw);
+                      setPersisted((p) => ({
+                        ...p,
+                        prompt: result.prompt,
+                        ...(result.suggested_pairs ? {
+                          tradingTokens: Array.from(parseSuggestedTokens(result.suggested_pairs)),
+                        } : {}),
+                      }));
+                    } catch (e) {
+                      setErr(e instanceof Error ? e.message : 'Failed to generate strategy');
+                    } finally {
+                      setGenerating(false);
+                    }
+                  }}
+                >
+                  {generating ? (
+                    <span className="loading loading-spinner loading-xs" />
+                  ) : (
+                    <Rocket className="h-3 w-3" />
+                  )}
+                  {generating ? 'Analyzing wallet...' : 'Auto-generate from wallet'}
+                </button>
+              )}
               <div className="dropdown dropdown-end">
                 <div tabIndex={0} role="button" className="btn btn-ghost btn-xs gap-1 opacity-60 hover:opacity-100">
                   <FileText className="h-3 w-3" />
