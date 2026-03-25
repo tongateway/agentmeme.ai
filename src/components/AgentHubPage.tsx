@@ -73,19 +73,23 @@ export function AgentHubPage({ raceCfg, onSelectToken }: AgentHubPageProps) {
                 </thead>
                 <tbody>
                   {tokens.map((t, i) => {
-                    const changePositive = t.price_change_24h >= 0;
+                    const change24h = t.price_change_24h ?? 0;
+                    const changePositive = change24h >= 0;
                     const changeColor = changePositive ? 'text-success' : 'text-error';
+                    const priceUsd = t.price_usd != null && t.price_usd < 1_000_000 ? t.price_usd : 0;
 
                     const consensusUpper = (t.consensus ?? '').toUpperCase();
                     let consensusBadge = 'badge-ghost opacity-60';
                     if (consensusUpper === 'BULLISH') consensusBadge = 'badge-success';
                     else if (consensusUpper === 'BEARISH') consensusBadge = 'badge-error';
 
+                    const bullish = t.bullish_pct ?? 0;
+                    const bearish = t.bearish_pct ?? 0;
                     const pct = consensusUpper === 'BULLISH'
-                      ? t.bullish_pct
+                      ? bullish
                       : consensusUpper === 'BEARISH'
-                        ? t.bearish_pct
-                        : Math.max(t.bullish_pct, t.bearish_pct);
+                        ? bearish
+                        : Math.max(bullish, bearish);
 
                     return (
                       <tr
@@ -106,12 +110,12 @@ export function AgentHubPage({ raceCfg, onSelectToken }: AgentHubPageProps) {
                         </td>
                         <td className="text-right align-middle">
                           <span className="mono text-xs tabular-nums font-medium">
-                            {fmtPrice(t.price_usd)}
+                            {fmtPrice(priceUsd)}
                           </span>
                         </td>
                         <td className="text-right align-middle">
                           <span className={`mono text-xs tabular-nums font-bold ${changeColor}`}>
-                            {changePositive ? '+' : ''}{t.price_change_24h.toFixed(1)}%
+                            {changePositive ? '+' : ''}{change24h.toFixed(1)}%
                           </span>
                         </td>
                         <td className="text-center align-middle">
