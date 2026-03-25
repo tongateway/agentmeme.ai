@@ -424,7 +424,7 @@ export default function App() {
 
       <footer className="border-t border-base-content/5 py-6 mt-auto">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs opacity-40">
-          <span>AI Trader Race on TON</span>
+          <span>Build on TON 💎</span>
           <div className="flex items-center gap-4">
             <button type="button" className="hover:opacity-100 underline-offset-4 hover:underline" onClick={() => setPage('docs')}>
               Docs
