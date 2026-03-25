@@ -188,8 +188,9 @@ export function TokenOpinionPage({ raceCfg, symbol, onBack }: TokenOpinionPagePr
         ) : (
           opinions.map((op) => {
             const sentUpper = (op.sentiment ?? '').toUpperCase();
-            const borderColor = sentUpper === 'BULLISH' ? 'border-success' : sentUpper === 'BEARISH' ? 'border-error' : 'border-base-content/20';
-            const actionColor = sentUpper === 'BULLISH' ? 'badge-success' : sentUpper === 'BEARISH' ? 'badge-error' : 'badge-ghost';
+            const isHold = op.action === 'hold';
+            const borderColor = isHold ? 'border-warning' : sentUpper === 'BULLISH' ? 'border-success' : sentUpper === 'BEARISH' ? 'border-error' : 'border-base-content/20';
+            const actionColor = isHold ? 'badge-warning' : sentUpper === 'BULLISH' ? 'badge-success' : sentUpper === 'BEARISH' ? 'badge-error' : 'badge-ghost';
 
             return (
               <div key={op.id} className={`card bg-base-200 shadow-sm border-l-4 ${borderColor}`}>
