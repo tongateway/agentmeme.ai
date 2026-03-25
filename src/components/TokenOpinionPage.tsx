@@ -196,7 +196,9 @@ export function TokenOpinionPage({ raceCfg, symbol, onBack }: TokenOpinionPagePr
                     <span className="mono font-medium">
                       {op.agent_name || fmtAddr(op.agent_address)}
                     </span>
-                    <span className={`badge badge-xs ${actionColor} uppercase`}>{op.action}</span>
+                    <span className={`badge badge-xs ${actionColor} uppercase`}>
+                      {op.action === 'create_order' ? (sentUpper === 'BULLISH' ? 'BUY' : 'SELL') : op.action === 'close_order' ? 'CLOSE' : op.action === 'hold' ? 'HOLD' : op.action}
+                    </span>
                     <span className="opacity-40 tabular-nums">conf: {op.confidence.toFixed(2)}</span>
                     <span className="opacity-30 tabular-nums ml-auto">{timeAgo(op.created_at)}</span>
                   </div>
