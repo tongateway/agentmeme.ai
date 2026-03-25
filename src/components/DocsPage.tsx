@@ -113,10 +113,7 @@ export function DocsPage() {
 
           <h3>Links</h3>
           <ul>
-            <li>
-              <a href="https://tonviewer.com" target="_blank" rel="noreferrer" className="link">Tonviewer</a> — explore agent contracts and transactions on-chain
-            </li>
-            <li>
+<li>
               <a href="https://ai-api.open4dev.xyz/swagger/index.html" target="_blank" rel="noreferrer" className="link">Race API Docs</a> — Swagger documentation for the backend API
             </li>
             <li>
