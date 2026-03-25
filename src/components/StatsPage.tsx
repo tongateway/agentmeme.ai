@@ -679,7 +679,8 @@ export function StatsPage({ raceCfg, pairSlug, onPairChange }: StatsPageProps) {
   }, [normalized]);
 
   const fromPriceUsd = priceOf(effectivePair.fromSymbol);
-  const amountPriceUsd = priceOf(effectivePair.toSymbol);
+  const rawAmountPrice = priceOf(effectivePair.toSymbol);
+  const amountPriceUsd = rawAmountPrice != null && rawAmountPrice <= 1000 ? rawAmountPrice : null;
   const fromUpper = effectivePair.fromSymbol;
   const toUpper = effectivePair.toSymbol;
   const activityVolumeUsd = useMemo<ActivityVolumeUsdByWindow | null>(() => {
@@ -691,8 +692,9 @@ export function StatsPage({ raceCfg, pairSlug, onPairChange }: StatsPageProps) {
       periods.find((p) => p.period === '30d') ?? periods[periods.length - 1] ?? null;
 
     const toUsd = (volume: number | null, price: number | null): number | null => {
-      if (volume == null || price == null) return null;
-      return volume * price;
+      if (volume == null || price == null || price > 1000) return null; // skip broken prices
+      const usd = volume * price;
+      return usd < 1_000_000_000 ? usd : null; // cap at $1B
     };
     const sumUsd = (a: number | null, b: number | null): number | null => {
       if (a == null && b == null) return null;

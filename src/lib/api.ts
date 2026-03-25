@@ -803,6 +803,12 @@ export async function getDexCoinPrice(symbol: string): Promise<DexCoinPrice | nu
     if (cached) _coinPriceMem.set(key, cached);
   }
 
+  // Invalidate obviously broken cached prices (> $1000 for non-BTC tokens)
+  if (cached?.data.priceUsd != null && cached.data.priceUsd > 1000) {
+    _coinPriceMem.delete(key);
+    cached = null;
+  }
+
   const fresh = !cached || Date.now() - cached.fetchedAt >= COIN_PRICE_TTL;
   if (!fresh) return cached!.data;
 
