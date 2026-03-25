@@ -389,7 +389,7 @@ export function ContractDetailPanel({ contract, raceCfg, theme, onDeleted, onSta
         const amt = Number(BigInt(j.balance)) / 10 ** decimals;
         if (amt <= 0) continue;
         const symbol = meta?.symbol ?? 'Unknown';
-        const hasPrice = meta?.price_usd != null && meta.price_usd > 0;
+        const hasPrice = meta?.price_usd != null && meta.price_usd > 0 && meta.price_usd < 1_000_000;
         rows.push({
           symbol,
           name: meta?.name ?? 'Unknown token',

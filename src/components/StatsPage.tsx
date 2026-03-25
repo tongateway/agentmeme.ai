@@ -628,7 +628,7 @@ export function StatsPage({ raceCfg, pairSlug, onPairChange }: StatsPageProps) {
         const map = new Map<string, number>();
         const missingSymbols: string[] = [];
         for (const t of tokens) {
-          if (t.price_usd > 0) {
+          if (t.price_usd > 0 && t.price_usd < 1_000_000) {
             map.set(t.symbol.toUpperCase(), t.price_usd);
           } else {
             missingSymbols.push(t.symbol.toUpperCase());

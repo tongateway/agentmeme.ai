@@ -854,7 +854,7 @@ async function getKnownUsdPrices(cfg?: PublicApiConfig): Promise<Map<string, num
     map.set('USDT', 1);
     map.set('USDC', 1);
     for (const t of tokens) {
-      if (t.price_usd > 0) map.set(t.symbol.toUpperCase(), t.price_usd);
+      if (t.price_usd > 0 && t.price_usd < 1_000_000) map.set(t.symbol.toUpperCase(), t.price_usd);
     }
   } catch { /* use whatever we got */ }
   _knownPricesCache = map;
