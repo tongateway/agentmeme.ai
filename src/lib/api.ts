@@ -789,8 +789,8 @@ const _coinPriceMem = new Map<string, { data: DexCoinPrice; fetchedAt: number }>
 
 /** Fetch coin price from DEX orderbook via /coins/price endpoint.
  *  Returns cached (localStorage) value instantly; refreshes in background after TTL. */
-// Map display symbols back to DEX symbols for API lookups
-const DEX_SYMBOL_REMAP: Record<string, string> = { AGNT: 'AGT' };
+// Map display symbols back to DEX symbols for API lookups (empty now — DEX uses AGNT too)
+const DEX_SYMBOL_REMAP: Record<string, string> = {};
 
 export async function getDexCoinPrice(symbol: string): Promise<DexCoinPrice | null> {
   const key = DEX_SYMBOL_REMAP[symbol.toUpperCase()] ?? symbol.toUpperCase();
