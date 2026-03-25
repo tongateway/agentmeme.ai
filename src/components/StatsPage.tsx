@@ -435,10 +435,12 @@ function ActivityWindow({
 }) {
   const total = data.open_orders + data.completed_orders;
   const completionPct = total > 0 ? (data.completed_orders / total) * 100 : 0;
-  const volume =
+  const rawVolume =
     volumeUsdOverride ??
     Number(String(data.volume_usd ?? '0').replaceAll(',', '').trim());
-  const volumeText = Number.isFinite(volume) && volume > 0 ? fmtUsd(volume) : '$0.00';
+  // Sanity cap: skip if volume looks broken (> $1B)
+  const volume = Number.isFinite(rawVolume) && rawVolume > 0 && rawVolume < 1_000_000_000 ? rawVolume : 0;
+  const volumeText = volume > 0 ? fmtUsd(volume) : '$0.00';
 
   return (
     <div

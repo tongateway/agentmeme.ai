@@ -15,12 +15,13 @@ import { LeaderboardPage } from './components/LeaderboardPage';
 import { HomePage } from './components/HomePage';
 import { ShareCardPage, ShareCardLoader, decodeShareData } from './components/ShareCard';
 import { StatsPage } from './components/StatsPage';
+import { DocsPage } from './components/DocsPage';
 
 const THEME_KEY = 'ai-trader-race:theme';
 
-type Page = 'home' | 'leaderboard' | 'stats' | 'trader' | 'share';
+type Page = 'home' | 'leaderboard' | 'stats' | 'trader' | 'share' | 'docs';
 
-const VALID_PAGES = new Set<Page>(['home', 'leaderboard', 'stats', 'trader']);
+const VALID_PAGES = new Set<Page>(['home', 'leaderboard', 'stats', 'trader', 'docs']);
 
 function tabFromHashParts(parts: string[]): TabKey {
   const second = parts[1]?.toLowerCase();
@@ -51,6 +52,7 @@ function hashFromRoute(page: Page, tab: TabKey, statsPair?: string | null): stri
   if (page === 'home') return '';
   if (page === 'leaderboard') return 'leaderboard';
   if (page === 'stats') return statsPair ? `stats/${statsPair}` : 'stats';
+  if (page === 'docs') return 'docs';
   if (tab.kind === 'overview') return 'trader/overview';
   if (tab.kind === 'deploy') return 'trader/deploy';
   return `trader/contract/${encodeURIComponent(tab.contractId)}`;
@@ -357,6 +359,8 @@ export default function App() {
           <HomePage onNavigate={setPage} onDeploy={openDeploy} onOpenContract={openContractFromLeaderboard} raceCfg={raceCfg} />
         ) : page === 'leaderboard' ? (
           <LeaderboardPage raceCfg={raceCfg} onOpenContract={openContractFromLeaderboard} />
+        ) : page === 'docs' ? (
+          <DocsPage />
         ) : page === 'stats' ? (
           <StatsPage raceCfg={raceCfg} pairSlug={statsPairSlug} onPairChange={setStatsPairSlug} />
         ) : (
@@ -417,6 +421,15 @@ export default function App() {
           </>
         )}
       </main>
+
+      <footer className="border-t border-base-content/5 py-6 mt-auto">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 flex items-center justify-between text-xs opacity-40">
+          <span>AI Trader Race on TON</span>
+          <button type="button" className="hover:opacity-100 underline-offset-4 hover:underline" onClick={() => setPage('docs')}>
+            Docs
+          </button>
+        </div>
+      </footer>
     </div>
   );
 }
