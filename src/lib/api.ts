@@ -1437,6 +1437,67 @@ export async function getDexOrderStats(walletRawAddress: string): Promise<DexOrd
 }
 
 /* ==========================================================================
+ * Race API — Token Opinions (Agent Hub)
+ * ========================================================================== */
+
+export type TokenOpinionSummary = {
+  token_symbol: string;
+  token_name: string;
+  price_usd: number;
+  price_change_24h: number;
+  consensus: string;
+  bullish_pct: number;
+  bearish_pct: number;
+  active_agents: number;
+  total_trades_24h: number;
+  avg_confidence: number;
+};
+
+export type AgentOpinion = {
+  id: string;
+  smart_contract_id: string;
+  ai_response_id: string;
+  token_symbol: string;
+  sentiment: string;
+  action: string;
+  confidence: number;
+  reasoning: string;
+  short_reason: string;
+  from_token: string;
+  to_token: string;
+  amount_nano: string;
+  agent_name: string | null;
+  agent_address: string;
+  created_at: string;
+};
+
+export type TokenOpinionDetail = {
+  stats: TokenOpinionSummary;
+  opinions: AgentOpinion[];
+  total: number;
+};
+
+export async function getTokenOpinions(cfg: PublicApiConfig): Promise<TokenOpinionSummary[]> {
+  const res = await fetch(raceUrl(cfg, '/api/token-opinions'), {
+    method: 'GET',
+    headers: publicGetHeaders(cfg),
+  });
+  return jsonOrThrow(res);
+}
+
+export async function getTokenOpinionDetail(cfg: PublicApiConfig, symbol: string, opts?: { limit?: number; offset?: number }): Promise<TokenOpinionDetail> {
+  const params = new URLSearchParams();
+  if (opts?.limit != null) params.set('limit', String(opts.limit));
+  if (opts?.offset != null) params.set('offset', String(opts.offset));
+  const qs = params.toString();
+  const res = await fetch(raceUrl(cfg, `/api/token-opinions/${encodeURIComponent(symbol)}${qs ? `?${qs}` : ''}`), {
+    method: 'GET',
+    headers: publicGetHeaders(cfg),
+  });
+  return jsonOrThrow(res);
+}
+
+/* ==========================================================================
  * TonConnect Auth — JWT
  * ========================================================================== */
 

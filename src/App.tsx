@@ -16,12 +16,14 @@ import { HomePage } from './components/HomePage';
 import { ShareCardPage, ShareCardLoader, decodeShareData } from './components/ShareCard';
 import { StatsPage } from './components/StatsPage';
 import { DocsPage } from './components/DocsPage';
+import { AgentHubPage } from './components/AgentHubPage';
+import { TokenOpinionPage } from './components/TokenOpinionPage';
 
 const THEME_KEY = 'ai-trader-race:theme';
 
-type Page = 'home' | 'leaderboard' | 'stats' | 'trader' | 'share' | 'docs';
+type Page = 'home' | 'leaderboard' | 'stats' | 'trader' | 'share' | 'docs' | 'agent-hub';
 
-const VALID_PAGES = new Set<Page>(['home', 'leaderboard', 'stats', 'trader', 'docs']);
+const VALID_PAGES = new Set<Page>(['home', 'leaderboard', 'stats', 'trader', 'docs', 'agent-hub']);
 
 function tabFromHashParts(parts: string[]): TabKey {
   const second = parts[1]?.toLowerCase();
@@ -32,26 +34,31 @@ function tabFromHashParts(parts: string[]): TabKey {
   return { kind: 'overview' };
 }
 
-function routeFromHash(): { page: Page; tab: TabKey; statsPair: string | null } {
+function routeFromHash(): { page: Page; tab: TabKey; statsPair: string | null; hubToken: string | null } {
   const raw = window.location.hash.replace(/^#\/?/, '');
   const parts = raw.split('/').filter(Boolean);
   const first = parts[0]?.toLowerCase();
-  if (!first) return { page: 'home', tab: { kind: 'overview' }, statsPair: null };
-  if (first === 'share') return { page: 'share', tab: { kind: 'overview' }, statsPair: null };
+  if (!first) return { page: 'home', tab: { kind: 'overview' }, statsPair: null, hubToken: null };
+  if (first === 'share') return { page: 'share', tab: { kind: 'overview' }, statsPair: null, hubToken: null };
   if (first === 'stats') {
     const pairSlug = parts[1]?.toUpperCase() || null;
-    return { page: 'stats', tab: { kind: 'overview' }, statsPair: pairSlug };
+    return { page: 'stats', tab: { kind: 'overview' }, statsPair: pairSlug, hubToken: null };
   }
-  if (first === 'trader') return { page: 'trader', tab: tabFromHashParts(parts), statsPair: null };
-  if (VALID_PAGES.has(first as Page)) return { page: first as Page, tab: { kind: 'overview' }, statsPair: null };
-  return { page: 'home', tab: { kind: 'overview' }, statsPair: null };
+  if (first === 'agent-hub') {
+    const tokenSymbol = parts[1] ? decodeURIComponent(parts[1]) : null;
+    return { page: 'agent-hub', tab: { kind: 'overview' }, statsPair: null, hubToken: tokenSymbol };
+  }
+  if (first === 'trader') return { page: 'trader', tab: tabFromHashParts(parts), statsPair: null, hubToken: null };
+  if (VALID_PAGES.has(first as Page)) return { page: first as Page, tab: { kind: 'overview' }, statsPair: null, hubToken: null };
+  return { page: 'home', tab: { kind: 'overview' }, statsPair: null, hubToken: null };
 }
 
-function hashFromRoute(page: Page, tab: TabKey, statsPair?: string | null): string | null {
+function hashFromRoute(page: Page, tab: TabKey, statsPair?: string | null, hubToken?: string | null): string | null {
   if (page === 'share') return null; // don't touch hash for share pages
   if (page === 'home') return '';
   if (page === 'leaderboard') return 'leaderboard';
   if (page === 'stats') return statsPair ? `stats/${statsPair}` : 'stats';
+  if (page === 'agent-hub') return hubToken ? `agent-hub/${encodeURIComponent(hubToken)}` : 'agent-hub';
   if (page === 'docs') return 'docs';
   if (tab.kind === 'overview') return 'trader/overview';
   if (tab.kind === 'deploy') return 'trader/deploy';
@@ -95,6 +102,7 @@ export default function App() {
   const initialRoute = routeFromHash();
   const [page, setPageState] = useState<Page>(initialRoute.page);
   const [statsPairSlug, setStatsPairSlug] = useState<string | null>(initialRoute.statsPair);
+  const [hubToken, setHubToken] = useState<string | null>(initialRoute.hubToken);
 
   const setPage = useCallback((p: Page) => {
     setPageState(p);
@@ -109,6 +117,7 @@ export default function App() {
       setPageState(next.page);
       setTab(next.tab);
       if (next.page === 'stats') setStatsPairSlug(next.statsPair);
+      if (next.page === 'agent-hub') setHubToken(next.hubToken);
     };
     window.addEventListener('hashchange', onHashChange);
     return () => window.removeEventListener('hashchange', onHashChange);
@@ -116,13 +125,13 @@ export default function App() {
 
   // Sync hash with in-app navigation state
   useEffect(() => {
-    const nextHashValue = hashFromRoute(page, tab, statsPairSlug);
+    const nextHashValue = hashFromRoute(page, tab, statsPairSlug, hubToken);
     if (nextHashValue === null) return; // share page — don't touch hash
     const nextHash = nextHashValue ? `#${nextHashValue}` : '';
     if (window.location.hash !== nextHash) {
       window.location.hash = nextHash;
     }
-  }, [page, tab, statsPairSlug]);
+  }, [page, tab, statsPairSlug, hubToken]);
 
   // Theme switcher
   const [theme, setTheme] = useLocalStorageState<'light' | 'dark'>(THEME_KEY, 'light');
@@ -337,6 +346,13 @@ export default function App() {
             Order Book
           </button>
           <button
+            className={`btn btn-sm shrink-0 ${page === 'agent-hub' ? 'btn-active' : 'btn-ghost'}`}
+            onClick={() => { setHubToken(null); setPage('agent-hub'); }}
+            type="button"
+          >
+            Agent Hub
+          </button>
+          <button
             className={`btn btn-sm shrink-0 ${page === 'trader' ? 'btn-active' : 'btn-ghost'}`}
             onClick={openTraderFromNav}
             type="button"
@@ -363,6 +379,12 @@ export default function App() {
           <DocsPage />
         ) : page === 'stats' ? (
           <StatsPage raceCfg={raceCfg} pairSlug={statsPairSlug} onPairChange={setStatsPairSlug} />
+        ) : page === 'agent-hub' ? (
+          hubToken ? (
+            <TokenOpinionPage raceCfg={raceCfg} symbol={hubToken} onBack={() => setHubToken(null)} />
+          ) : (
+            <AgentHubPage raceCfg={raceCfg} onSelectToken={(s) => setHubToken(s)} />
+          )
         ) : (
           <>
             {/* Auth warning — wallet connected but no JWT */}
