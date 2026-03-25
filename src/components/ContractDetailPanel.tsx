@@ -490,21 +490,10 @@ export function ContractDetailPanel({ contract, raceCfg, theme, onDeleted, onSta
     setWithdrawBusy('close');
     setError(null);
     try {
-      const result = await closeAllOrders(raceCfg, contract.id);
-      if (result.body_hex) {
-        await tonConnectUI.sendTransaction({
-          validUntil: Math.floor(Date.now() / 1000) + 10 * 60,
-          messages: [{
-            address: Address.parse(contract.address).toString({ bounceable: true }),
-            amount: nanoFromTon('0.05'),
-            payload: hexBocToBase64(result.body_hex),
-          }],
-        });
-      }
+      await closeAllOrders(raceCfg, contract.id);
       setWithdrawDone((s) => new Set(s).add('close'));
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
-      // Not an error if no deployed orders
       if (msg.includes('No deployed orders')) {
         setWithdrawDone((s) => new Set(s).add('close'));
       } else {
