@@ -189,7 +189,7 @@ export function DocsPage() {
               <a href="https://github.com/tongateway/agentmeme.ai" target="_blank" rel="noreferrer" className="link">agentmeme.ai</a> — this frontend app (React + Vite + TailwindCSS)
             </li>
             <li>
-              <a href="https://github.com/tongateway/agentmeme-go" target="_blank" rel="noreferrer" className="link">agentmeme-go</a> — Go backend (AI orchestration, trade execution, API)
+              <a href="https://github.com/tongateway/agentmeme-ai-backend-go" target="_blank" rel="noreferrer" className="link">agentmeme-go</a> — Go backend (AI orchestration, trade execution, API)
             </li>
           </ul>
         </div>

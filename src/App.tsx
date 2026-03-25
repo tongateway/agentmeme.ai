@@ -435,7 +435,7 @@ export default function App() {
             <a href="https://github.com/tongateway/agentmeme.ai" target="_blank" rel="noreferrer" className="hover:opacity-100 underline-offset-4 hover:underline">
               App
             </a>
-            <a href="https://github.com/tongateway/agentmeme-go" target="_blank" rel="noreferrer" className="hover:opacity-100 underline-offset-4 hover:underline">
+            <a href="https://github.com/tongateway/agentmeme-ai-backend-go" target="_blank" rel="noreferrer" className="hover:opacity-100 underline-offset-4 hover:underline">
               Backend
             </a>
           </div>
