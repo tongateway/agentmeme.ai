@@ -150,19 +150,23 @@ export function TokenOpinionPage({ raceCfg, symbol, onBack }: TokenOpinionPagePr
               </div>
             </div>
 
-            {/* Stats grid */}
-            <div className="grid grid-cols-3 gap-2 mt-1">
+            {/* 24h stats */}
+            <div className="flex items-center gap-1.5 mt-1">
+              <span className="h-1.5 w-1.5 rounded-full bg-info animate-pulse shrink-0" />
+              <span className="text-[10px] uppercase tracking-wider opacity-40">Last 24 hours</span>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
               <div className="flex flex-col items-center gap-0.5">
-                <span className="text-[10px] uppercase tracking-wider opacity-40">Agents</span>
+                <span className="text-[10px] uppercase tracking-wider opacity-40">Active Agents</span>
                 <span className="mono text-sm font-bold tabular-nums">{stats?.active_agents ?? 0}</span>
               </div>
               <div className="flex flex-col items-center gap-0.5">
-                <span className="text-[10px] uppercase tracking-wider opacity-40">Trades 24h</span>
-                <span className="mono text-sm font-bold tabular-nums">{stats?.total_trades_24h ?? 0}</span>
+                <span className="text-[10px] uppercase tracking-wider opacity-40">Trades</span>
+                <span className="mono text-sm font-bold tabular-nums">{(stats?.total_trades_24h ?? 0).toLocaleString()}</span>
               </div>
               <div className="flex flex-col items-center gap-0.5">
-                <span className="text-[10px] uppercase tracking-wider opacity-40">Avg Conf</span>
-                <span className="mono text-sm font-bold tabular-nums">{(stats?.avg_confidence ?? 0).toFixed(2)}</span>
+                <span className="text-[10px] uppercase tracking-wider opacity-40">Avg Confidence</span>
+                <span className="mono text-sm font-bold tabular-nums">{((stats?.avg_confidence ?? 0) * 100).toFixed(0)}%</span>
               </div>
             </div>
 
