@@ -429,7 +429,7 @@ export default function App() {
             <button type="button" className="hover:opacity-100 underline-offset-4 hover:underline" onClick={() => setPage('docs')}>
               Docs
             </button>
-            <a href="https://github.com/nickspaargaren/orderbook-protocol" target="_blank" rel="noreferrer" className="hover:opacity-100 underline-offset-4 hover:underline">
+            <a href="https://github.com/tongateway/orderbook-protocol" target="_blank" rel="noreferrer" className="hover:opacity-100 underline-offset-4 hover:underline">
               Orderbook Protocol
             </a>
             <a href="https://github.com/tongateway/agentmeme.ai" target="_blank" rel="noreferrer" className="hover:opacity-100 underline-offset-4 hover:underline">

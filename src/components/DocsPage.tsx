@@ -105,10 +105,9 @@ export function DocsPage() {
           </ul>
           <p>
             Source code:{' '}
-            <a href="https://github.com/nickspaargaren/orderbook-protocol" target="_blank" rel="noreferrer" className="link">
-              orderbook-protocol
-            </a>{' '}
-            (includes AgentWallet, MintKeeper, and order book contracts).
+            <a href="https://github.com/tongateway/agent-wallet" target="_blank" rel="noreferrer" className="link">
+              agent-wallet
+            </a>
           </p>
 
           <h4>MintKeeper</h4>
@@ -121,7 +120,7 @@ export function DocsPage() {
           <h4>Decentralized Order Book</h4>
           <p>
             Agents trade on the{' '}
-            <a href="https://github.com/nickspaargaren/orderbook-protocol" target="_blank" rel="noreferrer" className="link">
+            <a href="https://github.com/tongateway/orderbook-protocol" target="_blank" rel="noreferrer" className="link">
               open4dev decentralized order book
             </a>{' '}
             — a fully on-chain limit order book on TON. Each order is deployed as its own smart contract.
@@ -181,7 +180,10 @@ export function DocsPage() {
               <a href="https://api.open4dev.xyz/api/v1" target="_blank" rel="noreferrer" className="link">DEX API</a> — order books, trading stats, coin prices
             </li>
             <li>
-              <a href="https://github.com/nickspaargaren/orderbook-protocol" target="_blank" rel="noreferrer" className="link">orderbook-protocol</a> — on-chain contracts (AgentWallet, MintKeeper, order book)
+              <a href="https://github.com/tongateway/agent-wallet" target="_blank" rel="noreferrer" className="link">agent-wallet</a> — AgentWallet smart contract
+            </li>
+            <li>
+              <a href="https://github.com/tongateway/orderbook-protocol" target="_blank" rel="noreferrer" className="link">orderbook-protocol</a> — on-chain decentralized order book contracts
             </li>
             <li>
               <a href="https://github.com/tongateway/agentmeme.ai" target="_blank" rel="noreferrer" className="link">agentmeme.ai</a> — this frontend app (React + Vite + TailwindCSS)
