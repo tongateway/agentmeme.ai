@@ -489,6 +489,7 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
       setBusy('register');
       const tokens = persisted.tradingTokens ?? DEFAULT_TRADING_TOKENS;
       const tradingPairs = buildTradingPairs(tokens);
+      const pricingId = selectedModelOption.pricing?.[0]?.id;
       const created = await registerRaceContract(raceCfg, {
         prompt: persisted.prompt,
         owner_address: ownerAddressRaw,
@@ -496,6 +497,7 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
         ...(selectedProvider ? { ai_provider: selectedProvider } : {}),
         ...(persisted.agentName?.trim() ? { name: persisted.agentName.trim() } : {}),
         ...(tradingPairs ? { trading_pairs: tradingPairs } : {}),
+        ...(pricingId ? { pricing_id: pricingId } : {}),
       });
       setPersisted((p) => ({ ...p, contractAddress: created.address, raceContractId: created.id }));
       onContractRegistered?.(created.id);
@@ -585,6 +587,7 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
         // 1. Register with backend — it creates the contract and returns the address
         const tokens2 = persisted.tradingTokens ?? DEFAULT_TRADING_TOKENS;
         const tradingPairs2 = buildTradingPairs(tokens2);
+        const pricingId2 = selectedModelOption.pricing?.[0]?.id;
         const created = await registerRaceContract(raceCfg, {
           prompt: persisted.prompt,
           owner_address: ownerAddressRaw,
@@ -592,6 +595,7 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
           ...(selectedProvider ? { ai_provider: selectedProvider } : {}),
           ...(persisted.agentName?.trim() ? { name: persisted.agentName.trim() } : {}),
           ...(tradingPairs2 ? { trading_pairs: tradingPairs2 } : {}),
+          ...(pricingId2 ? { pricing_id: pricingId2 } : {}),
         });
 
         contractId = created.id;

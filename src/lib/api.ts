@@ -101,6 +101,7 @@ export type RegisterRaceContractRequest = {
   ai_provider?: string;
   name?: string;
   trading_pairs?: string;
+  pricing_id?: string;
 };
 
 export type RaceContractCreateResponse = ContractListItem & {
@@ -197,6 +198,7 @@ export type ReactionResponse = {
 };
 
 export type PricingTier = {
+  id: string;
   cntDecisions: number;
   price: number;
   currency: string;
@@ -331,6 +333,7 @@ function normalizeAiModelOption(item: Record<string, unknown>, providerHint?: st
   const pricing: PricingTier[] = pricingRaw
     .filter((t): t is Record<string, unknown> => t != null && typeof t === 'object')
     .map((t) => ({
+      id: String(t.id ?? ''),
       cntDecisions: Number(t.cnt_decisions ?? 0),
       price: Number(t.price ?? 0),
       currency: typeof t.currency === 'string' ? t.currency : 'TON',

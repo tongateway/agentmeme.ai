@@ -21,6 +21,16 @@ function fmtPrice(n: number): string {
   return `$${n.toFixed(6)}`;
 }
 
+const TOKEN_DECIMALS: Record<string, number> = { USDT: 6, USDC: 6 };
+
+function fmtNano(nano: string, token?: string): string {
+  const decimals = TOKEN_DECIMALS[(token ?? '').toUpperCase()] ?? 9;
+  const n = Number(nano) / 10 ** decimals;
+  if (n >= 1000) return n.toLocaleString(undefined, { maximumFractionDigits: 2 });
+  if (n >= 1) return n.toFixed(4);
+  return n.toFixed(6);
+}
+
 function fmtAddr(addr: string): string {
   if (addr.length <= 14) return addr;
   return `${addr.slice(0, 6)}\u2026${addr.slice(-4)}`;
@@ -217,7 +227,7 @@ export function TokenOpinionPage({ raceCfg, symbol, onBack }: TokenOpinionPagePr
                   {(op.from_token || op.to_token) && (
                     <div className="text-[10px] opacity-35 mono">
                       {op.from_token} &rarr; {op.to_token}
-                      {op.amount_nano && op.amount_nano !== '0' && ` (${op.amount_nano})`}
+                      {op.amount_nano && op.amount_nano !== '0' && ` (${fmtNano(op.amount_nano, op.from_token)} ${op.from_token})`}
                     </div>
                   )}
                 </div>
