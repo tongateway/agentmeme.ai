@@ -1,10 +1,40 @@
 import { useCallback, useEffect, useState } from 'react';
-import { getTokenOpinions, type TokenOpinionSummary, type PublicApiConfig } from '@/lib/api';
+import {
+  getTokenOpinions,
+  getRaceLeaderboard,
+  type TokenOpinionSummary,
+  type LeaderboardEntry,
+  type PublicApiConfig,
+} from '@/lib/api';
+import { TrendingTokens } from '@/components/TrendingTokens';
+import { AgentSpotlight } from '@/components/AgentSpotlight';
 
 type AgentHubPageProps = {
   raceCfg: PublicApiConfig;
   onSelectToken: (symbol: string) => void;
 };
+
+function computeSignalStrength(
+  token: TokenOpinionSummary,
+  maxAgents: number,
+  maxTrades: number,
+): number {
+  const consensusWeight = Math.max(token.bullish_pct, token.bearish_pct) / 100;
+  const agentWeight = maxAgents > 0 ? token.active_agents / maxAgents : 0;
+  const volumeWeight = maxTrades > 0 ? token.total_trades_24h / maxTrades : 0;
+  return (
+    consensusWeight * 0.4 +
+    token.avg_confidence * 0.3 +
+    agentWeight * 0.15 +
+    volumeWeight * 0.15
+  ) * 10;
+}
+
+function signalColor(signal: number): string {
+  if (signal >= 7) return 'text-success';
+  if (signal >= 4) return 'text-warning';
+  return 'opacity-40';
+}
 
 function fmtPrice(n: number): string {
   if (n === 0) return '$0.00';
@@ -18,16 +48,21 @@ export function AgentHubPage({ raceCfg, onSelectToken }: AgentHubPageProps) {
   const [tokens, setTokens] = useState<TokenOpinionSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const data = await getTokenOpinions(raceCfg);
+      const [data, lb] = await Promise.all([
+        getTokenOpinions(raceCfg),
+        getRaceLeaderboard(raceCfg).catch(() => [] as LeaderboardEntry[]),
+      ]);
       const sorted = (Array.isArray(data) ? data : []).sort(
         (a, b) => b.total_trades_24h - a.total_trades_24h,
       );
       setTokens(sorted);
+      setLeaderboard(lb);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -41,11 +76,24 @@ export function AgentHubPage({ raceCfg, onSelectToken }: AgentHubPageProps) {
     return () => clearInterval(iv);
   }, [load]);
 
+  const maxAgents = Math.max(0, ...tokens.map((x) => x.active_agents));
+  const maxTrades = Math.max(0, ...tokens.map((x) => x.total_trades_24h));
+
   return (
     <div className="mt-4">
       <div className="card bg-base-200 shadow-md">
         <div className="card-body p-3 sm:p-5 gap-3">
           <h2 className="card-title text-base">Agent Hub</h2>
+
+          {/* Dashboard strip */}
+          {!loading && tokens.length > 0 && (
+            <div className="flex flex-col sm:flex-row gap-3">
+              <AgentSpotlight leaderboard={leaderboard} />
+              <div className="flex-1 min-w-0 flex items-center">
+                <TrendingTokens tokens={tokens} onSelectToken={onSelectToken} />
+              </div>
+            </div>
+          )}
 
           {error ? (
             <div className="text-sm text-error">{error}</div>
@@ -68,11 +116,13 @@ export function AgentHubPage({ raceCfg, onSelectToken }: AgentHubPageProps) {
                     <th className="text-right">24h</th>
                     <th className="text-center">AI Consensus</th>
                     <th className="text-right hidden sm:table-cell">Agents</th>
+                    <th className="text-right hidden sm:table-cell">Signal</th>
                     <th className="text-right">Trades 24h</th>
                   </tr>
                 </thead>
                 <tbody>
                   {tokens.map((t, i) => {
+                    const signal = computeSignalStrength(t, maxAgents, maxTrades);
                     const change24h = t.price_change_24h ?? 0;
                     const changePositive = change24h >= 0;
                     const changeColor = changePositive ? 'text-success' : 'text-error';
@@ -125,6 +175,11 @@ export function AgentHubPage({ raceCfg, onSelectToken }: AgentHubPageProps) {
                         </td>
                         <td className="text-right align-middle hidden sm:table-cell">
                           <span className="mono text-xs tabular-nums opacity-60">{t.active_agents}</span>
+                        </td>
+                        <td className="text-right align-middle hidden sm:table-cell">
+                          <span className={`mono text-xs tabular-nums font-bold ${signalColor(signal)}`}>
+                            {signal.toFixed(1)}
+                          </span>
                         </td>
                         <td className="text-right align-middle">
                           <span className="mono text-xs tabular-nums">{t.total_trades_24h}</span>
