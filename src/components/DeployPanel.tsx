@@ -621,7 +621,7 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
       // value_nanoton from backend is broken (int64 overflow), calculate ourselves:
       // price + 0.5 TON for on-chain flow fees (internal + mint + forward)
       const priceNano = BigInt(nanoFromTon(String(priceTon)));
-      const flowFeesNano = BigInt(nanoFromTon('1'));
+      const flowFeesNano = BigInt(nanoFromTon('2'));
       const totalNano = priceNano + flowFeesNano + userFundsNano;
 
       await tonConnectUI.sendTransaction({
