@@ -615,16 +615,14 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
       }
 
       // 2. Deploy MintKeeper via the data returned by the backend
-      //    Total = pricing tier cost + user-specified extra funds
+      //    Contract requires: claimMintFlowFees (~0.5 TON) + protocolFee (price)
       const userFundsNano = BigInt(nanoFromTon(persisted.deployAmountTon || '0'));
-      // price + gas (0.1 TON) + user funds
-      const rawFee = deployData.value_nanoton;
       const priceTon = selectedModelOption.pricing?.[0]?.price ?? 4;
-      const deployFeeNano = rawFee > 0
-        ? BigInt(rawFee)
-        : BigInt(nanoFromTon(String(priceTon)));
-      const gasNano = BigInt(nanoFromTon('0.1'));
-      const totalNano = deployFeeNano + gasNano + userFundsNano;
+      // value_nanoton from backend is broken (int64 overflow), calculate ourselves:
+      // price + 0.5 TON for on-chain flow fees (internal + mint + forward)
+      const priceNano = BigInt(nanoFromTon(String(priceTon)));
+      const flowFeesNano = BigInt(nanoFromTon('0.5'));
+      const totalNano = priceNano + flowFeesNano + userFundsNano;
 
       await tonConnectUI.sendTransaction({
         validUntil: Math.floor(Date.now() / 1000) + 10 * 60,
