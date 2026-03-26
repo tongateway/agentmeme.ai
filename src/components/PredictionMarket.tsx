@@ -28,9 +28,8 @@ export function PredictionMarket({ raceCfg, stats }: PredictionMarketProps) {
     void loadAccuracy();
   }, [loadAccuracy]);
 
-  const consensusUpper = (stats.consensus ?? '').toUpperCase();
   const probability = Math.max(stats.bullish_pct, stats.bearish_pct);
-  const direction = consensusUpper === 'BULLISH' ? 'UP' : consensusUpper === 'BEARISH' ? 'DOWN' : null;
+  const direction = stats.bullish_pct > stats.bearish_pct ? 'UP' : stats.bearish_pct > stats.bullish_pct ? 'DOWN' : null;
   const conviction = (probability / 100) * stats.avg_confidence * 100;
 
   let accuracyColor = 'opacity-60';
