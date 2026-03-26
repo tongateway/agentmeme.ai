@@ -618,7 +618,8 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
       //    value_nanoton = claimMintFlowFees + protocolFee (from backend)
       const userFundsNano = BigInt(nanoFromTon(persisted.deployAmountTon || '0'));
       const deployFeeNano = BigInt(deployData.value_nanoton);
-      const totalNano = deployFeeNano + userFundsNano;
+      const gasNano = BigInt(nanoFromTon('0.1'));
+      const totalNano = deployFeeNano + gasNano + userFundsNano;
 
       await tonConnectUI.sendTransaction({
         validUntil: Math.floor(Date.now() / 1000) + 10 * 60,
