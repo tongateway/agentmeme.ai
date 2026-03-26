@@ -615,9 +615,13 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
       }
 
       // 2. Deploy MintKeeper via the data returned by the backend
-      //    Total = backend deploy fee + user-specified funds
+      //    Total = pricing tier cost + user-specified extra funds
       const userFundsNano = BigInt(nanoFromTon(persisted.deployAmountTon || '0'));
-      const deployFeeNano = BigInt(deployData.value_nanoton);
+      // Use pricing tier price if value_nanoton is missing or broken (negative/overflow)
+      const rawFee = deployData.value_nanoton;
+      const deployFeeNano = rawFee > 0
+        ? BigInt(rawFee)
+        : BigInt(nanoFromTon(String(selectedModelOption.pricing?.[0]?.price ?? 4)));
       const totalNano = deployFeeNano + userFundsNano;
 
       await tonConnectUI.sendTransaction({
