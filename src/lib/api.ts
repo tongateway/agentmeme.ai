@@ -1505,6 +1505,26 @@ export async function getTokenOpinionDetail(cfg: PublicApiConfig, symbol: string
   return jsonOrThrow(res);
 }
 
+export type TokenPredictionAccuracy = {
+  token_symbol: string;
+  total_predictions: number;
+  correct_predictions: number;
+  accuracy_pct: number;
+  streak: number;
+  last_evaluated: string;
+};
+
+export async function getTokenPredictionAccuracy(
+  cfg: PublicApiConfig,
+  symbol: string,
+): Promise<TokenPredictionAccuracy> {
+  const res = await fetch(
+    raceUrl(cfg, `/api/token-opinions/${encodeURIComponent(symbol)}/accuracy`),
+    { method: 'GET', headers: publicGetHeaders(cfg) },
+  );
+  return jsonOrThrow(res);
+}
+
 /* ==========================================================================
  * TonConnect Auth — JWT
  * ========================================================================== */
