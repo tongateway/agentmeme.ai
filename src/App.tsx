@@ -258,7 +258,7 @@ export default function App() {
   const handleContractStatusChanged = useCallback(
     (contractId: string, isActive: boolean) => {
       setAllContracts((prev) =>
-        prev?.map((c) => (c.id === contractId ? { ...c, is_active: isActive } : c)) ?? null,
+        prev?.map((c) => (c.id === contractId ? { ...c, is_active: isActive, status: isActive ? 'active' : 'paused' } : c)) ?? null,
       );
     },
     [],
