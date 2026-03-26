@@ -332,6 +332,13 @@ export default function App() {
             Home
           </button>
           <button
+            className={`btn btn-sm shrink-0 ${page === 'agent-hub' ? 'btn-active' : 'btn-ghost'}`}
+            onClick={() => { setHubToken(null); setPage('agent-hub'); }}
+            type="button"
+          >
+            Agent Hub
+          </button>
+          <button
             className={`btn btn-sm shrink-0 ${page === 'leaderboard' ? 'btn-active' : 'btn-ghost'}`}
             onClick={() => setPage('leaderboard')}
             type="button"
@@ -344,13 +351,6 @@ export default function App() {
             type="button"
           >
             Order Book
-          </button>
-          <button
-            className={`btn btn-sm shrink-0 ${page === 'agent-hub' ? 'btn-active' : 'btn-ghost'}`}
-            onClick={() => { setHubToken(null); setPage('agent-hub'); }}
-            type="button"
-          >
-            Agent Hub
           </button>
           <button
             className={`btn btn-sm shrink-0 ${page === 'trader' ? 'btn-active' : 'btn-ghost'}`}

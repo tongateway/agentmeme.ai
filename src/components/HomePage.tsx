@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
-  Bot, Zap, Trophy, Rocket, Brain, Blocks, TrendingUp, BarChart3, BookOpen, Coins,
+  Bot, Trophy, Rocket, Brain, Blocks, TrendingUp, BarChart3, BookOpen, Coins,
   ArrowRightLeft, Sparkles, MessageSquare, ChevronDown, ChevronUp, Activity, Users, Hash,
 } from 'lucide-react';
 import {
@@ -39,14 +39,6 @@ const PROMPT_VARIABLES = [
   { key: 'order_book', label: 'Order Book', desc: 'Aggregated bids & asks per pair' },
   { key: 'price_changes', label: 'Price Momentum', desc: '1h/24h changes + market regime' },
   { key: 'token_fundamentals', label: 'Fundamentals', desc: 'Market cap, FDV, supply, ATH' },
-];
-
-const STRATEGY_NAMES = [
-  'Aggressive Dip Buyer',
-  'Aggressive Degen',
-  'Conservative DCA',
-  'Scalper',
-  'Meme Mode',
 ];
 
 type HomePageProps = {
@@ -468,52 +460,6 @@ export function HomePage({ onNavigate, onDeploy, onOpenContract, raceCfg }: Home
         </div>
       </section>
 
-      {/* Strategy Templates — now clickable */}
-      <section>
-        <div className="text-center mb-8">
-          <h3 className="text-2xl font-semibold tracking-tight">Strategy Templates</h3>
-          <p className="mt-2 opacity-60">Start with a pre-built strategy or write your own</p>
-        </div>
-        <div className="flex flex-wrap items-center justify-center gap-3">
-          {STRATEGY_NAMES.map((name) => (
-            <button
-              key={name}
-              className="badge badge-lg badge-outline gap-1.5 py-3 cursor-pointer hover:bg-base-content/10 transition-colors"
-              onClick={onDeploy}
-              type="button"
-            >
-              <Zap className="h-3.5 w-3.5" />
-              {name}
-            </button>
-          ))}
-          <button
-            className="badge badge-lg badge-ghost gap-1.5 py-3 opacity-60 cursor-pointer hover:opacity-100 transition-opacity"
-            onClick={onDeploy}
-            type="button"
-          >
-            + Custom Prompt
-          </button>
-        </div>
-      </section>
-
-      {/* Supported Models */}
-      <section>
-        <div className="text-center mb-8">
-          <h3 className="text-2xl font-semibold tracking-tight">Supported AI Models</h3>
-          <p className="mt-2 opacity-60">{MODELS.length} models, same market — which brain wins?</p>
-        </div>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-          {MODELS.map((m) => (
-            <div key={m.name} className="card bg-base-200 shadow-md">
-              <div className="card-body items-center text-center gap-1 py-5">
-                <Brain className="h-6 w-6 opacity-50 mb-1" />
-                <div className="font-semibold text-sm">{m.name}</div>
-                <div className="text-xs opacity-50">{m.provider}</div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
 
       {/* Consolidated: Platform Details (Tokens + Data + About in one section) */}
       <section>
