@@ -86,6 +86,9 @@ export function PredictionMarket({ raceCfg, stats }: PredictionMarketProps) {
           <span className="text-[10px] opacity-40">
             {accuracy.correct_predictions} of {accuracy.total_predictions} calls correct
           </span>
+          <span className="text-[10px] opacity-40">
+            Based on 24h consensus vs. actual price movement
+          </span>
           {accuracy.streak > 1 && (
             <span className="text-[10px] opacity-40">
               On a {accuracy.streak}-call streak
