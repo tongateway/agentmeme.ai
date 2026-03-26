@@ -96,12 +96,11 @@ export type RegisterContractRequest = {
 export type RegisterRaceContractRequest = {
   prompt: string;
   owner_address: string;
-  is_active?: boolean;
-  ai_model?: string;
+  pricing_id: string;
   ai_provider?: string;
   name?: string;
   trading_pairs?: string;
-  pricing_id?: string;
+  status?: string;
 };
 
 export type RaceContractCreateResponse = ContractListItem & {
@@ -416,7 +415,7 @@ export async function registerRaceContract(cfg: PublicApiConfig, body: RegisterR
   const res = await fetch(raceUrl(cfg, '/api/contracts'), {
     method: 'POST',
     headers: publicPostHeaders(cfg),
-    body: JSON.stringify({ ...body, wallet_id: 0 }),
+    body: JSON.stringify(body),
   });
   const data = await jsonOrThrow(res) as Record<string, unknown>;
   return {

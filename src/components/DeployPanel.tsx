@@ -490,14 +490,14 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
       const tokens = persisted.tradingTokens ?? DEFAULT_TRADING_TOKENS;
       const tradingPairs = buildTradingPairs(tokens);
       const pricingId = selectedModelOption.pricing?.[0]?.id;
+      if (!pricingId) throw new Error('No pricing tier available for this model');
       const created = await registerRaceContract(raceCfg, {
         prompt: persisted.prompt,
         owner_address: ownerAddressRaw,
-        ai_model: selectedModel,
+        pricing_id: pricingId,
         ...(selectedProvider ? { ai_provider: selectedProvider } : {}),
         ...(persisted.agentName?.trim() ? { name: persisted.agentName.trim() } : {}),
         ...(tradingPairs ? { trading_pairs: tradingPairs } : {}),
-        ...(pricingId ? { pricing_id: pricingId } : {}),
       });
       setPersisted((p) => ({ ...p, contractAddress: created.address, raceContractId: created.id }));
       onContractRegistered?.(created.id);
@@ -588,14 +588,14 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
         const tokens2 = persisted.tradingTokens ?? DEFAULT_TRADING_TOKENS;
         const tradingPairs2 = buildTradingPairs(tokens2);
         const pricingId2 = selectedModelOption.pricing?.[0]?.id;
+        if (!pricingId2) throw new Error('No pricing tier available for this model');
         const created = await registerRaceContract(raceCfg, {
           prompt: persisted.prompt,
           owner_address: ownerAddressRaw,
-          ai_model: selectedModel,
+          pricing_id: pricingId2,
           ...(selectedProvider ? { ai_provider: selectedProvider } : {}),
           ...(persisted.agentName?.trim() ? { name: persisted.agentName.trim() } : {}),
           ...(tradingPairs2 ? { trading_pairs: tradingPairs2 } : {}),
-          ...(pricingId2 ? { pricing_id: pricingId2 } : {}),
         });
 
         contractId = created.id;
