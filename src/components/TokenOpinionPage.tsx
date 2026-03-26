@@ -6,6 +6,7 @@ import {
   type TokenOpinionSummary,
   type PublicApiConfig,
 } from '@/lib/api';
+import { PredictionMarket } from '@/components/PredictionMarket';
 
 type TokenOpinionPageProps = {
   raceCfg: PublicApiConfig;
@@ -179,6 +180,12 @@ export function TokenOpinionPage({ raceCfg, symbol, onBack }: TokenOpinionPagePr
                 <span className="mono text-sm font-bold tabular-nums">{((stats?.avg_confidence ?? 0) * 100).toFixed(0)}%</span>
               </div>
             </div>
+
+            {stats && (
+              <div className="border-t border-base-content/10 pt-3 mt-1">
+                <PredictionMarket raceCfg={raceCfg} stats={stats} />
+              </div>
+            )}
 
             <button className="btn btn-sm btn-ghost gap-1 mt-2 self-start" type="button" onClick={onBack}>
               <ArrowLeft className="h-4 w-4" /> Back to Hub
