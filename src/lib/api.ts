@@ -95,7 +95,6 @@ export type RegisterContractRequest = {
 
 export type RegisterRaceContractRequest = {
   prompt: string;
-  owner_address: string;
   pricing_id: string;
   ai_provider?: string;
   name?: string;

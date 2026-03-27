@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTonConnectUI } from '@tonconnect/ui-react';
 import { Address } from '@ton/core';
-import { createChart, LineSeries, type IChartApi, type UTCTimestamp } from 'lightweight-charts';
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import {
   getRaceAiResponses,
   getRaceContractDetail,
@@ -33,7 +33,7 @@ import {
 } from 'lucide-react';
 import { buildShareUrl } from './ShareCard';
 import { nanoFromTon } from '@/lib/ton/agentWalletV5';
-import { getChartOptions, lineSeriesOptions, dedupeChartData, type AppTheme } from '@/lib/chart-theme';
+import type { AppTheme } from '@/lib/chart-theme';
 
 /** A resolved token balance row for display. */
 type TokenBalanceRow = {
@@ -165,86 +165,120 @@ async function fetchTonBalance(address: string): Promise<string> {
   return fracStr ? `${whole}.${fracStr}` : `${whole}`;
 }
 
-/* ---------- Balance Chart (Lightweight Charts) ---------- */
+/* ---------- Balance Chart (Recharts) ---------- */
 
 type ChartPoint = { time: number; value: number };
 
 const CHART_GREEN = '#00C389';
 
-function BalanceChart({ points, theme }: { points: ChartPoint[]; theme: AppTheme }) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const chartRef = useRef<IChartApi | null>(null);
-  const seriesRef = useRef<any>(null);
-  const [chartReady, setChartReady] = useState(false);
+type TimeRange = '1h' | '6h' | '24h' | '7d';
+const TIME_RANGES: { key: TimeRange; label: string; ms: number }[] = [
+  { key: '1h', label: '1h', ms: 60 * 60 * 1000 },
+  { key: '6h', label: '6h', ms: 6 * 60 * 60 * 1000 },
+  { key: '24h', label: '24h', ms: 24 * 60 * 60 * 1000 },
+  { key: '7d', label: '7d', ms: 7 * 24 * 60 * 60 * 1000 },
+];
 
-  // Create chart once container is in DOM
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
+function BalanceChart({ points }: { points: ChartPoint[]; theme: AppTheme }) {
+  const [range, setRange] = useState<TimeRange>('1h');
 
-    const chart = createChart(container, {
-      ...getChartOptions(theme),
-      width: container.clientWidth,
-      height: 330,
-      handleScroll: { mouseWheel: true, pressedMouseMove: true },
-      handleScale: { axisPressedMouseMove: true, mouseWheel: true, pinch: true },
-    });
+  const filtered = useMemo(() => {
+    const rangeMs = TIME_RANGES.find((r) => r.key === range)?.ms ?? 60 * 60 * 1000;
+    const cutoff = Date.now() - rangeMs;
+    const result = points.filter((p) => p.time >= cutoff);
+    return result.length > 0 ? result : points.slice(-20);
+  }, [points, range]);
 
-    const series = chart.addSeries(LineSeries as any, {
-      ...lineSeriesOptions(CHART_GREEN),
-      lineWidth: 3,
-      lastValueVisible: true,
-      priceLineVisible: true,
-      priceLineColor: CHART_GREEN,
-      priceLineWidth: 1,
-      priceLineStyle: 2, // dashed
-    });
+  const currentBalance = filtered.length > 0 ? filtered[filtered.length - 1].value : 0;
+  const startBalance = filtered.length > 0 ? filtered[0].value : 0;
+  const changePct = startBalance > 0 ? ((currentBalance - startBalance) / startBalance) * 100 : 0;
+  const changePositive = changePct >= 0;
 
-    chartRef.current = chart;
-    seriesRef.current = series;
-    setChartReady(true);
-
-    const ro = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        const w = entry.contentRect.width;
-        if (w > 0) chart.applyOptions({ width: w });
-      }
-    });
-    ro.observe(container);
-
-    return () => {
-      ro.disconnect();
-      chart.remove();
-      chartRef.current = null;
-      seriesRef.current = null;
-      setChartReady(false);
-    };
-  }, []);
-
-  // Update theme
-  useEffect(() => {
-    if (chartRef.current) {
-      chartRef.current.applyOptions(getChartOptions(theme));
-    }
-  }, [theme]);
-
-  // Update data — depend on chartReady so it runs after chart creation
-  useEffect(() => {
-    if (!seriesRef.current || !chartReady) return;
-    const deduped = dedupeChartData(points);
-    if (deduped.length > 0) {
-      seriesRef.current.setData(deduped.map((p) => ({ time: p.time as UTCTimestamp, value: p.value })));
-      chartRef.current?.timeScale().fitContent();
-    }
-  }, [points, chartReady]);
+  const fmtTime = (ts: number) => {
+    const d = new Date(ts);
+    if (range === '7d') return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    return d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+  };
 
   return (
-    <div className="relative w-full" style={{ minHeight: 330 }}>
-      <div ref={containerRef} className="w-full" style={{ minHeight: 330 }} />
-      {points.length === 0 && (
-        <div className="absolute inset-0 flex items-center justify-center">
+    <div className="flex flex-col gap-3">
+      <div className="flex items-center justify-between">
+        <div>
+          <div className="text-xs opacity-50">Balance (USD)</div>
+          <div className="flex items-baseline gap-2">
+            <span className="text-3xl font-bold mono tabular-nums">
+              ${currentBalance.toFixed(2)}
+            </span>
+            <span className={`text-sm font-bold mono tabular-nums ${changePositive ? 'text-success' : 'text-error'}`}>
+              {changePositive ? '+' : ''}{changePct.toFixed(2)}%
+            </span>
+          </div>
+        </div>
+        <div className="flex gap-0.5 bg-base-300 rounded-lg p-0.5">
+          {TIME_RANGES.map((r) => (
+            <button
+              key={r.key}
+              type="button"
+              className={`btn btn-xs px-3 ${range === r.key ? 'btn-active' : 'btn-ghost'}`}
+              onClick={() => setRange(r.key)}
+            >
+              {r.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {filtered.length === 0 ? (
+        <div className="flex items-center justify-center" style={{ height: 280 }}>
           <span className="text-sm opacity-60">No balance data for chart.</span>
         </div>
+      ) : (
+        <ResponsiveContainer width="100%" height={280}>
+          <AreaChart data={filtered} margin={{ top: 5, right: 5, left: 0, bottom: 0 }}>
+            <defs>
+              <linearGradient id="balanceGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={CHART_GREEN} stopOpacity={0.3} />
+                <stop offset="100%" stopColor={CHART_GREEN} stopOpacity={0.02} />
+              </linearGradient>
+            </defs>
+            <XAxis
+              dataKey="time"
+              tickFormatter={fmtTime}
+              tick={{ fontSize: 11, fill: 'currentColor', opacity: 0.4 }}
+              axisLine={false}
+              tickLine={false}
+              minTickGap={40}
+            />
+            <YAxis
+              domain={['auto', 'auto']}
+              tickFormatter={(v: number) => `$${v.toFixed(2)}`}
+              tick={{ fontSize: 11, fill: 'currentColor', opacity: 0.4 }}
+              axisLine={false}
+              tickLine={false}
+              width={65}
+            />
+            <Tooltip
+              contentStyle={{
+                backgroundColor: 'oklch(var(--b2))',
+                border: '1px solid oklch(var(--bc) / 0.1)',
+                borderRadius: 8,
+                fontSize: 12,
+                padding: '6px 10px',
+              }}
+              labelFormatter={(ts) => new Date(ts as number).toLocaleString()}
+              formatter={(value) => [`$${Number(value).toFixed(2)}`, 'Balance']}
+            />
+            <Area
+              type="monotone"
+              dataKey="value"
+              stroke={CHART_GREEN}
+              strokeWidth={2.5}
+              fill="url(#balanceGradient)"
+              dot={false}
+              activeDot={{ r: 4, fill: CHART_GREEN, strokeWidth: 0 }}
+            />
+          </AreaChart>
+        </ResponsiveContainer>
       )}
     </div>
   );
@@ -849,7 +883,6 @@ export function ContractDetailPanel({ contract, raceCfg, theme, onDeleted, onSta
           {/* Balance Chart */}
           <div className="card bg-base-200 shadow-md overflow-hidden">
             <div className="card-body">
-              <h2 className="card-title">Balance (USD)</h2>
               <BalanceChart points={chartPoints} theme={theme} />
             </div>
           </div>

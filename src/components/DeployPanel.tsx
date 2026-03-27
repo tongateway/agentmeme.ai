@@ -493,7 +493,7 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
       if (!pricingId) throw new Error('No pricing tier available for this model');
       const created = await registerRaceContract(raceCfg, {
         prompt: persisted.prompt,
-        owner_address: ownerAddressRaw,
+
         pricing_id: pricingId,
         ...(selectedProvider ? { ai_provider: selectedProvider } : {}),
         ...(persisted.agentName?.trim() ? { name: persisted.agentName.trim() } : {}),
@@ -591,7 +591,7 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
         if (!pricingId2) throw new Error('No pricing tier available for this model');
         const created = await registerRaceContract(raceCfg, {
           prompt: persisted.prompt,
-          owner_address: ownerAddressRaw,
+  
           pricing_id: pricingId2,
           ...(selectedProvider ? { ai_provider: selectedProvider } : {}),
           ...(persisted.agentName?.trim() ? { name: persisted.agentName.trim() } : {}),
