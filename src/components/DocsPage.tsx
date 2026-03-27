@@ -179,7 +179,6 @@ export function DocsPage() {
               { name: 'AI Models API', desc: 'Model selection and pricing info', url: 'https://ai-api.open4dev.xyz/swagger/index.html#/AI%20Models' },
               { name: 'open4dev Order Book', desc: 'DEX protocol documentation', url: 'https://github.com/tongateway/orderbook-protocol' },
               { name: 'Agent Wallet Source', desc: 'Smart contract source code', url: 'https://github.com/tongateway/agent-wallet' },
-              { name: 'Tonviewer', desc: 'On-chain explorer for TON', url: 'https://tonviewer.com' },
               { name: 'TonConnect', desc: 'Wallet connection protocol', url: 'https://docs.ton.org/develop/dapps/ton-connect/overview' },
             ].map((link) => (
               <a

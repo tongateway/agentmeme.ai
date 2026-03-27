@@ -606,6 +606,8 @@ export type TokenLeaderboardEntry = {
 
 function normalizeTokenLeaderboardEntry(item: Record<string, unknown>, tokenKey: string): TokenLeaderboardEntry {
   const prefix = tokenKey.toLowerCase() + '_';
+  // API may return fields with or without the token prefix — try prefixed first, fall back to unprefixed
+  const get = (field: string) => item[`${prefix}${field}`] ?? item[field] ?? 0;
   return {
     rank: Number(item.rank ?? 0),
     smart_contract_id: String(item.smart_contract_id ?? ''),
@@ -616,12 +618,12 @@ function normalizeTokenLeaderboardEntry(item: Record<string, unknown>, tokenKey:
     status: typeof item.status === 'string' ? item.status : undefined,
     max_decisions: Number(item.max_decisions ?? 0),
     used_decisions: Number(item.used_decisions ?? 0),
-    buy_volume: Number(item[`${prefix}buy_volume`] ?? 0),
-    sell_volume: Number(item[`${prefix}sell_volume`] ?? 0),
-    completed_orders: Number(item[`${prefix}completed_orders`] ?? 0),
-    deployed_orders: Number(item[`${prefix}deployed_orders`] ?? 0),
-    total_orders: Number(item[`${prefix}total_orders`] ?? 0),
-    completed_volume: Number(item[`${prefix}completed_volume`] ?? 0),
+    buy_volume: Number(get('buy_volume')),
+    sell_volume: Number(get('sell_volume')),
+    completed_orders: Number(get('completed_orders')),
+    deployed_orders: Number(get('deployed_orders')),
+    total_orders: Number(get('total_orders')),
+    completed_volume: Number(get('completed_volume')),
   };
 }
 
