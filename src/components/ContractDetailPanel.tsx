@@ -27,8 +27,9 @@ import { readCache, writeCache, aiResponsesCacheKey, balancesCacheKey } from '@/
 import { OrdersPanel } from './OrdersPanel';
 import {
   Trash2, ArrowDownToLine, ArrowUpFromLine, XCircle,
-  Share2, Check, Pause, Play, Wallet, AlertTriangle, ChevronDown, RefreshCw,
+  Share2, Check, Pause, Play, Wallet, AlertTriangle, RefreshCw,
   FileText, Copy, Pencil, Save,
+  Bot, Zap, Activity, ArrowUpRight, Clock,
 } from 'lucide-react';
 import { buildShareUrl } from './ShareCard';
 import { nanoFromTon } from '@/lib/ton/agentWalletV5';
@@ -294,6 +295,10 @@ export function ContractDetailPanel({ contract, raceCfg, theme, onDeleted, onSta
   const [withdrawDone, setWithdrawDone] = useState<Set<string>>(new Set()); // tracks completed steps
   const [jettonInfo, setJettonInfo] = useState<WithdrawJettonResult | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [detailTab, setDetailTab] = useState<'overview' | 'orders' | 'ai'>('overview');
+
+  // Address copy feedback
+  const [addrCopied, setAddrCopied] = useState(false);
 
   // Fetch contract detail for ai_model
   useEffect(() => {
@@ -620,391 +625,510 @@ export function ContractDetailPanel({ contract, raceCfg, theme, onDeleted, onSta
       .sort((a, b) => a.time - b.time);
   }, [aiResponses]);
 
+  const usedDec = contract.used_decisions ?? 0;
+  const maxDec = contract.max_decisions ?? 0;
+  const decPct = maxDec > 0 ? Math.round((usedDec / maxDec) * 100) : 0;
+
+  const openOrders = (contract as any).open_orders ?? 0;
+  const closedOrders = (contract as any).closed_orders ?? 0;
+
+  const createdDate = new Date(contract.created_at);
+  const createdDay = createdDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+  const createdTime = createdDate.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+
+  const modelShort = aiModel ? aiModel.split('/').pop()?.split('-').slice(0, 2).join('-') ?? aiModel : '\u2014';
+  const modelProvider = aiModel ? (aiModel.includes('/') ? aiModel.split('/')[0] : contract.ai_provider ?? 'AI') : '\u2014';
+
   return (
-    <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-      {/* Contract Info */}
-      <div className="card bg-base-200 shadow-md sm:col-span-2 lg:col-span-1">
-        <div className="card-body gap-3">
-          <div className="flex items-center justify-between">
-            <h2 className="card-title">Contract Info</h2>
-            <div className="flex items-center gap-1.5">
-              {aiResponses.length === 0 && !aiLoading ? (
-                <span className="badge badge-sm badge-warning animate-pulse">Deploying…</span>
-              ) : (
-                <span className={`badge badge-sm ${isActive ? 'badge-success' : 'badge-ghost'}`}>
-                  {isActive ? 'Active' : 'Paused'}
-                </span>
-              )}
+    <div className="mt-4 flex flex-col gap-4">
+      {/* ===== 1. Agent Header Card ===== */}
+      <div className="card bg-base-200 shadow-md">
+        <div className="card-body py-4">
+          <div className="flex items-center gap-4 flex-wrap">
+            {/* Bot icon */}
+            <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/15 shrink-0">
+              <Bot className="h-5 w-5 text-primary" />
             </div>
-          </div>
 
-          <div className="flex items-center justify-between gap-4">
-            <div className="text-sm opacity-60">Address</div>
-            <a
-              className="mono text-xs underline-offset-4 hover:underline link link-hover"
-              href={explorerLink(contract.address)}
-              target="_blank"
-              rel="noreferrer"
-            >
-              {fmtAddr(contract.address)}
-            </a>
-          </div>
-          <div className="divider my-0" />
-          <div className="flex items-center justify-between gap-4">
-            <div className="text-sm opacity-60">Model</div>
-            <div className="mono text-xs">
-              {aiModel ? (
-                <span className="badge badge-outline badge-sm">{aiModel}</span>
-              ) : (
-                <span className="opacity-40">—</span>
-              )}
-            </div>
-          </div>
-          <div className="divider my-0" />
-          <TradingPairsRow contract={contract} raceCfg={raceCfg} />
-          <div className="divider my-0" />
-          <div className="flex items-center justify-between gap-4">
-            <div className="text-sm opacity-60">Prompt</div>
-            <button
-              className="btn btn-ghost btn-xs gap-1"
-              onClick={() => void handleViewPrompt()}
-              disabled={promptLoading}
-              type="button"
-            >
-              {promptLoading ? (
-                <span className="loading loading-spinner loading-xs" />
-              ) : (
-                <FileText className="h-3 w-3" />
-              )}
-              View Prompt
-            </button>
-          </div>
-          <div className="divider my-0" />
-          <div className="flex items-center justify-between gap-4">
-            <div className="text-sm opacity-60">ID</div>
-            <div className="mono text-xs break-all text-right">{contract.id}</div>
-          </div>
-          <div className="divider my-0" />
-          <div className="flex items-center justify-between gap-4">
-            <div className="text-sm opacity-60">Created</div>
-            <div className="mono text-xs">{new Date(contract.created_at).toLocaleString()}</div>
-          </div>
-          <div className="divider my-0" />
-          <div className="flex items-center justify-between gap-4">
-            <div className="text-sm opacity-60">Decisions</div>
-            <div className="flex items-center gap-2">
-              <span className="mono text-xs">
-                {contract.used_decisions ?? 0}
-                {contract.max_decisions != null && contract.max_decisions > 0
-                  ? ` / ${contract.max_decisions}`
-                  : ' / \u221E'}
-              </span>
-              {contract.max_decisions != null && contract.max_decisions > 0 && (
-                <progress
-                  className="progress progress-success w-16 h-2"
-                  value={contract.used_decisions ?? 0}
-                  max={contract.max_decisions}
-                />
-              )}
-            </div>
-          </div>
-          <div className="divider my-0" />
-          <div className="flex items-center justify-between gap-4">
-            <div className="text-sm opacity-60">Explorer</div>
-            <div className="flex items-center gap-2 text-xs">
-              <a
-                className="underline-offset-4 hover:underline link link-primary"
-                href={explorerLink(contract.address)}
-                target="_blank"
-                rel="noreferrer"
-              >
-                Tonviewer
-              </a>
-              <span className="opacity-50">|</span>
-              <a
-                className="underline-offset-4 hover:underline link link-primary"
-                href={tonscanLink(contract.address)}
-                target="_blank"
-                rel="noreferrer"
-              >
-                Tonscan
-              </a>
-            </div>
-          </div>
-          <div className="divider my-0" />
-
-          {/* Extended Balance — TON + jettons */}
-          <div className="flex items-center gap-2 mb-1">
-            <Wallet className="h-4 w-4 opacity-60" />
-            <span className="text-sm opacity-60">Wallet Balance</span>
-            {balancesRefreshing && (
-              <span className="flex items-center gap-1 text-xs opacity-40">
-                <RefreshCw className="h-3 w-3 animate-spin" />
-              </span>
-            )}
-            {totalUsdBalance > 0 && (
-              <span className="badge badge-sm badge-ghost mono ml-auto">~${totalUsdBalance.toFixed(2)}</span>
-            )}
-          </div>
-
-          {balancesLoading && tokenBalances.length === 0 ? (
-            <div className="flex justify-center py-2">
-              <span className="loading loading-spinner loading-xs" />
-            </div>
-          ) : tokenBalances.length === 0 ? (
-            <div className="text-xs opacity-40 text-center py-1">No tokens found</div>
-          ) : (
-            <div className="flex flex-col gap-1.5">
-              {tokenBalances.map((t) => (
-                <div key={t.symbol} className="flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold">{t.symbol}</span>
-                    <span className="opacity-40">{t.name}</span>
-                  </div>
-                  <div className="flex items-center gap-3 mono">
-                    <span>{t.amount >= 1000 ? t.amount.toLocaleString(undefined, { maximumFractionDigits: 2 }) : t.amount >= 1 ? t.amount.toFixed(4) : t.amount.toFixed(6)}</span>
-                    {t.usdValue > 0 && (
-                      <span className="opacity-50 text-[10px]">~${t.usdValue.toFixed(2)}</span>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Top Up */}
-          <div className="divider my-0" />
-          <div className="flex items-center gap-2">
-            <ArrowUpFromLine className="h-4 w-4 opacity-60" />
-            <span className="text-sm opacity-60">Top Up</span>
-            <div className="flex items-center gap-1.5 ml-auto">
-              <input
-                id="detail-topup"
-                type="text"
-                className="input input-bordered input-xs w-16 text-xs mono text-right"
-                value={topupAmount}
-                onChange={(e) => setTopupAmount(e.target.value)}
-                inputMode="decimal"
-                placeholder="TON"
-              />
-              <span className="text-xs opacity-40">TON</span>
-              <button
-                className={`btn btn-outline btn-xs gap-1 ${topupBusy ? 'btn-disabled' : ''}`}
-                onClick={() => void topupContract()}
-                type="button"
-              >
-                {topupBusy ? 'Sending\u2026' : 'Send'}
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Balance Chart */}
-      <div className="card bg-base-200 shadow-md sm:col-span-2 lg:col-span-1 overflow-hidden">
-        <div className="card-body">
-          <h2 className="card-title">Balance (USD)</h2>
-          <BalanceChart points={chartPoints} theme={theme} />
-        </div>
-      </div>
-
-      {/* Agent Actions — collapsible */}
-      <details className="card bg-base-200 shadow-md sm:col-span-2 group">
-        <summary className="card-body py-4 cursor-pointer select-none list-none [&::-webkit-details-marker]:hidden">
-          <div className="flex items-center justify-between">
-            <h2 className="card-title text-sm">Agent Actions</h2>
-            <ChevronDown className="h-4 w-4 opacity-40 transition-transform group-open:rotate-180" />
-          </div>
-        </summary>
-        <div className="card-body pt-0 gap-4">
-          {/* Pause / Resume + Delete — single row */}
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              className={`btn btn-sm gap-1 ${isActive ? 'btn-warning btn-outline' : 'btn-success btn-outline'}`}
-              onClick={() => void handleTogglePause()}
-              disabled={pauseBusy}
-              type="button"
-            >
-              {isActive ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-              {pauseBusy ? 'Updating\u2026' : isActive ? 'Pause Agent' : 'Resume Agent'}
-            </button>
-
-            {!confirmDelete ? (
-              <button
-                className="btn btn-error btn-sm btn-outline gap-1"
-                onClick={() => setConfirmDelete(true)}
-                disabled={!!withdrawBusy}
-                type="button"
-              >
-                <Trash2 className="h-4 w-4" />
-                Delete agent
-              </button>
-            ) : (
+            {/* Name + status */}
+            <div className="flex flex-col min-w-0">
               <div className="flex items-center gap-2">
-                <span className="text-xs text-error font-medium">
-                  {canDelete ? 'Sure?' : 'Delete anyway?'}
-                </span>
+                <span className="text-xl font-bold truncate">{contract.name || 'Agent'}</span>
+                {aiResponses.length === 0 && !aiLoading ? (
+                  <span className="badge badge-sm badge-warning animate-pulse">Deploying...</span>
+                ) : (
+                  <span className={`badge badge-sm ${isActive ? 'badge-success' : 'badge-ghost'}`}>
+                    {isActive ? 'Active' : 'Paused'}
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-1 mt-0.5">
+                <span className="mono text-xs opacity-50">{fmtAddr(contract.address)}</span>
                 <button
-                  className="btn btn-error btn-xs gap-1"
-                  onClick={() => void handleDelete()}
-                  disabled={withdrawBusy === 'delete'}
+                  className={`btn btn-ghost btn-xs px-1 ${addrCopied ? 'text-success' : ''}`}
+                  onClick={() => {
+                    void navigator.clipboard.writeText(contract.address);
+                    setAddrCopied(true);
+                    setTimeout(() => setAddrCopied(false), 2000);
+                  }}
                   type="button"
+                  title="Copy address"
                 >
-                  {withdrawBusy === 'delete' ? 'Deleting\u2026' : 'Yes'}
-                </button>
-                <button
-                  className="btn btn-ghost btn-xs"
-                  onClick={() => setConfirmDelete(false)}
-                  disabled={withdrawBusy === 'delete'}
-                  type="button"
-                >
-                  Cancel
+                  {addrCopied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
                 </button>
               </div>
-            )}
+            </div>
+
+            {/* Spacer */}
+            <div className="flex-1" />
+
+            {/* Pause + Delete buttons */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                className={`btn btn-sm btn-outline gap-1 ${isActive ? 'btn-warning' : 'btn-success'}`}
+                onClick={() => void handleTogglePause()}
+                disabled={pauseBusy}
+                type="button"
+              >
+                {isActive ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+                {pauseBusy ? 'Updating...' : isActive ? 'Pause' : 'Resume'}
+              </button>
+
+              {!confirmDelete ? (
+                <button
+                  className="btn btn-error btn-sm btn-outline gap-1"
+                  onClick={() => setConfirmDelete(true)}
+                  disabled={!!withdrawBusy}
+                  type="button"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Delete
+                </button>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-error font-medium">
+                    {canDelete ? 'Sure?' : 'Delete anyway?'}
+                  </span>
+                  <button
+                    className="btn btn-error btn-xs gap-1"
+                    onClick={() => void handleDelete()}
+                    disabled={withdrawBusy === 'delete'}
+                    type="button"
+                  >
+                    {withdrawBusy === 'delete' ? 'Deleting...' : 'Yes'}
+                  </button>
+                  <button
+                    className="btn btn-ghost btn-xs"
+                    onClick={() => setConfirmDelete(false)}
+                    disabled={withdrawBusy === 'delete'}
+                    type="button"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Confirm delete warning */}
           {confirmDelete && !canDelete && (
-            <div className="flex items-start gap-2 text-warning">
+            <div className="flex items-start gap-2 text-warning mt-2">
               <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
               <span className="text-xs">
                 Please withdraw all tokens (jettons & TON) before deleting. Tokens left in the contract will be lost!
               </span>
             </div>
           )}
+        </div>
+      </div>
 
-          <div className="divider my-0" />
+      {/* ===== 2. Five Stat Cards ===== */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+        {/* Model */}
+        <div className="card bg-base-200 shadow-sm">
+          <div className="card-body py-3 px-4 gap-1">
+            <div className="flex items-center gap-1.5">
+              <Zap className="h-3.5 w-3.5 text-warning" />
+              <span className="text-xs opacity-60">Model</span>
+            </div>
+            <div className="text-lg font-bold truncate">{modelShort}</div>
+            <div className="text-xs opacity-40 truncate">{modelProvider}</div>
+          </div>
+        </div>
 
-          {/* Withdraw */}
-          <div className="flex flex-col gap-2">
-            <span className="text-xs opacity-60">Withdraw</span>
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                className={`btn btn-outline btn-sm gap-1 ${withdrawDone.has('close') ? 'btn-success' : ''}`}
-                onClick={() => void handleCloseOrders()}
-                disabled={!!withdrawBusy || withdrawDone.has('close')}
-                type="button"
-              >
-                <XCircle className="h-4 w-4" />
-                {withdrawBusy === 'close' ? 'Closing\u2026' : withdrawDone.has('close') ? 'Orders closed' : 'Close orders'}
-              </button>
+        {/* Balance */}
+        <div className="card bg-base-200 shadow-sm">
+          <div className="card-body py-3 px-4 gap-1">
+            <div className="flex items-center gap-1.5">
+              <Wallet className="h-3.5 w-3.5 text-success" />
+              <span className="text-xs opacity-60">Balance</span>
+            </div>
+            <div className="text-lg font-bold mono">
+              {totalUsdBalance > 0 ? `$${totalUsdBalance.toFixed(2)}` : '$0.00'}
+            </div>
+            <div className="text-xs opacity-40">USD equiv.</div>
+          </div>
+        </div>
 
-              <button
-                className={`btn btn-outline btn-sm gap-1 ${withdrawDone.has('jetton') && withdrawDone.has('ton') ? 'btn-success' : ''}`}
-                onClick={() => void handleWithdrawAll()}
-                disabled={!!withdrawBusy || (withdrawDone.has('jetton') && withdrawDone.has('ton'))}
-                type="button"
-              >
-                <ArrowDownToLine className="h-4 w-4" />
-                {withdrawBusy === 'withdraw' ? 'Withdrawing\u2026' : withdrawDone.has('jetton') && withdrawDone.has('ton') ? 'All withdrawn' : 'Withdraw all'}
-              </button>
+        {/* Decisions */}
+        <div className="card bg-base-200 shadow-sm">
+          <div className="card-body py-3 px-4 gap-1">
+            <div className="flex items-center gap-1.5">
+              <Activity className="h-3.5 w-3.5 text-info" />
+              <span className="text-xs opacity-60">Decisions</span>
+            </div>
+            <div className="text-lg font-bold mono">
+              {usedDec}{maxDec > 0 ? ` / ${maxDec}` : ' / \u221E'}
+            </div>
+            <div className="text-xs opacity-40">{maxDec > 0 ? `${decPct}% used` : 'Unlimited'}</div>
+          </div>
+        </div>
+
+        {/* Open Orders */}
+        <div className="card bg-base-200 shadow-sm">
+          <div className="card-body py-3 px-4 gap-1">
+            <div className="flex items-center gap-1.5">
+              <ArrowUpRight className="h-3.5 w-3.5 text-primary" />
+              <span className="text-xs opacity-60">Open Orders</span>
+            </div>
+            <div className="text-lg font-bold mono">{openOrders}</div>
+            <div className="text-xs opacity-40">{closedOrders} closed</div>
+          </div>
+        </div>
+
+        {/* Created */}
+        <div className="card bg-base-200 shadow-sm">
+          <div className="card-body py-3 px-4 gap-1">
+            <div className="flex items-center gap-1.5">
+              <Clock className="h-3.5 w-3.5 text-secondary" />
+              <span className="text-xs opacity-60">Created</span>
+            </div>
+            <div className="text-lg font-bold">{createdDay}</div>
+            <div className="text-xs opacity-40">{createdTime}</div>
+          </div>
+        </div>
+      </div>
+
+      {/* ===== Error display ===== */}
+      {error ? (
+        <div role="alert" className="alert alert-error">
+          <span className="mono text-xs">{error}</span>
+        </div>
+      ) : null}
+
+      {/* ===== 3. Tabs ===== */}
+      <div className="tabs tabs-bordered">
+        <button
+          className={`tab ${detailTab === 'overview' ? 'tab-active' : ''}`}
+          onClick={() => setDetailTab('overview')}
+          type="button"
+        >
+          Overview
+        </button>
+        <button
+          className={`tab ${detailTab === 'orders' ? 'tab-active' : ''}`}
+          onClick={() => setDetailTab('orders')}
+          type="button"
+        >
+          DEX Orders
+        </button>
+        <button
+          className={`tab ${detailTab === 'ai' ? 'tab-active' : ''}`}
+          onClick={() => setDetailTab('ai')}
+          type="button"
+        >
+          AI Responses
+        </button>
+      </div>
+
+      {/* ===== 4. Tab Content ===== */}
+
+      {/* --- Overview Tab --- */}
+      {detailTab === 'overview' && (
+        <>
+          {/* Balance Chart */}
+          <div className="card bg-base-200 shadow-md overflow-hidden">
+            <div className="card-body">
+              <h2 className="card-title">Balance (USD)</h2>
+              <BalanceChart points={chartPoints} theme={theme} />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            {/* Left: Contract Details */}
+            <div className="card bg-base-200 shadow-md">
+              <div className="card-body gap-3">
+                <h2 className="card-title text-sm">Contract Details</h2>
+
+                <div className="flex items-center justify-between gap-4">
+                  <span className="text-sm opacity-60">ID</span>
+                  <span className="mono text-xs break-all text-right">{contract.id}</span>
+                </div>
+                <div className="divider my-0" />
+
+                <TradingPairsRow contract={contract} raceCfg={raceCfg} />
+                <div className="divider my-0" />
+
+                <div className="flex items-center justify-between gap-4">
+                  <span className="text-sm opacity-60">Prompt</span>
+                  <button
+                    className="btn btn-ghost btn-xs gap-1"
+                    onClick={() => void handleViewPrompt()}
+                    disabled={promptLoading}
+                    type="button"
+                  >
+                    {promptLoading ? (
+                      <span className="loading loading-spinner loading-xs" />
+                    ) : (
+                      <FileText className="h-3 w-3" />
+                    )}
+                    View Prompt
+                  </button>
+                </div>
+                <div className="divider my-0" />
+
+                <div className="flex items-center justify-between gap-4">
+                  <span className="text-sm opacity-60">Explorer</span>
+                  <div className="flex items-center gap-2 text-xs">
+                    <a
+                      className="underline-offset-4 hover:underline link link-primary"
+                      href={explorerLink(contract.address)}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      Tonviewer
+                    </a>
+                    <span className="opacity-50">|</span>
+                    <a
+                      className="underline-offset-4 hover:underline link link-primary"
+                      href={tonscanLink(contract.address)}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      Tonscan
+                    </a>
+                  </div>
+                </div>
+                <div className="divider my-0" />
+
+                <div className="flex items-center justify-between gap-4">
+                  <span className="text-sm opacity-60">Decisions</span>
+                  <div className="flex items-center gap-2">
+                    <span className="mono text-xs">
+                      {usedDec}{maxDec > 0 ? ` / ${maxDec}` : ' / \u221E'}
+                    </span>
+                    {maxDec > 0 && (
+                      <progress
+                        className="progress progress-success w-16 h-2"
+                        value={usedDec}
+                        max={maxDec}
+                      />
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
 
-            {/* Jetton info */}
-            {jettonInfo && jettonInfo.jettons?.length > 0 && (
-              <div className="text-xs opacity-60">
-                Jettons: {jettonInfo.jettons.map((j) => `${(j.balance / 10 ** j.decimals).toFixed(j.decimals > 4 ? 4 : j.decimals)} ${j.symbol}`).join(', ')}
+            {/* Right column */}
+            <div className="flex flex-col gap-4">
+              {/* Wallet card */}
+              <div className="card bg-base-200 shadow-md">
+                <div className="card-body gap-3">
+                  <div className="flex items-center gap-2">
+                    <Wallet className="h-4 w-4 opacity-60" />
+                    <h2 className="card-title text-sm">Wallet</h2>
+                    {balancesRefreshing && (
+                      <span className="flex items-center gap-1 text-xs opacity-40">
+                        <RefreshCw className="h-3 w-3 animate-spin" />
+                      </span>
+                    )}
+                    {totalUsdBalance > 0 && (
+                      <span className="badge badge-sm badge-ghost mono ml-auto">~${totalUsdBalance.toFixed(2)}</span>
+                    )}
+                  </div>
+
+                  {balancesLoading && tokenBalances.length === 0 ? (
+                    <div className="flex justify-center py-2">
+                      <span className="loading loading-spinner loading-xs" />
+                    </div>
+                  ) : tokenBalances.length === 0 ? (
+                    <div className="text-xs opacity-40 text-center py-1">No tokens found</div>
+                  ) : (
+                    <div className="flex flex-col gap-1.5">
+                      {tokenBalances.map((t) => (
+                        <div key={t.symbol} className="flex items-center justify-between text-xs">
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold">{t.symbol}</span>
+                            <span className="opacity-40">{t.name}</span>
+                          </div>
+                          <div className="flex items-center gap-3 mono">
+                            <span>{t.amount >= 1000 ? t.amount.toLocaleString(undefined, { maximumFractionDigits: 2 }) : t.amount >= 1 ? t.amount.toFixed(4) : t.amount.toFixed(6)}</span>
+                            {t.usdValue > 0 && (
+                              <span className="opacity-50 text-[10px]">~${t.usdValue.toFixed(2)}</span>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="divider my-0" />
+
+                  {/* Top Up */}
+                  <div className="flex items-center gap-2">
+                    <ArrowUpFromLine className="h-4 w-4 opacity-60" />
+                    <span className="text-sm opacity-60">Top Up</span>
+                    <div className="flex items-center gap-1.5 ml-auto">
+                      <input
+                        id="detail-topup"
+                        type="text"
+                        className="input input-bordered input-xs w-16 text-xs mono text-right"
+                        value={topupAmount}
+                        onChange={(e) => setTopupAmount(e.target.value)}
+                        inputMode="decimal"
+                        placeholder="TON"
+                      />
+                      <span className="text-xs opacity-40">TON</span>
+                      <button
+                        className={`btn btn-outline btn-xs gap-1 ${topupBusy ? 'btn-disabled' : ''}`}
+                        onClick={() => void topupContract()}
+                        type="button"
+                      >
+                        {topupBusy ? 'Sending...' : 'Send'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Quick Actions card */}
+              <div className="card bg-base-200 shadow-md">
+                <div className="card-body gap-3">
+                  <h2 className="card-title text-sm">Quick Actions</h2>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      className={`btn btn-outline btn-sm gap-1 ${withdrawDone.has('close') ? 'btn-success' : ''}`}
+                      onClick={() => void handleCloseOrders()}
+                      disabled={!!withdrawBusy || withdrawDone.has('close')}
+                      type="button"
+                    >
+                      <XCircle className="h-4 w-4" />
+                      {withdrawBusy === 'close' ? 'Closing...' : withdrawDone.has('close') ? 'Orders closed' : 'Close orders'}
+                    </button>
+
+                    <button
+                      className={`btn btn-outline btn-sm gap-1 ${withdrawDone.has('jetton') && withdrawDone.has('ton') ? 'btn-success' : ''}`}
+                      onClick={() => void handleWithdrawAll()}
+                      disabled={!!withdrawBusy || (withdrawDone.has('jetton') && withdrawDone.has('ton'))}
+                      type="button"
+                    >
+                      <ArrowDownToLine className="h-4 w-4" />
+                      {withdrawBusy === 'withdraw' ? 'Withdrawing...' : withdrawDone.has('jetton') && withdrawDone.has('ton') ? 'All withdrawn' : 'Withdraw all'}
+                    </button>
+                  </div>
+
+                  {/* Jetton info */}
+                  {jettonInfo && jettonInfo.jettons?.length > 0 && (
+                    <div className="text-xs opacity-60">
+                      Jettons: {jettonInfo.jettons.map((j) => `${(j.balance / 10 ** j.decimals).toFixed(j.decimals > 4 ? 4 : j.decimals)} ${j.symbol}`).join(', ')}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* --- DEX Orders Tab --- */}
+      {detailTab === 'orders' && (
+        <OrdersPanel contractAddress={contract.address} />
+      )}
+
+      {/* --- AI Responses Tab --- */}
+      {detailTab === 'ai' && (
+        <div className="card bg-base-200 shadow-md">
+          <div className="card-body">
+            <div className="flex items-center gap-2">
+              <h2 className="card-title">AI Responses</h2>
+              {aiRefreshing && (
+                <span className="flex items-center gap-1 text-xs opacity-50">
+                  <RefreshCw className="h-3 w-3 animate-spin" />
+                  Updating...
+                </span>
+              )}
+            </div>
+
+            {aiError ? (
+              <div className="text-sm text-error">{aiError}</div>
+            ) : aiResponses.length === 0 && !aiLoading ? (
+              <div className="text-sm opacity-60">No AI responses yet.</div>
+            ) : aiLoading ? (
+              <div className="flex justify-center py-4">
+                <span className="loading loading-spinner loading-md" />
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="table table-sm">
+                  <thead>
+                    <tr>
+                      <th>Time</th>
+                      <th>Action</th>
+                      <th className="text-right">Balance</th>
+                      <th>Reason</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {aiResponses.map((r) => {
+                      const pp = r.parsed_params as Record<string, unknown> | null;
+                      const reason = pp?.reasoning as string | undefined;
+                      const shareUrl = reason ? buildShareUrl(r.id) : null;
+                      return (
+                        <tr key={r.id} className="hover">
+                          <td className="mono text-xs whitespace-nowrap">
+                            {new Date(r.created_at).toLocaleString()}
+                          </td>
+                          <td>
+                            <span className="badge badge-outline badge-sm">
+                              {r.action}
+                            </span>
+                          </td>
+                          <td className="mono text-xs text-right whitespace-nowrap">
+                            {r.balance_usd != null ? `$${r.balance_usd.toFixed(2)}` : '\u2014'}
+                          </td>
+                          <td className="text-xs opacity-60 max-w-[400px]">
+                            {reason || '\u2014'}
+                          </td>
+                          <td>
+                            {shareUrl && (
+                              <button
+                                className={`btn btn-xs ${copiedId === r.id ? 'btn-success' : 'btn-ghost'}`}
+                                title="Copy share link"
+                                onClick={() => {
+                                  void navigator.clipboard.writeText(shareUrl);
+                                  setCopiedId(r.id);
+                                  setTimeout(() => setCopiedId(null), 2000);
+                                }}
+                              >
+                                {copiedId === r.id ? (
+                                  <Check className="h-3 w-3" />
+                                ) : (
+                                  <Share2 className="h-3 w-3" />
+                                )}
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
             )}
           </div>
         </div>
-      </details>
-
-      {error ? (
-        <div className="sm:col-span-2">
-          <div role="alert" className="alert alert-error">
-            <span className="mono text-xs">{error}</span>
-          </div>
-        </div>
-      ) : null}
-
-      {/* DEX Orders */}
-      <OrdersPanel contractAddress={contract.address} />
-
-      {/* AI Responses */}
-      <div className="card bg-base-200 shadow-md sm:col-span-2">
-        <div className="card-body">
-          <div className="flex items-center gap-2">
-            <h2 className="card-title">AI Responses</h2>
-            {aiRefreshing && (
-              <span className="flex items-center gap-1 text-xs opacity-50">
-                <RefreshCw className="h-3 w-3 animate-spin" />
-                Updating…
-              </span>
-            )}
-          </div>
-
-          {aiError ? (
-            <div className="text-sm text-error">{aiError}</div>
-          ) : aiResponses.length === 0 && !aiLoading ? (
-            <div className="text-sm opacity-60">No AI responses yet.</div>
-          ) : aiLoading ? (
-            <div className="flex justify-center py-4">
-              <span className="loading loading-spinner loading-md" />
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="table table-sm">
-                <thead>
-                  <tr>
-                    <th>Time</th>
-                    <th>Action</th>
-                    <th className="text-right">Balance</th>
-                    <th>Reason</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {aiResponses.map((r) => {
-                    const pp = r.parsed_params as Record<string, unknown> | null;
-                    const reason = pp?.reasoning as string | undefined;
-                    // Short share link — just the response ID
-                    const shareUrl = reason ? buildShareUrl(r.id) : null;
-                    return (
-                      <tr key={r.id} className="hover">
-                        <td className="mono text-xs whitespace-nowrap">
-                          {new Date(r.created_at).toLocaleString()}
-                        </td>
-                        <td>
-                          <span className="badge badge-outline badge-sm">
-                            {r.action}
-                          </span>
-                        </td>
-                        <td className="mono text-xs text-right whitespace-nowrap">
-                          {r.balance_usd != null ? `$${r.balance_usd.toFixed(2)}` : '\u2014'}
-                        </td>
-                        <td className="text-xs opacity-60 max-w-[400px]">
-                          {reason || '\u2014'}
-                        </td>
-                        <td>
-                          {shareUrl && (
-                            <button
-                              className={`btn btn-xs ${copiedId === r.id ? 'btn-success' : 'btn-ghost'}`}
-                              title="Copy share link"
-                              onClick={() => {
-                                void navigator.clipboard.writeText(shareUrl);
-                                setCopiedId(r.id);
-                                setTimeout(() => setCopiedId(null), 2000);
-                              }}
-                            >
-                              {copiedId === r.id ? (
-                                <Check className="h-3 w-3" />
-                              ) : (
-                                <Share2 className="h-3 w-3" />
-                              )}
-                            </button>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      </div>
+      )}
 
       {/* Prompt Modal */}
       {promptOpen && prompt && (
@@ -1070,7 +1194,7 @@ export function ContractDetailPanel({ contract, raceCfg, theme, onDeleted, onSta
                     ) : (
                       <Save className="h-3.5 w-3.5" />
                     )}
-                    {promptSaving ? 'Saving…' : 'Save'}
+                    {promptSaving ? 'Saving...' : 'Save'}
                   </button>
                 </>
               ) : (
