@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { BarChart3, ArrowDownUp } from 'lucide-react';
+import { BarChart3, ArrowDownUp, RefreshCw, TrendingUp, ArrowUp, ArrowDown } from 'lucide-react';
 import {
   getDexCoinPrice,
   getDexOrderBook,
@@ -336,86 +336,140 @@ function OrderBookTable({
   );
 
   return (
-    <div className="card bg-base-200 shadow-md overflow-hidden flex-1 min-w-0">
-      <div className="card-body p-0">
-        {statsStrip('border-b border-base-content/10 bg-base-300/40')}
+    <div className="space-y-3">
+      {statsStrip('card bg-base-200 shadow-sm card-body p-3 rounded-xl border border-base-content/5')}
 
-        <div className="flex items-center gap-2 px-3 py-2 text-[10px] uppercase tracking-wider opacity-40 border-b border-base-content/5">
-          <span className="w-28 sm:w-36 text-right">Price ({fromUpper})</span>
-          <span className="flex-1 text-right">Amount ({toUpper})</span>
-          <span className="w-16 text-right hidden sm:block">USD</span>
-          <span className="w-10 text-right">Qty</span>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Bids panel */}
+        <div className="card bg-base-200 shadow-md overflow-hidden">
+          <div className="card-body p-0">
+            <div className="flex items-center justify-between px-3 py-2 border-b border-base-content/10">
+              <div className="flex items-center gap-1.5">
+                <ArrowUp className="h-3.5 w-3.5 text-success" />
+                <span className="text-sm font-bold">Bids</span>
+                <span className="text-xs opacity-40">({normalized.bids.length})</span>
+              </div>
+              <span className="text-[10px] text-success opacity-60">Buy orders</span>
+            </div>
+            <div className="flex items-center gap-2 px-3 py-2 text-[10px] uppercase tracking-wider opacity-40 border-b border-base-content/5">
+              <span className="w-28 sm:w-36 text-right">Price ({fromUpper})</span>
+              <span className="flex-1 text-right">Amount ({toUpper})</span>
+              <span className="w-16 text-right hidden sm:block">USD</span>
+              <span className="w-10 text-right">Qty</span>
+            </div>
+            {normalized.bids.length === 0 ? (
+              <div className="text-center py-4 text-xs opacity-40">No bids</div>
+            ) : (
+              <div className="flex flex-col">
+                {normalized.bids.map((lvl, i) => {
+                  const pct = maxAmount > 0 ? (lvl.amount / maxAmount) * 100 : 0;
+                  const usdVal = amountPriceUsd != null ? lvl.amount * amountPriceUsd : null;
+                  return (
+                    <div
+                      key={`bid-${i}-${refreshTick}`}
+                      className="relative flex items-center gap-2 px-3 py-1 text-xs mono animate-[rowFlash_0.6s_ease-out]"
+                      style={{ animationDelay: `${i * 30}ms` }}
+                    >
+                      <div
+                        className="absolute inset-y-0 right-0 bg-success/10 transition-[width] duration-700 ease-out"
+                        style={{ width: `${Math.min(100, pct)}%` }}
+                      />
+                      <span className="relative z-10 w-28 sm:w-36 text-right text-success font-medium">
+                        {fmtRate(lvl.price)}
+                      </span>
+                      <span className="relative z-10 flex-1 text-right">{fmtAmount(lvl.amount)}</span>
+                      <span className="relative z-10 w-16 text-right opacity-40 text-[10px] hidden sm:block">
+                        {usdVal != null ? fmtUsd(usdVal) : '\u2014'}
+                      </span>
+                      <span className="relative z-10 w-10 text-right opacity-50">{lvl.orderCount}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
 
-        {asksReversed.length === 0 ? (
-          <div className="text-center py-4 text-xs opacity-40">No asks</div>
-        ) : (
-          <div className="flex flex-col">
-            {asksReversed.map((lvl, i) => {
-              const pct = maxAmount > 0 ? (lvl.amount / maxAmount) * 100 : 0;
-              const usdVal = amountPriceUsd != null ? lvl.amount * amountPriceUsd : null;
-              return (
-                <div
-                  key={`ask-${i}-${refreshTick}`}
-                  className="relative flex items-center gap-2 px-3 py-1 text-xs mono animate-[rowFlash_0.6s_ease-out]"
-                  style={{ animationDelay: `${i * 30}ms` }}
-                >
-                  <div
-                    className="absolute inset-y-0 right-0 bg-error/10 transition-[width] duration-700 ease-out"
-                    style={{ width: `${Math.min(100, pct)}%` }}
-                  />
-                  <span className="relative z-10 w-28 sm:w-36 text-right text-error font-medium">
-                    {fmtRate(lvl.price)}
-                  </span>
-                  <span className="relative z-10 flex-1 text-right">{fmtAmount(lvl.amount)}</span>
-                  <span className="relative z-10 w-16 text-right opacity-40 text-[10px] hidden sm:block">
-                    {usdVal != null ? fmtUsd(usdVal) : '\u2014'}
-                  </span>
-                  <span className="relative z-10 w-10 text-right opacity-50">{lvl.orderCount}</span>
-                </div>
-              );
-            })}
+        {/* Asks panel */}
+        <div className="card bg-base-200 shadow-md overflow-hidden">
+          <div className="card-body p-0">
+            <div className="flex items-center justify-between px-3 py-2 border-b border-base-content/10">
+              <div className="flex items-center gap-1.5">
+                <ArrowDown className="h-3.5 w-3.5 text-error" />
+                <span className="text-sm font-bold">Asks</span>
+                <span className="text-xs opacity-40">({normalized.asks.length})</span>
+              </div>
+              <span className="text-[10px] text-error opacity-60">Sell orders</span>
+            </div>
+            <div className="flex items-center gap-2 px-3 py-2 text-[10px] uppercase tracking-wider opacity-40 border-b border-base-content/5">
+              <span className="w-28 sm:w-36 text-right">Price ({fromUpper})</span>
+              <span className="flex-1 text-right">Amount ({toUpper})</span>
+              <span className="w-16 text-right hidden sm:block">USD</span>
+              <span className="w-10 text-right">Qty</span>
+            </div>
+            {asksReversed.length === 0 ? (
+              <div className="text-center py-4 text-xs opacity-40">No asks</div>
+            ) : (
+              <div className="flex flex-col">
+                {asksReversed.map((lvl, i) => {
+                  const pct = maxAmount > 0 ? (lvl.amount / maxAmount) * 100 : 0;
+                  const usdVal = amountPriceUsd != null ? lvl.amount * amountPriceUsd : null;
+                  return (
+                    <div
+                      key={`ask-${i}-${refreshTick}`}
+                      className="relative flex items-center gap-2 px-3 py-1 text-xs mono animate-[rowFlash_0.6s_ease-out]"
+                      style={{ animationDelay: `${i * 30}ms` }}
+                    >
+                      <div
+                        className="absolute inset-y-0 right-0 bg-error/10 transition-[width] duration-700 ease-out"
+                        style={{ width: `${Math.min(100, pct)}%` }}
+                      />
+                      <span className="relative z-10 w-28 sm:w-36 text-right text-error font-medium">
+                        {fmtRate(lvl.price)}
+                      </span>
+                      <span className="relative z-10 flex-1 text-right">{fmtAmount(lvl.amount)}</span>
+                      <span className="relative z-10 w-16 text-right opacity-40 text-[10px] hidden sm:block">
+                        {usdVal != null ? fmtUsd(usdVal) : '\u2014'}
+                      </span>
+                      <span className="relative z-10 w-10 text-right opacity-50">{lvl.orderCount}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
-        )}
-
-        {statsStrip('border-y border-base-content/10 bg-base-300/50')}
-
-        {normalized.bids.length === 0 ? (
-          <div className="text-center py-4 text-xs opacity-40">No bids</div>
-        ) : (
-          <div className="flex flex-col">
-            {normalized.bids.map((lvl, i) => {
-              const pct = maxAmount > 0 ? (lvl.amount / maxAmount) * 100 : 0;
-              const usdVal = amountPriceUsd != null ? lvl.amount * amountPriceUsd : null;
-              return (
-                <div
-                  key={`bid-${i}-${refreshTick}`}
-                  className="relative flex items-center gap-2 px-3 py-1 text-xs mono animate-[rowFlash_0.6s_ease-out]"
-                  style={{ animationDelay: `${i * 30}ms` }}
-                >
-                  <div
-                    className="absolute inset-y-0 right-0 bg-success/10 transition-[width] duration-700 ease-out"
-                    style={{ width: `${Math.min(100, pct)}%` }}
-                  />
-                  <span className="relative z-10 w-28 sm:w-36 text-right text-success font-medium">
-                    {fmtRate(lvl.price)}
-                  </span>
-                  <span className="relative z-10 flex-1 text-right">{fmtAmount(lvl.amount)}</span>
-                  <span className="relative z-10 w-16 text-right opacity-40 text-[10px] hidden sm:block">
-                    {usdVal != null ? fmtUsd(usdVal) : '\u2014'}
-                  </span>
-                  <span className="relative z-10 w-10 text-right opacity-50">{lvl.orderCount}</span>
-                </div>
-              );
-            })}
-          </div>
-        )}
-        {sourceLabel && (
-          <div className="px-3 py-1.5 text-[10px] tracking-wide opacity-50 border-t border-base-content/5 bg-base-300/30 text-center">
-            {sourceLabel}
-          </div>
-        )}
+        </div>
       </div>
+
+      {/* Spread summary bar */}
+      {stats.bestBid != null && stats.bestAsk != null && stats.spreadPct != null && (
+        <div className="card bg-base-200 shadow-sm">
+          <div className="card-body p-3 flex-row items-center justify-center gap-6">
+            <div className="text-center">
+              <div className="text-[10px] opacity-40">Best Bid</div>
+              <div className="mono text-sm font-bold text-success">{fmtRate(stats.bestBid)}</div>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-12 h-1 rounded-full bg-success" />
+              <div className="text-center">
+                <div className="text-[10px] opacity-40">Spread</div>
+                <div className="mono text-xs font-bold">{stats.spreadPct.toFixed(2)}%</div>
+              </div>
+              <div className="w-12 h-1 rounded-full bg-error" />
+            </div>
+            <div className="text-center">
+              <div className="text-[10px] opacity-40">Best Ask</div>
+              <div className="mono text-sm font-bold text-error">{fmtRate(stats.bestAsk)}</div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {sourceLabel && (
+        <div className="px-3 py-1.5 text-[10px] tracking-wide opacity-50 border-t border-base-content/5 bg-base-300/30 text-center rounded-b-xl">
+          {sourceLabel}
+        </div>
+      )}
     </div>
   );
 }
@@ -452,7 +506,7 @@ function ActivityWindow({
         className="absolute left-0 bottom-0 h-[2px] bg-success/50 transition-all duration-700"
         style={{ width: `${completionPct}%` }}
       />
-      <div className="text-[10px] uppercase tracking-widest font-semibold opacity-50 mb-2">{label}</div>
+      <div className="flex items-center justify-between mb-2"><span className="badge badge-sm badge-outline">{label}</span><TrendingUp className="h-3.5 w-3.5 opacity-30" /></div>
       <div className="grid grid-cols-3 gap-2">
         <div>
           <div className="text-[9px] uppercase tracking-wide opacity-40">Open</div>
@@ -741,20 +795,25 @@ export function StatsPage({ raceCfg, pairSlug, onPairChange }: StatsPageProps) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
-          <BarChart3 className="h-5 w-5 text-primary" />
-        </div>
-        <div>
-          <h1 className="text-xl font-semibold tracking-tight">Order Book</h1>
-          <div className="flex items-center gap-1.5">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75" />
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-success" />
-            </span>
-            <p className="text-xs opacity-50">Live from open4dev DEX</p>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
+            <BarChart3 className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <h1 className="text-xl font-semibold tracking-tight">Order Book</h1>
+            <div className="flex items-center gap-1.5">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-success" />
+              </span>
+              <p className="text-xs opacity-50">Live from open4dev DEX</p>
+            </div>
           </div>
         </div>
+        <button type="button" className="btn btn-sm btn-ghost gap-1.5 opacity-60" onClick={() => setRefreshTick(t => t + 1)}>
+          <RefreshCw className="h-3.5 w-3.5" /> Refresh
+        </button>
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
@@ -764,7 +823,7 @@ export function StatsPage({ raceCfg, pairSlug, onPairChange }: StatsPageProps) {
           return (
             <button
               key={p.slug}
-              className={`btn btn-xs ${
+              className={`btn btn-sm rounded-full px-4 ${
                 isSelected
                   ? 'btn-primary'
                   : isHot
@@ -774,13 +833,13 @@ export function StatsPage({ raceCfg, pairSlug, onPairChange }: StatsPageProps) {
               onClick={() => selectPair(idx)}
               type="button"
             >
-              {p.hot && <span className="text-orange-400 mr-0.5">*</span>}
               {p.label}
+              {p.hot && <span className="h-1.5 w-1.5 rounded-full bg-success inline-block ml-1" />}
             </button>
           );
         })}
         <button
-          className="btn btn-ghost btn-xs gap-1 opacity-60 hover:opacity-100"
+          className="btn btn-ghost btn-sm gap-1 opacity-60 hover:opacity-100"
           onClick={() => setReversed((r) => !r)}
           type="button"
           title="Reverse pair"
@@ -797,6 +856,19 @@ export function StatsPage({ raceCfg, pairSlug, onPairChange }: StatsPageProps) {
           toSymbol={toUpper}
           volumeUsdByWindow={activityVolumeUsd}
         />
+      )}
+
+      {stats && (
+        <div className="card bg-base-200/60 shadow-sm">
+          <div className="card-body p-2 flex-row items-center justify-center gap-4 flex-wrap text-xs mono">
+            <span className="opacity-50">{fromUpper} / {toUpper}</span>
+            <span>Bid <span className="text-success font-bold">{fmtRate(stats.bestBid ?? 0)}</span></span>
+            <span>Ask <span className="text-error font-bold">{fmtRate(stats.bestAsk ?? 0)}</span></span>
+            {stats.spreadPct != null && (
+              <span>Spread <span className="text-warning font-bold">{stats.spreadPct.toFixed(2)}%</span></span>
+            )}
+          </div>
+        </div>
       )}
 
       {bookError ? (
