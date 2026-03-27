@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTonAddress, useTonConnectUI, useTonWallet } from '@tonconnect/ui-react';
 import { Address } from '@ton/core';
-import { Rocket, Wallet, ChevronDown, ChevronUp, ExternalLink, Minus, Plus, FileText } from 'lucide-react';
+import { Rocket, Wallet, ChevronDown, ChevronUp, ExternalLink, Minus, Plus, FileText, Zap } from 'lucide-react';
 import {
   nanoFromTon,
 } from '@/lib/ton/agentWalletV5';
@@ -650,24 +650,24 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
     <div className="mt-4 mx-auto max-w-2xl">
       <div className="card bg-base-200 shadow-md overflow-hidden">
         {/* Header */}
-        <div className="border-b border-base-content/5 px-6 py-4">
+        <div className="border-b border-base-content/5 px-6 py-5">
           <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-success/15">
-              <Rocket className="h-4.5 w-4.5 text-success" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-success/20">
+              <Zap className="h-5 w-5 text-success" />
             </div>
             <div>
-              <h2 className="text-lg font-semibold tracking-tight">Deploy New Agent</h2>
+              <h2 className="text-xl font-bold tracking-tight">Deploy New Agent</h2>
               <p className="text-xs opacity-40 mt-0.5">Configure, deploy on-chain, and enter the Trading Race</p>
             </div>
           </div>
         </div>
 
-        <div className="px-6 py-5 space-y-5">
+        <div className="px-6 py-6 space-y-6">
           {/* Section 1: Choose AI Model */}
           <div>
             <div className="flex items-center gap-2 mb-3">
-              <div className="flex h-6 w-6 items-center justify-center rounded-md bg-base-content/8 text-[10px] font-bold opacity-50">1</div>
-              <span className="text-sm font-semibold">Choose AI Model</span>
+              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-success/20 text-[11px] font-bold text-success">1</div>
+              <span className="text-base font-bold">Choose AI Model</span>
               {modelsLoading && <span className="ml-1 loading loading-dots loading-xs" />}
             </div>
 
@@ -692,20 +692,20 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
                     {shortModelName(selectedModelOption.name)}
                   </span>
                 </div>
-                {selectedModelOption.isThinking != null && (
-                  <span
-                    className="flex-shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ml-2"
-                    style={
-                      selectedModelOption.isThinking
-                        ? { background: '#E6F1FB', color: '#185FA5' }
-                        : { background: '#FAEEDA', color: '#854F0B' }
-                    }
-                  >
-                    {selectedModelOption.isThinking ? 'Thinking' : 'Fast'}
-                  </span>
-                )}
+                <span
+                  className="flex-shrink-0 rounded-full px-2.5 py-0.5 text-[10px] font-semibold ml-2"
+                  style={
+                    selectedModelOption.isThinking
+                      ? { background: '#E6F1FB', color: '#185FA5' }
+                      : selectedModelOption.isThinking === false
+                        ? { background: '#FAEEDA', color: '#854F0B' }
+                        : { background: '#D4EDDA', color: '#155724' }
+                  }
+                >
+                  {selectedModelOption.isThinking ? 'Thinking' : selectedModelOption.isThinking === false ? 'Fast' : 'Balanced'}
+                </span>
                 {selectedModelOption.pricing?.[0] && (
-                  <span className="flex-shrink-0 text-[10px] opacity-40 ml-2 mono">
+                  <span className="flex-shrink-0 text-[11px] opacity-40 ml-2 mono">
                     {selectedModelOption.pricing[0].price} {selectedModelOption.pricing[0].currency}/{selectedModelOption.pricing[0].cntDecisions} dec
                   </span>
                 )}
@@ -789,27 +789,34 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
             )}
           </div>
 
-          <div className="divider my-1 opacity-20" />
+          <div className="my-2" />
 
           {/* Section 2: Trading Tokens */}
           <div>
             <div className="flex items-center gap-2 mb-3">
-              <div className="flex h-6 w-6 items-center justify-center rounded-md bg-base-content/8 text-[10px] font-bold opacity-50">2</div>
-              <span className="text-sm font-semibold">Trading Tokens</span>
+              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-success/20 text-[11px] font-bold text-success">2</div>
+              <span className="text-base font-bold">Trading Tokens</span>
               <span className="text-[10px] opacity-40 ml-1">(AGNT token will trade by default)</span>
             </div>
-            <div className="flex flex-wrap gap-1.5">
+            <div className="flex flex-wrap gap-2">
               {TRADABLE_TOKENS.map((token) => {
                 const isAgnt = token === 'AGNT';
                 const selected = isAgnt || (persisted.tradingTokens ?? DEFAULT_TRADING_TOKENS).includes(token);
+                const tokenColors: Record<string, string> = {
+                  AGNT: 'btn-error',
+                  TON: 'btn-info',
+                  NOT: 'btn-ghost btn-active',
+                  BUILD: 'btn-warning',
+                  USDT: 'btn-ghost btn-active',
+                };
                 return (
                   <button
                     key={token}
                     type="button"
-                    className={`btn btn-xs ${
+                    className={`btn btn-sm rounded-full px-4 ${
                       selected
-                        ? isAgnt ? 'btn-primary cursor-default' : 'btn-primary'
-                        : 'btn-ghost border border-base-content/10'
+                        ? isAgnt ? `${tokenColors[token] ?? 'btn-primary'} cursor-default` : (tokenColors[token] ?? 'btn-primary')
+                        : 'btn-ghost border border-base-content/15'
                     }`}
                     onClick={() => {
                       if (isAgnt) return;
@@ -823,20 +830,20 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
                     }}
                   >
                     {token}
-                    {isAgnt && <span className="text-[9px] opacity-60 ml-0.5">(always)</span>}
+                    {isAgnt && <span className="text-[10px] opacity-70 ml-1">(always)</span>}
                   </button>
                 );
               })}
             </div>
           </div>
 
-          <div className="divider my-1 opacity-20" />
+          <div className="my-2" />
 
           {/* Section 3: Trading Strategy */}
           <div>
             <div className="flex items-center gap-2 mb-3">
-              <div className="flex h-6 w-6 items-center justify-center rounded-md bg-base-content/8 text-[10px] font-bold opacity-50">3</div>
-              <span className="text-sm font-semibold">Trading Strategy</span>
+              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-success/20 text-[11px] font-bold text-success">3</div>
+              <span className="text-base font-bold">Trading Strategy</span>
             </div>
             <div className="flex items-center justify-end gap-1.5 mb-1.5">
               {isConnected && (
@@ -940,13 +947,13 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
             )}
           </div>
 
-          <div className="divider my-1 opacity-20" />
+          <div className="my-2" />
 
           {/* Section 3: Name & Deploy */}
           <div className="space-y-3">
             <div className="flex items-center gap-2 mb-3">
-              <div className="flex h-6 w-6 items-center justify-center rounded-md bg-base-content/8 text-[10px] font-bold opacity-50">4</div>
-              <span className="text-sm font-semibold">Name & Deploy</span>
+              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-success/20 text-[11px] font-bold text-success">4</div>
+              <span className="text-base font-bold">Name & Deploy</span>
             </div>
 
             {/* Agent Name */}
