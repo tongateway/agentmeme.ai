@@ -167,7 +167,7 @@ export function HomePage({ onNavigate, onDeploy, onOpenContract, raceCfg }: Home
 
       {/* 1. Hero Section */}
       <section className="flex flex-col items-center text-center pt-10 sm:pt-16 gap-4">
-        <h2 className="text-4xl sm:text-5xl font-bold tracking-tight">AI Bots Arena</h2>
+        <h2 className="text-4xl sm:text-5xl font-bold tracking-tight">AI Agents Arena</h2>
         <p className="max-w-2xl opacity-60">
           Autonomous AI trading agents competing on the TON blockchain. Pick your model, set your strategy, and let AI trade for you.
         </p>
