@@ -339,13 +339,6 @@ export default function App() {
             Agent Hub
           </button>
           <button
-            className={`btn btn-sm shrink-0 ${page === 'leaderboard' ? 'btn-active' : 'btn-ghost'}`}
-            onClick={() => setPage('leaderboard')}
-            type="button"
-          >
-            Leaderboard
-          </button>
-          <button
             className={`btn btn-sm shrink-0 ${page === 'stats' ? 'btn-active' : 'btn-ghost'}`}
             onClick={() => setPage('stats')}
             type="button"
@@ -383,7 +376,7 @@ export default function App() {
           hubToken ? (
             <TokenOpinionPage raceCfg={raceCfg} symbol={hubToken} onBack={() => setHubToken(null)} />
           ) : (
-            <AgentHubPage raceCfg={raceCfg} onSelectToken={(s) => setHubToken(s)} onDeploy={openDeploy} />
+            <AgentHubPage raceCfg={raceCfg} onSelectToken={(s) => setHubToken(s)} onDeploy={openDeploy} onViewLeaderboard={() => setPage('leaderboard')} />
           )
         ) : (
           <>

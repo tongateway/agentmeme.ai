@@ -14,6 +14,7 @@ type AgentHubPageProps = {
   raceCfg: PublicApiConfig;
   onSelectToken: (symbol: string) => void;
   onDeploy?: () => void;
+  onViewLeaderboard?: () => void;
 };
 
 function computeSignalStrength(
@@ -51,7 +52,7 @@ function fmtAddr(addr: string): string {
   return `${addr.slice(0, 6)}\u2026${addr.slice(-4)}`;
 }
 
-export function AgentHubPage({ raceCfg, onSelectToken, onDeploy }: AgentHubPageProps) {
+export function AgentHubPage({ raceCfg, onSelectToken, onDeploy, onViewLeaderboard }: AgentHubPageProps) {
   const [tokens, setTokens] = useState<TokenOpinionSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -213,9 +214,13 @@ export function AgentHubPage({ raceCfg, onSelectToken, onDeploy }: AgentHubPageP
                       Top Performing Agents
                     </span>
                   </div>
-                  <span className="flex items-center gap-0.5 text-[11px] opacity-40 cursor-default">
+                  <button
+                    type="button"
+                    className="flex items-center gap-0.5 text-[11px] opacity-40 hover:opacity-80 transition-opacity"
+                    onClick={onViewLeaderboard}
+                  >
                     View all <ChevronRight className="h-3 w-3" />
-                  </span>
+                  </button>
                 </div>
                 <div className="flex flex-col gap-2">
                   {top3.map((entry, idx) => {
