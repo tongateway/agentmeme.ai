@@ -1047,86 +1047,70 @@ export function ContractDetailPanel({ contract, raceCfg, theme, onDeleted, onSta
 
       {/* --- AI Responses Tab --- */}
       {detailTab === 'ai' && (
-        <div className="card bg-base-200 shadow-md">
-          <div className="card-body">
-            <div className="flex items-center gap-2">
-              <h2 className="card-title">AI Responses</h2>
-              {aiRefreshing && (
-                <span className="flex items-center gap-1 text-xs opacity-50">
-                  <RefreshCw className="h-3 w-3 animate-spin" />
-                  Updating...
-                </span>
-              )}
+        <div className="flex flex-col gap-3">
+          {aiRefreshing && (
+            <div className="flex items-center gap-1 text-xs opacity-50">
+              <RefreshCw className="h-3 w-3 animate-spin" /> Updating...
             </div>
+          )}
 
-            {aiError ? (
-              <div className="text-sm text-error">{aiError}</div>
-            ) : aiResponses.length === 0 && !aiLoading ? (
-              <div className="text-sm opacity-60">No AI responses yet.</div>
-            ) : aiLoading ? (
-              <div className="flex justify-center py-4">
-                <span className="loading loading-spinner loading-md" />
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="table table-sm">
-                  <thead>
-                    <tr>
-                      <th>Time</th>
-                      <th>Action</th>
-                      <th className="text-right">Balance</th>
-                      <th>Reason</th>
-                      <th></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {aiResponses.map((r) => {
-                      const pp = r.parsed_params as Record<string, unknown> | null;
-                      const reason = pp?.reasoning as string | undefined;
-                      const shareUrl = reason ? buildShareUrl(r.id) : null;
-                      return (
-                        <tr key={r.id} className="hover">
-                          <td className="mono text-xs whitespace-nowrap">
-                            {new Date(r.created_at).toLocaleString()}
-                          </td>
-                          <td>
-                            <span className="badge badge-outline badge-sm">
-                              {r.action}
+          {aiError ? (
+            <div className="text-sm text-error">{aiError}</div>
+          ) : aiResponses.length === 0 && !aiLoading ? (
+            <div className="card bg-base-200 shadow-md">
+              <div className="card-body"><span className="text-sm opacity-60">No AI responses yet.</span></div>
+            </div>
+          ) : aiLoading ? (
+            <div className="flex justify-center py-4">
+              <span className="loading loading-spinner loading-md" />
+            </div>
+          ) : (
+            aiResponses.map((r) => {
+              const pp = r.parsed_params as Record<string, unknown> | null;
+              const reason = pp?.reasoning as string | undefined;
+              const shareUrl = reason ? buildShareUrl(r.id) : null;
+              const actionColor = r.action === 'create_order' ? 'badge-success' : r.action === 'close_order' ? 'badge-warning' : r.action === 'hold' ? 'badge-ghost' : 'badge-info';
+              return (
+                <div key={r.id} className="card bg-base-200 shadow-sm border-l-4 border-base-content/10">
+                  <div className="card-body p-4 gap-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-start gap-3">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-base-300 mt-0.5">
+                          <Activity className="h-4 w-4 opacity-50" />
+                        </div>
+                        <div className="flex flex-col gap-0.5">
+                          <div className="flex items-center gap-2">
+                            <span className={`badge badge-sm ${actionColor}`}>{r.action}</span>
+                            <span className="mono text-sm font-bold">
+                              {r.balance_usd != null ? `$${r.balance_usd.toFixed(2)}` : ''}
                             </span>
-                          </td>
-                          <td className="mono text-xs text-right whitespace-nowrap">
-                            {r.balance_usd != null ? `$${r.balance_usd.toFixed(2)}` : '\u2014'}
-                          </td>
-                          <td className="text-xs opacity-60 max-w-[400px]">
-                            {reason || '\u2014'}
-                          </td>
-                          <td>
-                            {shareUrl && (
-                              <button
-                                className={`btn btn-xs ${copiedId === r.id ? 'btn-success' : 'btn-ghost'}`}
-                                title="Copy share link"
-                                onClick={() => {
-                                  void navigator.clipboard.writeText(shareUrl);
-                                  setCopiedId(r.id);
-                                  setTimeout(() => setCopiedId(null), 2000);
-                                }}
-                              >
-                                {copiedId === r.id ? (
-                                  <Check className="h-3 w-3" />
-                                ) : (
-                                  <Share2 className="h-3 w-3" />
-                                )}
-                              </button>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
+                          </div>
+                          <span className="flex items-center gap-1 text-[11px] opacity-40">
+                            <Clock className="h-3 w-3" />
+                            {new Date(r.created_at).toLocaleString()}
+                          </span>
+                        </div>
+                      </div>
+                      {shareUrl && (
+                        <button
+                          className={`btn btn-xs btn-ghost ${copiedId === r.id ? 'text-success' : 'opacity-40'}`}
+                          title="Copy share link"
+                          onClick={() => {
+                            void navigator.clipboard.writeText(shareUrl);
+                            setCopiedId(r.id);
+                            setTimeout(() => setCopiedId(null), 2000);
+                          }}
+                        >
+                          {copiedId === r.id ? <Check className="h-3.5 w-3.5" /> : <Share2 className="h-3.5 w-3.5" />}
+                        </button>
+                      )}
+                    </div>
+                    {reason && <p className="text-xs leading-relaxed opacity-60 mt-1">{reason}</p>}
+                  </div>
+                </div>
+              );
+            })
+          )}
         </div>
       )}
 

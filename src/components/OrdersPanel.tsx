@@ -195,7 +195,7 @@ export function OrdersPanel({ contractAddress }: OrdersPanelProps) {
             )}
           </div>
           {/* Tabs */}
-          <div role="tablist" className="tabs tabs-boxed tabs-sm">
+          <div role="tablist" className="tabs tabs-bordered tabs-sm">
             <button
               role="tab"
               className={`tab ${tab === 'active' ? 'tab-active' : ''}`}
