@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Bot, ArrowLeft } from 'lucide-react';
+import { Bot, ArrowLeft, TrendingUp, TrendingDown, Users, Target, Clock } from 'lucide-react';
 import {
   getTokenOpinionDetail,
   type AgentOpinion,
@@ -49,6 +49,14 @@ function timeAgo(iso: string): string {
   const days = Math.floor(hours / 24);
   return `${days}d ago`;
 }
+
+const TOKEN_COLORS: Record<string, string> = {
+  TON: 'bg-info text-info-content',
+  AGNT: 'bg-secondary text-secondary-content',
+  NOT: 'bg-accent text-accent-content',
+  BUILD: 'bg-warning text-warning-content',
+  USDT: 'bg-success text-success-content',
+};
 
 const PAGE_SIZE = 20;
 
@@ -112,90 +120,117 @@ export function TokenOpinionPage({ raceCfg, symbol, onBack }: TokenOpinionPagePr
     );
   }
 
-  const consensusUpper = (stats?.consensus ?? '').toUpperCase();
   const changePositive = (stats?.price_change_24h ?? 0) >= 0;
   const changeColor = changePositive ? 'text-success' : 'text-error';
 
-  let consensusColor = 'opacity-60';
-  if (consensusUpper === 'BULLISH') consensusColor = 'text-success';
-  else if (consensusUpper === 'BEARISH') consensusColor = 'text-error';
+  const consensusUpper = (stats?.consensus ?? '').toUpperCase();
+  let consensusBadge = 'badge-ghost opacity-60';
+  if (consensusUpper === 'BULLISH') consensusBadge = 'badge-success';
+  else if (consensusUpper === 'BEARISH') consensusBadge = 'badge-error';
 
   const bullPct = stats?.bullish_pct ?? 0;
   const bearPct = stats?.bearish_pct ?? 0;
+  const tokenColor = TOKEN_COLORS[symbol] ?? 'bg-primary text-primary-content';
 
   return (
-    <div className="mt-4 flex flex-col lg:flex-row gap-4">
+    <div className="mt-4 flex flex-col lg:flex-row gap-6">
       {/* Left sidebar */}
-      <div className="lg:w-80 lg:sticky lg:top-4 lg:self-start shrink-0">
-        <div className="card bg-base-200 shadow-md">
-          <div className="card-body p-4 gap-3">
-            <div className="flex flex-col gap-1">
-              <span className="text-lg font-bold">{stats?.token_symbol}</span>
-              <span className="text-xs opacity-50">{stats?.token_name}</span>
-            </div>
+      <div className="lg:w-80 lg:sticky lg:top-4 lg:self-start shrink-0 flex flex-col gap-4">
 
-            <div className="flex items-baseline gap-2">
-              <span className="text-xl font-bold tabular-nums mono">{fmtPrice(stats?.price_usd ?? 0)}</span>
-              <span className={`text-sm font-bold tabular-nums mono ${changeColor}`}>
-                {changePositive ? '+' : ''}{(stats?.price_change_24h ?? 0).toFixed(1)}%
-              </span>
-            </div>
-
-            <div className={`text-2xl font-extrabold ${consensusColor}`}>
-              {consensusUpper || 'NEUTRAL'}
-            </div>
-
-            {/* Bullish/Bearish bar */}
-            <div className="flex flex-col gap-1">
-              <div className="flex justify-between text-[10px] uppercase tracking-wider opacity-50">
-                <span>Bullish {bullPct.toFixed(0)}%</span>
-                <span>Bearish {bearPct.toFixed(0)}%</span>
-              </div>
-              <div className="flex h-2 rounded-full overflow-hidden bg-base-300">
-                {bullPct > 0 && (
-                  <div className="bg-success" style={{ width: `${bullPct}%` }} />
-                )}
-                {bearPct > 0 && (
-                  <div className="bg-error" style={{ width: `${bearPct}%` }} />
-                )}
-              </div>
-            </div>
-
-            {/* 24h stats */}
-            <div className="flex items-center gap-1.5 mt-1">
-              <span className="h-1.5 w-1.5 rounded-full bg-info animate-pulse shrink-0" />
-              <span className="text-[10px] uppercase tracking-wider opacity-40">Last 24 hours</span>
-            </div>
-            <div className="grid grid-cols-3 gap-2">
-              <div className="flex flex-col items-center gap-0.5">
-                <span className="text-[10px] uppercase tracking-wider opacity-40">Active Agents</span>
-                <span className="mono text-sm font-bold tabular-nums">{stats?.active_agents ?? 0}</span>
-              </div>
-              <div className="flex flex-col items-center gap-0.5">
-                <span className="text-[10px] uppercase tracking-wider opacity-40">Trades</span>
-                <span className="mono text-sm font-bold tabular-nums">{(stats?.total_trades_24h ?? 0).toLocaleString()}</span>
-              </div>
-              <div className="flex flex-col items-center gap-0.5">
-                <span className="text-[10px] uppercase tracking-wider opacity-40">Avg Confidence</span>
-                <span className="mono text-sm font-bold tabular-nums">{((stats?.avg_confidence ?? 0) * 100).toFixed(0)}%</span>
-              </div>
-            </div>
-
-            {stats && (
-              <div className="border-t border-base-content/10 pt-3 mt-1">
-                <PredictionMarket raceCfg={raceCfg} stats={stats} />
-              </div>
-            )}
-
-            <button className="btn btn-sm btn-ghost gap-1 mt-2 self-start" type="button" onClick={onBack}>
-              <ArrowLeft className="h-4 w-4" /> Back to Hub
-            </button>
+        {/* Token header */}
+        <div className="flex items-center gap-3">
+          <div className={`flex h-10 w-10 items-center justify-center rounded-full text-xs font-bold ${tokenColor}`}>
+            {symbol.slice(0, 3)}
+          </div>
+          <div className="flex flex-col">
+            <span className="text-lg font-bold leading-tight">{stats?.token_symbol}</span>
+            <span className="text-xs opacity-50">{stats?.token_name}</span>
           </div>
         </div>
+
+        {/* Price */}
+        <div className="flex items-baseline gap-2">
+          <span className="text-2xl font-bold tabular-nums mono">{fmtPrice(stats?.price_usd ?? 0)}</span>
+          <span className={`flex items-center gap-0.5 text-sm font-bold tabular-nums mono ${changeColor}`}>
+            {changePositive ? <TrendingUp className="h-3.5 w-3.5" /> : <TrendingDown className="h-3.5 w-3.5" />}
+            {changePositive ? '+' : ''}{(stats?.price_change_24h ?? 0).toFixed(1)}%
+          </span>
+        </div>
+
+        {/* Sentiment */}
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] uppercase tracking-wider font-semibold opacity-50">Sentiment</span>
+            <span className={`badge badge-sm ${consensusBadge}`}>{consensusUpper || 'NEUTRAL'}</span>
+          </div>
+          <div className="flex h-2.5 rounded-full overflow-hidden bg-base-300">
+            {bullPct > 0 && <div className="bg-success" style={{ width: `${bullPct}%` }} />}
+            {bearPct > 0 && <div className="bg-error" style={{ width: `${bearPct}%` }} />}
+          </div>
+          <div className="flex justify-between text-[10px] opacity-50">
+            <span className="flex items-center gap-1">
+              <TrendingUp className="h-3 w-3 text-success" />
+              {bullPct.toFixed(0)}% Bullish
+            </span>
+            <span className="flex items-center gap-1">
+              {bearPct.toFixed(0)}% Bearish
+              <TrendingDown className="h-3 w-3 text-error" />
+            </span>
+          </div>
+        </div>
+
+        {/* Active Agents */}
+        <div className="flex flex-col gap-2">
+          <span className="text-[11px] uppercase tracking-wider font-semibold opacity-50">Active Agents</span>
+          <div className="grid grid-cols-3 gap-2">
+            <div className="card bg-base-200 shadow-sm">
+              <div className="card-body items-center p-3 gap-1">
+                <Users className="h-4 w-4 opacity-40" />
+                <span className="mono text-base font-bold tabular-nums">{stats?.active_agents ?? 0}</span>
+                <span className="text-[10px] opacity-40">Agents</span>
+              </div>
+            </div>
+            <div className="card bg-base-200 shadow-sm">
+              <div className="card-body items-center p-3 gap-1">
+                <TrendingUp className="h-4 w-4 opacity-40" />
+                <span className="mono text-base font-bold tabular-nums">{(stats?.total_trades_24h ?? 0).toLocaleString()}</span>
+                <span className="text-[10px] opacity-40">Trades</span>
+              </div>
+            </div>
+            <div className="card bg-base-200 shadow-sm">
+              <div className="card-body items-center p-3 gap-1">
+                <Target className="h-4 w-4 opacity-40" />
+                <span className="mono text-base font-bold tabular-nums">{((stats?.avg_confidence ?? 0) * 100).toFixed(0)}%</span>
+                <span className="text-[10px] opacity-40">Confidence</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Prediction Market */}
+        {stats && (
+          <div className="flex flex-col gap-2">
+            <PredictionMarket raceCfg={raceCfg} stats={stats} />
+          </div>
+        )}
+
+        {/* Back to Hub */}
+        <button className="btn btn-sm btn-ghost gap-1 self-start mt-2" type="button" onClick={onBack}>
+          <ArrowLeft className="h-4 w-4" /> Back to Hub
+        </button>
       </div>
 
       {/* Right column — opinion feed */}
-      <div className="flex-1 min-w-0 flex flex-col gap-3">
+      <div className="flex-1 min-w-0 flex flex-col gap-4">
+        {/* Feed header */}
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-bold">Agent Trading Feed</h2>
+          <div className="flex items-center gap-1.5">
+            <span className="h-1.5 w-1.5 rounded-full bg-success animate-pulse" />
+            <span className="text-xs opacity-50">Live updates</span>
+          </div>
+        </div>
+
         {opinions.length === 0 ? (
           <div className="card bg-base-200 shadow-md">
             <div className="card-body p-4">
@@ -208,26 +243,42 @@ export function TokenOpinionPage({ raceCfg, symbol, onBack }: TokenOpinionPagePr
             const isHold = op.action === 'hold';
             const borderColor = isHold ? 'border-warning' : sentUpper === 'BULLISH' ? 'border-success' : sentUpper === 'BEARISH' ? 'border-error' : 'border-base-content/20';
             const actionColor = isHold ? 'badge-warning' : sentUpper === 'BULLISH' ? 'badge-success' : sentUpper === 'BEARISH' ? 'badge-error' : 'badge-ghost';
+            const actionLabel = op.action === 'create_order' ? (sentUpper === 'BULLISH' ? 'BUY' : 'SELL') : op.action === 'close_order' ? 'CLOSE' : op.action === 'hold' ? 'HOLD' : op.action;
+
+            const iconBg = isHold ? 'bg-warning/20 text-warning' : sentUpper === 'BULLISH' ? 'bg-success/20 text-success' : sentUpper === 'BEARISH' ? 'bg-error/20 text-error' : 'bg-base-300 opacity-60';
 
             return (
               <div key={op.id} className={`card bg-base-200 shadow-sm border-l-4 ${borderColor}`}>
-                <div className="card-body p-3 sm:p-4 gap-2">
-                  {/* Header row */}
-                  <div className="flex flex-wrap items-center gap-2 text-xs">
-                    <Bot className="h-3.5 w-3.5 opacity-40 shrink-0" />
-                    <span className="mono font-medium">
-                      {op.agent_name || fmtAddr(op.agent_address)}
+                <div className="card-body p-4 gap-3">
+                  {/* Header: agent info + action badge */}
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-3">
+                      <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${iconBg}`}>
+                        <Bot className="h-4 w-4" />
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-sm font-semibold">
+                          {op.agent_name || fmtAddr(op.agent_address)}
+                        </span>
+                        <span className="flex items-center gap-1 text-[11px] opacity-40">
+                          <Clock className="h-3 w-3" />
+                          {timeAgo(op.created_at)}
+                        </span>
+                      </div>
+                    </div>
+                    <span className={`badge badge-sm ${actionColor} uppercase shrink-0`}>
+                      {actionLabel}
                     </span>
-                    <span className={`badge badge-xs ${actionColor} uppercase`}>
-                      {op.action === 'create_order' ? (sentUpper === 'BULLISH' ? 'BUY' : 'SELL') : op.action === 'close_order' ? 'CLOSE' : op.action === 'hold' ? 'HOLD' : op.action}
-                    </span>
-                    <span className="opacity-40 tabular-nums">conf: {op.confidence.toFixed(2)}</span>
-                    <span className="opacity-30 tabular-nums ml-auto">{timeAgo(op.created_at)}</span>
                   </div>
 
-                  {/* Reasoning */}
+                  {/* Short reason as title */}
+                  {op.short_reason && (
+                    <p className="text-sm font-semibold leading-snug">{op.short_reason}</p>
+                  )}
+
+                  {/* Full reasoning */}
                   {op.reasoning && (
-                    <p className="text-xs leading-relaxed opacity-80">{op.reasoning}</p>
+                    <p className="text-xs leading-relaxed opacity-60">{op.reasoning}</p>
                   )}
 
                   {/* Action details */}

@@ -5,7 +5,7 @@ import {
   type TokenPredictionAccuracy,
   type PublicApiConfig,
 } from '@/lib/api';
-import { BarChart3 } from 'lucide-react';
+import { Zap } from 'lucide-react';
 
 type PredictionMarketProps = {
   raceCfg: PublicApiConfig;
@@ -30,7 +30,6 @@ export function PredictionMarket({ raceCfg, stats }: PredictionMarketProps) {
 
   const probability = Math.max(stats.bullish_pct, stats.bearish_pct);
   const direction = stats.bullish_pct > stats.bearish_pct ? 'UP' : stats.bearish_pct > stats.bullish_pct ? 'DOWN' : null;
-  const conviction = (probability / 100) * stats.avg_confidence * 100;
 
   let accuracyColor = 'opacity-60';
   if (accuracy) {
@@ -41,58 +40,56 @@ export function PredictionMarket({ raceCfg, stats }: PredictionMarketProps) {
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex items-center gap-1.5">
-        <BarChart3 className="h-3.5 w-3.5 opacity-40" />
-        <span className="text-[10px] uppercase tracking-wider opacity-40">Prediction Market</span>
-      </div>
+      <span className="text-[11px] uppercase tracking-wider font-semibold opacity-50">Prediction Market</span>
 
-      {/* Implied Probability */}
-      {direction ? (
-        <div className="flex flex-col gap-1">
-          <p className="text-xs leading-relaxed">
-            Agents imply{' '}
-            <span className="font-bold">{probability.toFixed(0)}% probability</span>{' '}
-            {stats.token_symbol} goes{' '}
-            <span className={`font-bold ${direction === 'UP' ? 'text-success' : 'text-error'}`}>
-              {direction}
-            </span>{' '}
-            in 24h
-          </p>
-          <div className="flex h-1.5 rounded-full overflow-hidden bg-base-300">
-            <div
-              className={direction === 'UP' ? 'bg-success' : 'bg-error'}
-              style={{ width: `${probability}%` }}
-            />
-          </div>
-          <div className="flex justify-between text-[10px] opacity-40">
-            <span>Conviction: {conviction.toFixed(0)}%</span>
-            <span>{probability.toFixed(0)}%</span>
-          </div>
+      <div className="card bg-base-200 shadow-sm">
+        <div className="card-body p-3 gap-2">
+          {direction ? (
+            <>
+              <div className="flex items-center gap-2">
+                <Zap className="h-4 w-4 text-warning" />
+                <span className="text-sm font-semibold">{stats.token_symbol} Price Direction</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className={`text-xs ${direction === 'UP' ? 'text-success' : 'text-error'}`}>
+                  Probability {direction}
+                </span>
+                <span className={`mono text-sm font-bold tabular-nums ${direction === 'UP' ? 'text-success' : 'text-error'}`}>
+                  {probability.toFixed(0)}%
+                </span>
+              </div>
+              <div className="flex h-2 rounded-full overflow-hidden bg-base-300">
+                <div
+                  className={direction === 'UP' ? 'bg-success' : 'bg-error'}
+                  style={{ width: `${probability}%` }}
+                />
+              </div>
+            </>
+          ) : (
+            <p className="text-xs opacity-50">No clear directional consensus</p>
+          )}
         </div>
-      ) : (
-        <p className="text-xs opacity-50">No clear directional consensus</p>
-      )}
+      </div>
 
       {/* Historical Accuracy */}
       {accuracy && accuracy.total_predictions > 0 && (
-        <div className="flex flex-col gap-1 mt-1">
-          <div className="flex items-baseline gap-1.5">
-            <span className="text-[10px] uppercase tracking-wider opacity-40">Accuracy</span>
-            <span className={`mono text-sm font-bold tabular-nums ${accuracyColor}`}>
-              {accuracy.accuracy_pct.toFixed(0)}%
-            </span>
-          </div>
-          <span className="text-[10px] opacity-40">
-            {accuracy.correct_predictions} of {accuracy.total_predictions} calls correct
-          </span>
-          <span className="text-[10px] opacity-40">
-            Based on 24h consensus vs. actual price movement
-          </span>
-          {accuracy.streak > 1 && (
+        <div className="card bg-base-200 shadow-sm">
+          <div className="card-body p-3 gap-1">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] uppercase tracking-wider opacity-40">Accuracy</span>
+              <span className={`mono text-sm font-bold tabular-nums ${accuracyColor}`}>
+                {accuracy.accuracy_pct.toFixed(0)}%
+              </span>
+            </div>
             <span className="text-[10px] opacity-40">
-              On a {accuracy.streak}-call streak
+              {accuracy.correct_predictions} of {accuracy.total_predictions} calls correct
             </span>
-          )}
+            {accuracy.streak > 1 && (
+              <span className="text-[10px] opacity-40">
+                On a {accuracy.streak}-call streak
+              </span>
+            )}
+          </div>
         </div>
       )}
     </div>
