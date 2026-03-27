@@ -242,11 +242,11 @@ function OrderBookTable({
   stats,
   fromUpper,
   toUpper,
-  fromPriceUsd,
+  fromPriceUsd: _fromPriceUsd,
   amountPriceUsd,
   refreshTick,
   sourceLabel,
-  realStats24h,
+  realStats24h: _realStats24h,
 }: OrderBookTableProps) {
   const maxAmount = useMemo(() => {
     const maxAsk = Math.max(...normalized.asks.map((a) => a.amount), 0);
@@ -256,89 +256,8 @@ function OrderBookTable({
 
   const asksReversed = useMemo(() => [...normalized.asks].reverse(), [normalized.asks]);
 
-  const bidOrders = realStats24h?.bidOrders ?? stats.totalBidOrders;
-  const askOrders = realStats24h?.askOrders ?? stats.totalAskOrders;
-  const bidVolume = realStats24h?.bidVolume ?? stats.totalBidAmount;
-  const askVolume = realStats24h?.askVolume ?? stats.totalAskAmount;
-  const bidVolumeSymbol = realStats24h?.bidVolumeSymbol ?? toUpper;
-  const askVolumeSymbol = realStats24h?.askVolumeSymbol ?? toUpper;
-  const bidVolumeUsd =
-    bidVolumeSymbol.toUpperCase() === fromUpper
-      ? fromPriceUsd != null
-        ? bidVolume * fromPriceUsd
-        : null
-      : bidVolumeSymbol.toUpperCase() === toUpper
-        ? amountPriceUsd != null
-          ? bidVolume * amountPriceUsd
-          : null
-        : null;
-  const askVolumeUsd =
-    askVolumeSymbol.toUpperCase() === fromUpper
-      ? fromPriceUsd != null
-        ? askVolume * fromPriceUsd
-        : null
-      : askVolumeSymbol.toUpperCase() === toUpper
-        ? amountPriceUsd != null
-          ? askVolume * amountPriceUsd
-          : null
-        : null;
-  const statsStrip = (classes: string) => (
-    <div className={`flex flex-wrap items-center gap-1.5 px-3 py-2 ${classes}`}>
-      <span className="text-xs font-bold tracking-tight mr-1">
-        {fromUpper} / {toUpper}
-      </span>
-
-      {stats.bestBid != null && (
-        <span className="badge badge-xs badge-ghost gap-1 mono">
-          <span className="opacity-50">Bid</span>
-          <span className="text-success font-semibold">{fmtRate(stats.bestBid)}</span>
-        </span>
-      )}
-
-      {stats.bestAsk != null && (
-        <span className="badge badge-xs badge-ghost gap-1 mono">
-          <span className="opacity-50">Ask</span>
-          <span className="text-error font-semibold">{fmtRate(stats.bestAsk)}</span>
-        </span>
-      )}
-
-      {stats.spreadPct != null && (
-        <span className="badge badge-xs badge-ghost gap-1 mono">
-          <span className="opacity-50">Spread</span>
-          <span className="font-semibold">{stats.spreadPct.toFixed(2)}%</span>
-        </span>
-      )}
-
-      <span className="badge badge-xs badge-ghost gap-1 mono">
-        <span className="opacity-50">{realStats24h ? 'Bid Vol 24h' : 'Bid Vol'}</span>
-        <span className="text-success font-semibold">{fmtAmount(bidVolume)}</span>
-        <span className="opacity-40">{bidVolumeSymbol}</span>
-        {bidVolumeUsd != null && (
-          <span className="opacity-40 hidden sm:inline">~{fmtUsd(bidVolumeUsd)}</span>
-        )}
-      </span>
-
-      <span className="badge badge-xs badge-ghost gap-1 mono">
-        <span className="opacity-50">{realStats24h ? 'Ask Vol 24h' : 'Ask Vol'}</span>
-        <span className="text-error font-semibold">{fmtAmount(askVolume)}</span>
-        <span className="opacity-40">{askVolumeSymbol}</span>
-        {askVolumeUsd != null && (
-          <span className="opacity-40 hidden sm:inline">~{fmtUsd(askVolumeUsd)}</span>
-        )}
-      </span>
-
-      <span className="ml-auto flex items-center gap-2 text-[10px] opacity-50">
-        <span className="text-success">{bidOrders}{realStats24h ? ' bids (24h)' : ' bids'}</span>
-        <span className="opacity-30">|</span>
-        <span className="text-error">{askOrders}{realStats24h ? ' asks (24h)' : ' asks'}</span>
-      </span>
-    </div>
-  );
-
   return (
     <div className="space-y-3">
-      {statsStrip('card bg-base-200 shadow-sm card-body p-3 rounded-xl border border-base-content/5')}
-
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Bids panel */}
         <div className="card bg-base-200 shadow-md overflow-hidden">
@@ -849,27 +768,55 @@ export function StatsPage({ raceCfg, pairSlug, onPairChange }: StatsPageProps) {
         </button>
       </div>
 
-      {pairStats && (
+      {pairStats ? (
         <PairActivityRow
           stats={pairStats}
           fromSymbol={fromUpper}
           toSymbol={toUpper}
           volumeUsdByWindow={activityVolumeUsd}
         />
-      )}
-
-      {stats && (
-        <div className="card bg-base-200/60 shadow-sm">
-          <div className="card-body p-2 flex-row items-center justify-center gap-4 flex-wrap text-xs mono">
-            <span className="opacity-50">{fromUpper} / {toUpper}</span>
-            <span>Bid <span className="text-success font-bold">{fmtRate(stats.bestBid ?? 0)}</span></span>
-            <span>Ask <span className="text-error font-bold">{fmtRate(stats.bestAsk ?? 0)}</span></span>
-            {stats.spreadPct != null && (
-              <span>Spread <span className="text-warning font-bold">{stats.spreadPct.toFixed(2)}%</span></span>
-            )}
-          </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+          {['1H', '24H', 'ALL'].map((label) => (
+            <div key={label} className="rounded-lg px-3 py-2.5 border border-base-content/5 bg-base-300/50">
+              <div className="flex items-center justify-between mb-2">
+                <span className="badge badge-sm badge-outline">{label}</span>
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                <div>
+                  <div className="text-[9px] uppercase tracking-wide opacity-40">Open</div>
+                  <div className="h-4 w-8 bg-base-content/5 rounded animate-pulse mt-1" />
+                </div>
+                <div>
+                  <div className="text-[9px] uppercase tracking-wide opacity-40">Filled</div>
+                  <div className="h-4 w-8 bg-base-content/5 rounded animate-pulse mt-1" />
+                </div>
+                <div>
+                  <div className="text-[9px] uppercase tracking-wide opacity-40">Volume</div>
+                  <div className="h-4 w-14 bg-base-content/5 rounded animate-pulse mt-1" />
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       )}
+
+      <div className="card bg-base-200/60 shadow-sm">
+        <div className="card-body p-2 flex-row items-center justify-center gap-4 flex-wrap text-xs mono">
+          <span className="opacity-50">{fromUpper} / {toUpper}</span>
+          {stats ? (
+            <>
+              <span>Bid <span className="text-success font-bold">{fmtRate(stats.bestBid ?? 0)}</span></span>
+              <span>Ask <span className="text-error font-bold">{fmtRate(stats.bestAsk ?? 0)}</span></span>
+              {stats.spreadPct != null && (
+                <span>Spread <span className="text-warning font-bold">{stats.spreadPct.toFixed(2)}%</span></span>
+              )}
+            </>
+          ) : (
+            <span className="opacity-30">Loading...</span>
+          )}
+        </div>
+      </div>
 
       {bookError ? (
         <div className="card bg-base-200 shadow-md">
