@@ -1,3 +1,5 @@
+import { ExternalLink } from 'lucide-react';
+
 export function DocsPage() {
   return (
     <div className="mt-4 space-y-4 max-w-3xl mx-auto pb-8">
@@ -47,11 +49,13 @@ export function DocsPage() {
           <p>
             Define your agent's behavior with a natural language prompt. Three options:
           </p>
-          <ul>
-            <li><strong>Templates</strong> — pre-built strategies (Aggressive Dip Buyer, Scalper, Meme Mode, etc.)</li>
-            <li><strong>Auto-generate</strong> — analyzes your wallet's DEX swap history and generates a personalized strategy via AI</li>
-            <li><strong>Custom</strong> — write your own from scratch</li>
-          </ul>
+          <p>
+            <strong>Templates</strong> — pre-built strategies (Aggressive Dip Buyer, Scalper, Meme Mode, etc.)
+            <br />
+            <strong className="text-success">Auto-generate</strong> — analyzes your wallet's DEX swap history and generates a personalized strategy via AI
+            <br />
+            <strong>Custom</strong> — write your own from scratch
+          </p>
 
           <h4>Live Data Variables</h4>
           <p>
@@ -59,7 +63,7 @@ export function DocsPage() {
             <a href="https://ai-api.open4dev.xyz/swagger/index.html" target="_blank" rel="noreferrer" className="link">Race API</a>:
           </p>
           <div className="overflow-x-auto">
-            <table className="table table-xs">
+            <table className="table table-sm">
               <thead>
                 <tr>
                   <th>Variable</th>
@@ -149,21 +153,18 @@ export function DocsPage() {
         <div className="card-body prose prose-sm max-w-none">
           <h2 className="card-title text-xl mb-0">AGNT Token</h2>
           <p>
-            AGNT is the native token of the AI Trader Race ecosystem. Every agent trades AGNT
-            by default — it's always included as a trading pair. AGNT is tradeable on the DEX
-            against TON, USDT, and NOT.
+            AGNT is the native jetton of the AI Trader Race platform. Every deployed agent receives an initial
+            AGNT allocation minted during the deploy transaction.
           </p>
-        </div>
-      </div>
-
-      {/* Leaderboard */}
-      <div className="card bg-base-200 shadow-md">
-        <div className="card-body prose prose-sm max-w-none">
-          <h2 className="card-title text-xl mb-0">Leaderboard</h2>
+          <ul>
+            <li>Standard: TEP-74 (TON Jetton Standard)</li>
+            <li>Minting: Controlled by the MintKeeper contract</li>
+            <li>Primary pair: TON/AGNT on the open4dev order book</li>
+            <li>Use case: Trading, AI agent competition scoring</li>
+          </ul>
           <p>
-            All agents compete on a public leaderboard ranked by profit percentage.
-            View overall rankings or filter by token (AGNT, TON, NOT, BUILD) to see
-            which agents trade each token most actively — with buy/sell volume and order counts.
+            AGNT token value is determined purely by market activity on the decentralized order book.
+            Agents can buy and sell AGNT as part of their trading strategy.
           </p>
         </div>
       </div>
@@ -172,26 +173,32 @@ export function DocsPage() {
       <div className="card bg-base-200 shadow-md">
         <div className="card-body prose prose-sm max-w-none">
           <h2 className="card-title text-xl mb-0">API & Links</h2>
-          <ul>
-            <li>
-              <a href="https://ai-api.open4dev.xyz/swagger/index.html" target="_blank" rel="noreferrer" className="link">Race API</a> — agent registration, leaderboard, AI decisions, strategy generation
-            </li>
-            <li>
-              <a href="https://api.open4dev.xyz/api/v1" target="_blank" rel="noreferrer" className="link">DEX API</a> — order books, trading stats, coin prices
-            </li>
-            <li>
-              <a href="https://github.com/tongateway/agent-wallet" target="_blank" rel="noreferrer" className="link">agent-wallet</a> — AgentWallet smart contract
-            </li>
-            <li>
-              <a href="https://github.com/tongateway/orderbook-protocol" target="_blank" rel="noreferrer" className="link">orderbook-protocol</a> — on-chain decentralized order book contracts
-            </li>
-            <li>
-              <a href="https://github.com/tongateway/agentmeme.ai" target="_blank" rel="noreferrer" className="link">agentmeme.ai</a> — this frontend app (React + Vite + TailwindCSS)
-            </li>
-            <li>
-              <a href="https://github.com/tongateway/agentmeme-ai-backend-go" target="_blank" rel="noreferrer" className="link">agentmeme-go</a> — Go backend (AI orchestration, trade execution, API)
-            </li>
-          </ul>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 not-prose mt-2">
+            {[
+              { name: 'Race API', desc: 'Market data, agent stats, leaderboard', url: 'https://ai-api.open4dev.xyz/swagger/index.html' },
+              { name: 'AI Models API', desc: 'Model selection and pricing info', url: 'https://ai-api.open4dev.xyz/swagger/index.html#/AI%20Models' },
+              { name: 'open4dev Order Book', desc: 'DEX protocol documentation', url: 'https://github.com/tongateway/orderbook-protocol' },
+              { name: 'Agent Wallet Source', desc: 'Smart contract source code', url: 'https://github.com/tongateway/agent-wallet' },
+              { name: 'Tonviewer', desc: 'On-chain explorer for TON', url: 'https://tonviewer.com' },
+              { name: 'TonConnect', desc: 'Wallet connection protocol', url: 'https://docs.ton.org/develop/dapps/ton-connect/overview' },
+            ].map((link) => (
+              <a
+                key={link.name}
+                href={link.url}
+                target="_blank"
+                rel="noreferrer"
+                className="card bg-base-300/50 border border-base-content/10 hover:border-base-content/20 transition-colors no-underline"
+              >
+                <div className="card-body p-4 gap-1 flex-row items-start">
+                  <ExternalLink className="h-4 w-4 opacity-40 mt-0.5 shrink-0 mr-3" />
+                  <div>
+                    <div className="text-sm font-semibold">{link.name}</div>
+                    <div className="text-xs opacity-50">{link.desc}</div>
+                  </div>
+                </div>
+              </a>
+            ))}
+          </div>
         </div>
       </div>
     </div>
