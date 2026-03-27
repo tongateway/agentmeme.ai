@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Bot, TrendingUp, TrendingDown, Target, Search, ChevronRight, Trophy } from 'lucide-react';
+import { Bot, TrendingUp, TrendingDown, Target, Search, ChevronRight, Trophy, Rocket } from 'lucide-react';
 import {
   getTokenOpinions,
   getRaceLeaderboard,
@@ -132,97 +132,54 @@ export function AgentHubPage({ raceCfg, onSelectToken, onDeploy, onViewLeaderboa
       {/* 1. Stats Bar */}
       {!loading && tokens.length > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {/* Active Agents */}
-          <div className="card bg-base-200 shadow-sm">
-            <div className="card-body p-3 gap-2 flex-row items-center">
-              <div className="flex items-center justify-center rounded-full bg-primary/15 shrink-0" style={{ width: 40, height: 40 }}>
-                <Bot className="h-5 w-5 text-primary" />
-              </div>
-              <div className="flex flex-col min-w-0">
-                <span className="mono text-lg font-bold leading-tight tabular-nums">{totalActiveAgents}</span>
-                <span className="text-[11px] opacity-50 leading-none">Active Agents</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Trades 24h */}
-          <div className="card bg-base-200 shadow-sm">
-            <div className="card-body p-3 gap-2 flex-row items-center">
-              <div className="flex items-center justify-center rounded-full bg-success/15 shrink-0" style={{ width: 40, height: 40 }}>
-                <TrendingUp className="h-5 w-5 text-success" />
-              </div>
-              <div className="flex flex-col min-w-0">
-                <span className="mono text-lg font-bold leading-tight tabular-nums">{totalTrades24h}</span>
-                <span className="text-[11px] opacity-50 leading-none">Trades (24h)</span>
+          {[
+            { icon: <Bot className="h-5 w-5 text-primary" />, bg: 'bg-primary/15', label: 'Active Agents', value: String(totalActiveAgents) },
+            { icon: <TrendingUp className="h-5 w-5 text-success" />, bg: 'bg-success/15', label: 'Trades (24h)', value: totalTrades24h.toLocaleString() },
+            { icon: dominantSentiment === 'Bearish' ? <TrendingDown className="h-5 w-5 text-error" /> : <TrendingUp className={`h-5 w-5 ${dominantSentiment === 'Bullish' ? 'text-success' : 'opacity-40'}`} />, bg: dominantSentiment === 'Bearish' ? 'bg-error/15' : dominantSentiment === 'Bullish' ? 'bg-success/15' : 'bg-base-content/10', label: 'Market Sentiment', value: dominantSentiment, subtitle: `${sentimentPct}% of agents` },
+            { icon: <Target className="h-5 w-5 text-warning" />, bg: 'bg-warning/15', label: 'Avg Signal Strength', value: avgSignal.toFixed(1), subtitle: 'out of 10' },
+          ].map((stat) => (
+            <div key={stat.label} className="card bg-base-200 shadow-sm">
+              <div className="card-body p-4 gap-1">
+                <div className="flex items-center gap-2">
+                  <div className={`flex items-center justify-center rounded-full shrink-0 ${stat.bg}`} style={{ width: 40, height: 40 }}>
+                    {stat.icon}
+                  </div>
+                  <span className="text-xs opacity-50">{stat.label}</span>
+                </div>
+                <span className="mono text-2xl font-bold tabular-nums mt-1">{stat.value}</span>
+                {stat.subtitle && <span className="text-[11px] opacity-40">{stat.subtitle}</span>}
               </div>
             </div>
-          </div>
-
-          {/* Market Sentiment */}
-          <div className="card bg-base-200 shadow-sm">
-            <div className="card-body p-3 gap-2 flex-row items-center">
-              <div
-                className={`flex items-center justify-center rounded-full shrink-0 ${
-                  dominantSentiment === 'Bullish' ? 'bg-success/15' : dominantSentiment === 'Bearish' ? 'bg-error/15' : 'bg-base-content/10'
-                }`}
-                style={{ width: 40, height: 40 }}
-              >
-                {dominantSentiment === 'Bearish' ? (
-                  <TrendingDown className={`h-5 w-5 text-error`} />
-                ) : (
-                  <TrendingUp className={`h-5 w-5 ${dominantSentiment === 'Bullish' ? 'text-success' : 'opacity-40'}`} />
-                )}
-              </div>
-              <div className="flex flex-col min-w-0">
-                <span className="text-lg font-bold leading-tight">{dominantSentiment}</span>
-                <span className="text-[11px] opacity-50 leading-none">{sentimentPct}% of agents</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Avg Signal Strength */}
-          <div className="card bg-base-200 shadow-sm">
-            <div className="card-body p-3 gap-2 flex-row items-center">
-              <div className="flex items-center justify-center rounded-full bg-warning/15 shrink-0" style={{ width: 40, height: 40 }}>
-                <Target className="h-5 w-5 text-warning" />
-              </div>
-              <div className="flex flex-col min-w-0">
-                <span className="mono text-lg font-bold leading-tight tabular-nums">{avgSignal.toFixed(1)}</span>
-                <span className="text-[11px] opacity-50 leading-none">Avg Signal / 10</span>
-              </div>
-            </div>
-          </div>
+          ))}
         </div>
       )}
 
       {/* 2. Agent Spotlight Row */}
       {!loading && (leaderboard.length > 0 || tokens.length > 0) && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {/* Agent of the Day */}
-          <div>
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-3">
+          {/* Agent of the Day — spans 2 cols */}
+          <div className="lg:col-span-2">
             <AgentSpotlight leaderboard={leaderboard} />
           </div>
 
-          {/* Top Performing Agents */}
+          {/* Top Performing Agents — spans 3 cols */}
           {top3.length > 0 && (
-            <div className="card bg-base-200 shadow-sm border border-base-content/5">
-              <div className="card-body p-3 gap-2">
+            <div className="lg:col-span-3 card bg-base-200 shadow-sm border border-base-content/5">
+              <div className="card-body p-4 gap-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1.5">
-                    <Trophy className="h-3.5 w-3.5 text-warning" />
-                    <span className="text-[10px] uppercase tracking-wider font-bold text-warning">
-                      Top Performing Agents
-                    </span>
+                    <Trophy className="h-4 w-4 text-warning" />
+                    <span className="text-sm font-bold">Top Performing Agents</span>
                   </div>
                   <button
                     type="button"
-                    className="flex items-center gap-0.5 text-[11px] opacity-40 hover:opacity-80 transition-opacity"
+                    className="flex items-center gap-0.5 text-xs opacity-40 hover:opacity-80 transition-opacity"
                     onClick={onViewLeaderboard}
                   >
-                    View all <ChevronRight className="h-3 w-3" />
+                    View all <ChevronRight className="h-3.5 w-3.5" />
                   </button>
                 </div>
-                <div className="flex flex-col gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                   {top3.map((entry, idx) => {
                     const profitPct = entry.profit_pct ?? 0;
                     const profitColor = profitPct >= 0 ? 'text-success' : 'text-error';
@@ -230,29 +187,31 @@ export function AgentHubPage({ raceCfg, onSelectToken, onDeploy, onViewLeaderboa
                       ? entry.ai_model.split('/').pop() ?? entry.ai_model
                       : entry.ai_model;
                     return (
-                      <div key={entry.address} className="flex items-center gap-2">
-                        <span
-                          className={`flex items-center justify-center rounded-full text-[10px] font-bold shrink-0 ${rankBadgeColor(idx)}`}
-                          style={{ width: 22, height: 22 }}
-                        >
-                          #{idx + 1}
-                        </span>
-                        <div className="flex flex-col flex-1 min-w-0">
-                          <span className="mono text-xs font-semibold truncate leading-none">
-                            {entry.name || fmtAddr(entry.address)}
+                      <div key={entry.address} className="card bg-base-300/50 border border-base-content/5">
+                        <div className="card-body p-3 gap-2">
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={`flex items-center justify-center rounded-full text-[10px] font-bold shrink-0 ${rankBadgeColor(idx)}`}
+                              style={{ width: 24, height: 24 }}
+                            >
+                              #{idx + 1}
+                            </span>
+                            <div className="flex flex-col min-w-0">
+                              <span className="mono text-sm font-bold truncate">
+                                {entry.name || fmtAddr(entry.address)}
+                              </span>
+                              <span className="text-[11px] opacity-40 truncate">
+                                {shortModel}
+                              </span>
+                            </div>
+                          </div>
+                          <span className={`mono text-lg font-bold tabular-nums ${profitColor}`}>
+                            {profitPct >= 0 ? '+' : ''}{profitPct.toFixed(1)}%
                           </span>
-                          <div className="flex items-center gap-1.5 mt-0.5">
-                            <span className="badge badge-xs badge-ghost opacity-60 truncate max-w-[7rem]">
-                              {shortModel}
-                            </span>
-                            <span className="mono text-[11px] opacity-40 tabular-nums">
-                              {entry.completed_orders ?? 0} trades
-                            </span>
+                          <div className="flex items-center justify-between text-[11px] opacity-40">
+                            <span>{entry.completed_orders ?? 0} trades</span>
                           </div>
                         </div>
-                        <span className={`mono text-xs font-bold tabular-nums shrink-0 ${profitColor}`}>
-                          {profitPct >= 0 ? '+' : ''}{profitPct.toFixed(1)}%
-                        </span>
                       </div>
                     );
                   })}
@@ -261,7 +220,7 @@ export function AgentHubPage({ raceCfg, onSelectToken, onDeploy, onViewLeaderboa
             </div>
           )}
 
-          {/* Dashboard strip (TrendingTokens) — keep in layout */}
+          {/* TrendingTokens — hidden helper */}
           <div className="hidden">
             <TrendingTokens tokens={tokens} onSelectToken={onSelectToken} />
           </div>
@@ -269,35 +228,32 @@ export function AgentHubPage({ raceCfg, onSelectToken, onDeploy, onViewLeaderboa
       )}
 
       {/* 3. Search Bar + Deploy Button */}
-      <div className="card bg-base-200 shadow-sm">
-        <div className="card-body p-3 flex-row items-center gap-2">
-          <div className="relative flex-1">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 opacity-40" />
-            <input
-              type="text"
-              className="input input-sm w-full pl-8 bg-base-100/50 border-base-content/10 focus:outline-none"
-              placeholder="Search tokens…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </div>
-          {onDeploy && (
-            <button
-              type="button"
-              className="btn btn-sm btn-success gap-1.5 shrink-0"
-              onClick={onDeploy}
-            >
-              Deploy Agent
-            </button>
-          )}
+      <div className="flex items-center gap-3">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 opacity-40" />
+          <input
+            type="text"
+            className="input input-bordered w-full pl-9"
+            placeholder="Search tokens…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
         </div>
+        {onDeploy && (
+          <button
+            type="button"
+            className="btn btn-success gap-2 shrink-0 text-base font-semibold px-6"
+            onClick={onDeploy}
+          >
+            <Rocket className="h-4 w-4" />
+            Deploy Agent
+          </button>
+        )}
       </div>
 
       {/* 4. Token Table */}
       <div className="card bg-base-200 shadow-md">
         <div className="card-body p-3 sm:p-5 gap-3">
-          <h2 className="card-title text-base">Agent Hub</h2>
-
           {error ? (
             <div className="text-sm text-error">{error}</div>
           ) : loading ? (

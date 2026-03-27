@@ -1,13 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { LayoutDashboard, Plus } from 'lucide-react';
+import { Plus, Bot } from 'lucide-react';
 import type { ContractListItem } from '@/lib/api';
 
-export type TabKey = { kind: 'overview' } | { kind: 'contract'; contractId: string } | { kind: 'deploy' };
+export type TabKey = { kind: 'contract'; contractId: string } | { kind: 'deploy' };
 
 export function tabEquals(a: TabKey, b: TabKey): boolean {
   if (a.kind !== b.kind) return false;
   if (a.kind === 'deploy') return true;
-  if (a.kind === 'overview') return true;
   return (a as { kind: 'contract'; contractId: string }).contractId ===
     (b as { kind: 'contract'; contractId: string }).contractId;
 }
@@ -82,16 +81,6 @@ export function ContractTabBar({ contracts, activeTab, onTabChange, loading, onR
       className="inline-flex max-w-full items-center gap-0 overflow-x-auto rounded-xl bg-base-200 p-1 shadow-md"
       style={{ scrollbarWidth: 'none' }}
     >
-      <button
-        className={`btn btn-sm shrink-0 gap-1.5 ${activeTab.kind === 'overview' ? 'btn-active' : 'btn-ghost'}`}
-        type="button"
-        onClick={() => onTabChange({ kind: 'overview' })}
-        aria-label="Overview"
-      >
-        <LayoutDashboard className="size-4" />
-        <span className="text-xs">Overview</span>
-      </button>
-
       {loading && !contracts?.length ? (
         <button className="btn btn-ghost btn-sm btn-disabled shrink-0">
           <span className="loading loading-spinner loading-xs" /> Loading…
@@ -115,6 +104,7 @@ export function ContractTabBar({ contracts, activeTab, onTabChange, loading, onR
               }
             }}
           >
+            <Bot className="size-3.5 opacity-50 shrink-0" />
             {isEditing ? (
               <input
                 ref={inputRef}
@@ -150,7 +140,7 @@ export function ContractTabBar({ contracts, activeTab, onTabChange, loading, onR
         aria-label="Deploy new agent"
       >
         <Plus className="size-4" />
-        <span className="text-xs">Deploy new agent</span>
+        <span className="text-xs">Deploy new</span>
       </button>
     </div>
   );

@@ -9,7 +9,7 @@ import { useAuth } from './lib/useAuth';
 import { generateAgentKeypair } from './lib/crypto';
 import { ContractTabBar, type TabKey } from './components/ContractTabBar';
 import { ContractDetailPanel } from './components/ContractDetailPanel';
-import { OverviewPanel } from './components/OverviewPanel';
+
 import { DeployPanel, type Persisted } from './components/DeployPanel';
 import { LeaderboardPage } from './components/LeaderboardPage';
 import { HomePage } from './components/HomePage';
@@ -31,26 +31,26 @@ function tabFromHashParts(parts: string[]): TabKey {
   if (second === 'contract' && parts[2]) {
     return { kind: 'contract', contractId: decodeURIComponent(parts[2]) };
   }
-  return { kind: 'overview' };
+  return { kind: 'deploy' };
 }
 
 function routeFromHash(): { page: Page; tab: TabKey; statsPair: string | null; hubToken: string | null } {
   const raw = window.location.hash.replace(/^#\/?/, '');
   const parts = raw.split('/').filter(Boolean);
   const first = parts[0]?.toLowerCase();
-  if (!first) return { page: 'home', tab: { kind: 'overview' }, statsPair: null, hubToken: null };
-  if (first === 'share') return { page: 'share', tab: { kind: 'overview' }, statsPair: null, hubToken: null };
+  if (!first) return { page: 'home', tab: { kind: 'deploy' }, statsPair: null, hubToken: null };
+  if (first === 'share') return { page: 'share', tab: { kind: 'deploy' }, statsPair: null, hubToken: null };
   if (first === 'stats') {
     const pairSlug = parts[1]?.toUpperCase() || null;
-    return { page: 'stats', tab: { kind: 'overview' }, statsPair: pairSlug, hubToken: null };
+    return { page: 'stats', tab: { kind: 'deploy' }, statsPair: pairSlug, hubToken: null };
   }
   if (first === 'agent-hub') {
     const tokenSymbol = parts[1] ? decodeURIComponent(parts[1]) : null;
-    return { page: 'agent-hub', tab: { kind: 'overview' }, statsPair: null, hubToken: tokenSymbol };
+    return { page: 'agent-hub', tab: { kind: 'deploy' }, statsPair: null, hubToken: tokenSymbol };
   }
   if (first === 'trader') return { page: 'trader', tab: tabFromHashParts(parts), statsPair: null, hubToken: null };
-  if (VALID_PAGES.has(first as Page)) return { page: first as Page, tab: { kind: 'overview' }, statsPair: null, hubToken: null };
-  return { page: 'home', tab: { kind: 'overview' }, statsPair: null, hubToken: null };
+  if (VALID_PAGES.has(first as Page)) return { page: first as Page, tab: { kind: 'deploy' }, statsPair: null, hubToken: null };
+  return { page: 'home', tab: { kind: 'deploy' }, statsPair: null, hubToken: null };
 }
 
 function hashFromRoute(page: Page, tab: TabKey, statsPair?: string | null, hubToken?: string | null): string | null {
@@ -60,7 +60,6 @@ function hashFromRoute(page: Page, tab: TabKey, statsPair?: string | null, hubTo
   if (page === 'stats') return statsPair ? `stats/${statsPair}` : 'stats';
   if (page === 'agent-hub') return hubToken ? `agent-hub/${encodeURIComponent(hubToken)}` : 'agent-hub';
   if (page === 'docs') return 'docs';
-  if (tab.kind === 'overview') return 'trader/overview';
   if (tab.kind === 'deploy') return 'trader/deploy';
   return `trader/contract/${encodeURIComponent(tab.contractId)}`;
 }
@@ -250,7 +249,7 @@ export default function App() {
     async (contractId: string) => {
       setMyContractIds((prev) => prev.filter((id) => id !== contractId));
       await refreshContracts();
-      setTab({ kind: 'overview' });
+      setTab({ kind: 'deploy' });
     },
     [refreshContracts, setMyContractIds],
   );
@@ -284,10 +283,13 @@ export default function App() {
 
   const openTraderFromNav = useCallback(() => {
     setPageState('trader');
-    if (!isConnected) {
+    // Auto-select first contract if available, otherwise show deploy
+    if (contracts && contracts.length > 0 && tab.kind === 'deploy') {
+      setTab({ kind: 'contract', contractId: contracts[0].id });
+    } else if (!isConnected || !contracts?.length) {
       setTab({ kind: 'deploy' });
     }
-  }, [isConnected]);
+  }, [isConnected, contracts, tab.kind]);
 
   const openDeploy = useCallback(() => {
     setPageState('trader');
@@ -350,7 +352,7 @@ export default function App() {
             onClick={openTraderFromNav}
             type="button"
           >
-            {isConnected ? 'My Agents' : 'Deploy agent'}
+            My Agents
           </button>
           <label className="swap swap-rotate btn btn-ghost btn-sm btn-circle shrink-0" aria-label="Toggle theme">
             <input type="checkbox" checked={theme === 'dark'} onChange={toggleTheme} />
@@ -408,9 +410,7 @@ export default function App() {
               onRename={handleRenameContract}
             />
 
-            {tab.kind === 'overview' ? (
-              <OverviewPanel contracts={contracts ?? []} raceCfg={raceCfg} theme={theme} />
-            ) : tab.kind === 'contract' && activeContract ? (
+            {tab.kind === 'contract' && activeContract ? (
               <ContractDetailPanel
                 key={tab.contractId}
                 contract={activeContract}
@@ -423,8 +423,6 @@ export default function App() {
               <div className="mt-4 flex justify-center py-8">
                 <span className="loading loading-spinner loading-md" />
               </div>
-            ) : tab.kind === 'contract' ? (
-              <OverviewPanel contracts={contracts ?? []} raceCfg={raceCfg} theme={theme} />
             ) : (
               <DeployPanel
                 persisted={persisted}
