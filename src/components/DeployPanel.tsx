@@ -802,20 +802,13 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
               {TRADABLE_TOKENS.map((token) => {
                 const isAgnt = token === 'AGNT';
                 const selected = isAgnt || (persisted.tradingTokens ?? DEFAULT_TRADING_TOKENS).includes(token);
-                const tokenColors: Record<string, string> = {
-                  AGNT: 'btn-error',
-                  TON: 'btn-info',
-                  NOT: 'btn-ghost btn-active',
-                  BUILD: 'btn-warning',
-                  USDT: 'btn-ghost btn-active',
-                };
                 return (
                   <button
                     key={token}
                     type="button"
                     className={`btn btn-sm rounded-full px-4 ${
                       selected
-                        ? isAgnt ? `${tokenColors[token] ?? 'btn-primary'} cursor-default` : (tokenColors[token] ?? 'btn-primary')
+                        ? isAgnt ? 'btn-primary cursor-default' : 'btn-primary'
                         : 'btn-ghost border border-base-content/15'
                     }`}
                     onClick={() => {
