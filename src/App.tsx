@@ -383,7 +383,7 @@ export default function App() {
           hubToken ? (
             <TokenOpinionPage raceCfg={raceCfg} symbol={hubToken} onBack={() => setHubToken(null)} />
           ) : (
-            <AgentHubPage raceCfg={raceCfg} onSelectToken={(s) => setHubToken(s)} />
+            <AgentHubPage raceCfg={raceCfg} onSelectToken={(s) => setHubToken(s)} onDeploy={openDeploy} />
           )
         ) : (
           <>
