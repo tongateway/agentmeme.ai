@@ -854,9 +854,9 @@ export function ContractDetailPanel({ contract, raceCfg, theme, onDeleted, onSta
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 items-start">
             {/* Left: Contract Details */}
-            <div className="card bg-base-200 shadow-md">
+            <div className="card bg-base-200 shadow-md h-full">
               <div className="card-body gap-3">
                 <h2 className="card-title text-sm">Contract Details</h2>
 
@@ -1002,7 +1002,7 @@ export function ContractDetailPanel({ contract, raceCfg, theme, onDeleted, onSta
               </div>
 
               {/* Quick Actions card */}
-              <div className="card bg-base-200 shadow-md">
+              <div className="card bg-base-200 shadow-md flex-1">
                 <div className="card-body gap-3">
                   <h2 className="card-title text-sm">Quick Actions</h2>
                   <div className="flex flex-wrap items-center gap-2">
