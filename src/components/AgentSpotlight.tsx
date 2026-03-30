@@ -80,7 +80,7 @@ export function AgentSpotlight({ leaderboard }: AgentSpotlightProps) {
           <span className={`mono text-3xl font-bold tabular-nums ${profitColor}`}>
             {profitPct >= 0 ? '+' : ''}{profitPct.toFixed(1)}%
           </span>
-          <div className="text-xs opacity-40 mt-0.5">Return {mode === 'day' ? 'today' : 'this week'}</div>
+          <div className="text-xs opacity-40 mt-0.5">P&L {mode === 'day' ? 'today' : 'this week'}</div>
         </div>
       </div>
     </div>
