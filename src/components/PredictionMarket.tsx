@@ -65,9 +65,6 @@ export function PredictionMarket({ raceCfg, stats }: PredictionMarketProps) {
                   style={{ width: `${conviction}%` }}
                 />
               </div>
-              <div className="text-[10px] opacity-40">
-                {probability.toFixed(0)}% consensus &times; {(stats.avg_confidence * 100).toFixed(0)}% confidence
-              </div>
             </>
           ) : (
             <p className="text-xs opacity-50">No clear directional consensus</p>
