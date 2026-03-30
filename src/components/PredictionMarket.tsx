@@ -30,6 +30,7 @@ export function PredictionMarket({ raceCfg, stats }: PredictionMarketProps) {
 
   const probability = Math.max(stats.bullish_pct, stats.bearish_pct);
   const direction = stats.bullish_pct > stats.bearish_pct ? 'UP' : stats.bearish_pct > stats.bullish_pct ? 'DOWN' : null;
+  const conviction = (probability / 100) * stats.avg_confidence * 100;
 
   let accuracyColor = 'opacity-60';
   if (accuracy) {
@@ -52,17 +53,20 @@ export function PredictionMarket({ raceCfg, stats }: PredictionMarketProps) {
               </div>
               <div className="flex items-center justify-between">
                 <span className={`text-xs ${direction === 'UP' ? 'text-success' : 'text-error'}`}>
-                  Probability {direction}
+                  Conviction {direction}
                 </span>
                 <span className={`mono text-sm font-bold tabular-nums ${direction === 'UP' ? 'text-success' : 'text-error'}`}>
-                  {probability.toFixed(0)}%
+                  {conviction.toFixed(0)}%
                 </span>
               </div>
               <div className="flex h-2 rounded-full overflow-hidden bg-base-300">
                 <div
                   className={direction === 'UP' ? 'bg-success' : 'bg-error'}
-                  style={{ width: `${probability}%` }}
+                  style={{ width: `${conviction}%` }}
                 />
+              </div>
+              <div className="text-[10px] opacity-40">
+                {probability.toFixed(0)}% consensus &times; {(stats.avg_confidence * 100).toFixed(0)}% confidence
               </div>
             </>
           ) : (
