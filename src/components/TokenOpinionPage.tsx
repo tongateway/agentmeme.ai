@@ -266,6 +266,7 @@ export function TokenOpinionPage({ raceCfg, symbol, onBack }: TokenOpinionPagePr
             const toToken = pp.to_token as string | undefined;
             const amount = pp.amount as string | undefined;
             const shortReason = pp.short_reason as string | undefined;
+            const humanOpinion = pp.human_opinion as string | undefined;
             const reasoning = pp.reasoning as string | undefined;
             const isBuy = r.action === 'create_order' && toToken?.toUpperCase() === symbol;
             const isSell = r.action === 'create_order' && fromToken?.toUpperCase() === symbol;
@@ -286,7 +287,7 @@ export function TokenOpinionPage({ raceCfg, symbol, onBack }: TokenOpinionPagePr
                       </div>
                       <div className="flex flex-col">
                         <span className="text-sm font-semibold">
-                          {fmtAddr(r.smart_contract_id)}
+                          {r.contract_name || fmtAddr(r.smart_contract_id)}
                         </span>
                         <span className="flex items-center gap-1 text-[11px] opacity-40">
                           <Clock className="h-3 w-3" />
@@ -304,9 +305,9 @@ export function TokenOpinionPage({ raceCfg, symbol, onBack }: TokenOpinionPagePr
                     <p className="text-sm font-semibold leading-snug">{shortReason}</p>
                   )}
 
-                  {/* Full reasoning */}
-                  {reasoning && (
-                    <p className="text-xs leading-relaxed opacity-60">{reasoning}</p>
+                  {/* Human opinion / reasoning */}
+                  {(humanOpinion || reasoning) && (
+                    <p className="text-xs leading-relaxed opacity-60">{humanOpinion || reasoning}</p>
                   )}
 
                   {/* Action details */}

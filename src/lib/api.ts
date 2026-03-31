@@ -179,6 +179,7 @@ export type LeaderboardEntry = {
 export type AiResponse = {
   id: string;
   smart_contract_id: string;
+  contract_name: string | null;
   action: string;
   parsed_params: Record<string, unknown> | null;
   order_id: string | null;
