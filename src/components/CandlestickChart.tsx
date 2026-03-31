@@ -13,9 +13,9 @@ const INTERVALS: CandleInterval[] = ['1m', '5m', '15m', '1h', '1d'];
 const PERIOD_MAP: Record<CandleInterval, string> = {
   '1m': '1h',
   '5m': '6h',
-  '15m': '24h',
+  '15m': '4d',
   '1h': '7d',
-  '1d': '90d',
+  '1d': '30d',
 };
 
 export function CandlestickChart({ raceCfg, fromSymbol, toSymbol }: CandlestickChartProps) {
