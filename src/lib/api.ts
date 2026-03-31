@@ -667,7 +667,7 @@ export async function getRaceAiResponses(
   if (opts?.smartContractId) params.set('smart_contract_id', opts.smartContractId);
   if (opts?.limit != null) params.set('limit', String(opts.limit));
   if (opts?.offset != null) params.set('offset', String(opts.offset));
-  if (opts?.actions?.length) params.set('actions', opts.actions.join(','));
+  if (opts?.actions?.length) params.set('action', opts.actions.join(','));
   if (opts?.tokenSymbol) params.set('token_symbol', opts.tokenSymbol);
   const qs = params.toString();
   const res = await fetch(raceUrl(cfg, `/api/ai-responses${qs ? `?${qs}` : ''}`), {
