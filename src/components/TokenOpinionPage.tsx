@@ -81,7 +81,7 @@ export function TokenOpinionPage({ raceCfg, symbol, onBack }: TokenOpinionPagePr
         getRaceAiResponses(raceCfg, {
           limit: PAGE_SIZE,
           offset: off,
-          actions: ['create_order', 'close_order', 'hold'],
+          actions: ['create_order', 'close_order'],
           tokenSymbol: symbol,
         }),
       ]);
@@ -267,14 +267,13 @@ export function TokenOpinionPage({ raceCfg, symbol, onBack }: TokenOpinionPagePr
             const amount = pp.amount as string | undefined;
             const shortReason = pp.short_reason as string | undefined;
             const reasoning = pp.reasoning as string | undefined;
-            const isHold = r.action === 'hold';
-            const isBuy = r.action === 'create_order' && toToken && toToken !== 'TON';
-            const isSell = r.action === 'create_order' && fromToken && fromToken !== 'TON';
+            const isBuy = r.action === 'create_order' && toToken?.toUpperCase() === symbol;
+            const isSell = r.action === 'create_order' && fromToken?.toUpperCase() === symbol;
             const isClose = r.action === 'close_order';
-            const borderColor = isHold ? 'border-info' : isClose ? 'border-warning' : isBuy ? 'border-success' : isSell ? 'border-error' : 'border-base-content/20';
-            const actionColor = isHold ? 'badge-info' : isClose ? 'badge-warning' : isBuy ? 'badge-success' : isSell ? 'badge-error' : 'badge-ghost';
-            const actionLabel = isHold ? 'HOLD' : isClose ? 'CLOSE' : isBuy ? 'BUY' : isSell ? 'SELL' : r.action;
-            const iconBg = isHold ? 'bg-info/20 text-info' : isClose ? 'bg-warning/20 text-warning' : isBuy ? 'bg-success/20 text-success' : isSell ? 'bg-error/20 text-error' : 'bg-base-300 opacity-60';
+            const borderColor = isClose ? 'border-warning' : isBuy ? 'border-success' : isSell ? 'border-error' : 'border-base-content/20';
+            const actionColor = isClose ? 'badge-warning' : isBuy ? 'badge-success' : isSell ? 'badge-error' : 'badge-ghost';
+            const actionLabel = isClose ? 'CLOSE' : isBuy ? 'BUY' : isSell ? 'SELL' : r.action;
+            const iconBg = isClose ? 'bg-warning/20 text-warning' : isBuy ? 'bg-success/20 text-success' : isSell ? 'bg-error/20 text-error' : 'bg-base-300 opacity-60';
 
             return (
               <div key={r.id} className={`card bg-base-200 shadow-sm border-l-4 ${borderColor}`}>
