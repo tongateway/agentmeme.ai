@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTonAddress, useTonConnectUI, useTonWallet } from '@tonconnect/ui-react';
 import { Address } from '@ton/core';
-import { Rocket, Wallet, ChevronDown, ChevronUp, ExternalLink, Minus, Plus, FileText, Zap } from 'lucide-react';
+import { Rocket, Wallet, ChevronDown, ChevronUp, ExternalLink, Minus, Plus, FileText, Zap, Check, ArrowRight, Info } from 'lucide-react';
 import {
   nanoFromTon,
 } from '@/lib/ton/agentWalletV5';
@@ -18,6 +18,15 @@ function explorerLink(addr: string): string {
 
 const TRADABLE_TOKENS = ['AGNT', 'TON', 'NOT', 'BUILD', 'USDT'];
 const DEFAULT_TRADING_TOKENS = ['AGNT', 'TON', 'NOT'];
+
+const QUOTE_TOKENS = ['AGNT', 'NOT', 'BUILD', 'USDT'];
+const TOKEN_COLORS: Record<string, string> = {
+  AGNT: '#F5A623',
+  NOT: '#4A90D9',
+  BUILD: '#50C878',
+  USDT: '#50C878',
+  TON: '#888',
+};
 
 /** Parse suggested_pairs from API into a token set for tradingTokens state. */
 function parseSuggestedTokens(pairs: string): string[] {
@@ -321,6 +330,10 @@ export type Persisted = {
   aiProvider?: string;
   agentName?: string;
   tradingTokens?: string[];
+  baseToken?: string;
+  quoteToken?: string;
+  agntTopup?: string;
+  quoteTopup?: string;
   pendingDeploy?: PendingDeploy | null;
 };
 
@@ -487,8 +500,9 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
 
     try {
       setBusy('register');
-      const tokens = persisted.tradingTokens ?? DEFAULT_TRADING_TOKENS;
-      const tradingPairs = buildTradingPairs(tokens);
+      const base = persisted.baseToken ?? 'AGNT';
+      const quote = persisted.quoteToken ?? 'NOT';
+      const tradingPairs = `${base}/${quote}`;
       const pricingId = selectedModelOption.pricing?.[0]?.id;
       if (!pricingId) throw new Error('No pricing tier available for this model');
       const created = await registerRaceContract(raceCfg, {
@@ -497,7 +511,7 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
         pricing_id: pricingId,
         ...(selectedProvider ? { ai_provider: selectedProvider } : {}),
         ...(persisted.agentName?.trim() ? { name: persisted.agentName.trim() } : {}),
-        ...(tradingPairs ? { trading_pairs: tradingPairs } : {}),
+        trading_pairs: tradingPairs,
       });
       setPersisted((p) => ({ ...p, contractAddress: created.address, raceContractId: created.id }));
       onContractRegistered?.(created.id);
@@ -585,17 +599,18 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
         contractId = persisted.raceContractId;
       } else {
         // 1. Register with backend — it creates the contract and returns the address
-        const tokens2 = persisted.tradingTokens ?? DEFAULT_TRADING_TOKENS;
-        const tradingPairs2 = buildTradingPairs(tokens2);
+        const base2 = persisted.baseToken ?? 'AGNT';
+        const quote2 = persisted.quoteToken ?? 'NOT';
+        const tradingPairs2 = `${base2}/${quote2}`;
         const pricingId2 = selectedModelOption.pricing?.[0]?.id;
         if (!pricingId2) throw new Error('No pricing tier available for this model');
         const created = await registerRaceContract(raceCfg, {
           prompt: persisted.prompt,
-  
+
           pricing_id: pricingId2,
           ...(selectedProvider ? { ai_provider: selectedProvider } : {}),
           ...(persisted.agentName?.trim() ? { name: persisted.agentName.trim() } : {}),
-          ...(tradingPairs2 ? { trading_pairs: tradingPairs2 } : {}),
+          trading_pairs: tradingPairs2,
         });
 
         contractId = created.id;
@@ -645,6 +660,11 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
 
   const busyLabel = busy === 'deploy' ? 'Deploying contract...' : busy === 'register' ? 'Registering agent...' : busy === 'topup' ? 'Sending TON...' : null;
   const canRetryRegisterOnly = !!persisted.contractAddress && !persisted.raceContractId;
+
+  const totalDeployTon = (0.6 + parseFloat(persisted.deployAmountTon || '0')).toFixed(1);
+  const hasName = !!(persisted.agentName?.trim());
+  const hasPair = !!(persisted.quoteToken);
+  const hasStrategy = !!(persisted.prompt?.trim());
 
   return (
     <div className="mt-4 mx-auto max-w-2xl">
@@ -791,42 +811,70 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
 
           <div className="my-2" />
 
-          {/* Section 2: Trading Tokens */}
+          {/* Section 2: Trading Pair */}
           <div>
             <div className="flex items-center gap-2 mb-3">
               <div className="flex h-7 w-7 items-center justify-center rounded-full bg-success/20 text-[11px] font-bold text-success">2</div>
-              <span className="text-base font-bold">Trading Tokens</span>
-              <span className="text-[10px] opacity-40 ml-1">(AGNT token will trade by default)</span>
+              <span className="text-base font-bold">Trading Pair</span>
+              <span className="text-[10px] opacity-40 ml-1">(1 pair per agent)</span>
             </div>
-            <div className="flex flex-wrap gap-2">
-              {TRADABLE_TOKENS.map((token) => {
-                const isAgnt = token === 'AGNT';
-                const selected = isAgnt || (persisted.tradingTokens ?? DEFAULT_TRADING_TOKENS).includes(token);
+
+            {/* Selected pair display */}
+            <div className="flex items-center gap-2 mb-3">
+              <span className="inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-bold" style={{ background: 'oklch(var(--bc) / 0.08)' }}>
+                <span className="h-2.5 w-2.5 rounded-full" style={{ background: TOKEN_COLORS[persisted.baseToken ?? 'AGNT'] }} />
+                {persisted.baseToken ?? 'AGNT'}
+              </span>
+              <span className="opacity-40">/</span>
+              {persisted.quoteToken ? (
+                <span className="inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-bold" style={{ background: 'oklch(var(--bc) / 0.08)' }}>
+                  <span className="h-2.5 w-2.5 rounded-full" style={{ background: TOKEN_COLORS[persisted.quoteToken] ?? '#888' }} />
+                  {persisted.quoteToken}
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  className="btn btn-sm btn-primary rounded-full gap-1 px-3"
+                  onClick={() => setPersisted((p) => ({ ...p, quoteToken: 'NOT' }))}
+                >
+                  pick <ArrowRight className="h-3 w-3" />
+                </button>
+              )}
+            </div>
+
+            {/* Quote token picker */}
+            <div className="flex flex-wrap gap-2 mb-2">
+              {QUOTE_TOKENS.map((token) => {
+                const isBase = token === (persisted.baseToken ?? 'AGNT');
+                const selected = token === persisted.quoteToken;
                 return (
                   <button
                     key={token}
                     type="button"
-                    className={`btn btn-sm rounded-full px-4 ${
+                    className={`btn btn-sm rounded-full px-4 gap-1.5 ${
                       selected
-                        ? isAgnt ? 'btn-primary cursor-default' : 'btn-primary'
-                        : 'btn-ghost border border-base-content/15'
+                        ? 'btn-primary'
+                        : isBase
+                          ? 'btn-ghost border border-base-content/10 opacity-40'
+                          : 'btn-ghost border border-base-content/15'
                     }`}
+                    disabled={isBase}
                     onClick={() => {
-                      if (isAgnt) return;
-                      setPersisted((p) => {
-                        const current = p.tradingTokens ?? [...DEFAULT_TRADING_TOKENS];
-                        const next = selected
-                          ? current.filter((t) => t !== token)
-                          : [...current, token];
-                        return { ...p, tradingTokens: next };
-                      });
+                      if (isBase) return;
+                      setPersisted((p) => ({ ...p, quoteToken: token }));
                     }}
                   >
+                    <span className="h-2 w-2 rounded-full" style={{ background: TOKEN_COLORS[token] ?? '#888' }} />
                     {token}
-                    {isAgnt && <span className="text-[10px] opacity-70 ml-1">(always)</span>}
+                    {isBase && <span className="text-[10px] opacity-60">b</span>}
                   </button>
                 );
               })}
+            </div>
+
+            <div className="flex items-center gap-1.5 text-[10px] opacity-40">
+              <Info className="h-3 w-3" />
+              TON = gas/deploy only, not tradeable. AGNT pre-selected but changeable.
             </div>
           </div>
 
@@ -853,9 +901,11 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
                       setPersisted((p) => ({
                         ...p,
                         prompt: result.prompt,
-                        ...(result.suggested_pairs ? {
-                          tradingTokens: Array.from(parseSuggestedTokens(result.suggested_pairs)),
-                        } : {}),
+                        ...(result.suggested_pairs ? (() => {
+                          const tokens = parseSuggestedTokens(result.suggested_pairs);
+                          const quote = tokens.find((t) => t !== 'AGNT') ?? 'NOT';
+                          return { quoteToken: quote };
+                        })() : {}),
                       }));
                     } catch (e) {
                       setErr(e instanceof Error ? e.message : 'Failed to generate strategy');
@@ -920,17 +970,25 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
                   Available variables <span className="normal-case opacity-70">(click to insert)</span>
                 </div>
                 <div className="flex flex-wrap gap-1.5">
-                  {promptVars.map((v) => (
-                    <button
-                      key={v.key}
-                      type="button"
-                      className="btn btn-xs btn-ghost border border-base-content/10 hover:border-primary/40 hover:bg-primary/10 gap-1 font-mono transition-colors"
-                      title={v.description}
-                      onClick={() => insertPromptVar(v)}
-                    >
-                      <span className="text-primary/80">{`{${v.key}}`}</span>
-                    </button>
-                  ))}
+                  {promptVars.map((v) => {
+                    const inPrompt = persisted.prompt.includes(`{${v.key}}`);
+                    return (
+                      <button
+                        key={v.key}
+                        type="button"
+                        className={`btn btn-xs gap-1 font-mono transition-colors ${
+                          inPrompt
+                            ? 'btn-primary border-primary/40'
+                            : 'btn-ghost border border-base-content/10 hover:border-primary/40 hover:bg-primary/10'
+                        }`}
+                        title={v.description}
+                        onClick={() => insertPromptVar(v)}
+                      >
+                        <span className={inPrompt ? '' : 'text-primary/80'}>{`{${v.key}}`}</span>
+                        {inPrompt && <Check className="h-3 w-3" />}
+                      </button>
+                    );
+                  })}
                 </div>
                 <div className="mt-1.5 text-[10px] opacity-30 flex items-center gap-1.5">
                   <span className="h-1.5 w-1.5 rounded-full bg-success animate-pulse shrink-0" />
@@ -942,66 +1000,143 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
 
           <div className="my-2" />
 
-          {/* Section 3: Name & Deploy */}
+          {/* Section 4: Name & Fund */}
           <div className="space-y-3">
             <div className="flex items-center gap-2 mb-3">
               <div className="flex h-7 w-7 items-center justify-center rounded-full bg-success/20 text-[11px] font-bold text-success">4</div>
-              <span className="text-base font-bold">Name & Deploy</span>
+              <span className="text-base font-bold">Name & Fund</span>
             </div>
 
             {/* Agent Name */}
-            <div>
-              <label className="text-xs font-medium opacity-60 mb-1.5 block" htmlFor="agentName">
-                Agent Name
-              </label>
-              <input
-                id="agentName"
-                type="text"
-                className="input input-bordered w-full"
-                value={persisted.agentName ?? ''}
-                onChange={(e) => setPersisted((p) => ({ ...p, agentName: e.target.value }))}
-                placeholder="e.g. Moon Hunter, Degen Alpha, TON Shark..."
-                maxLength={40}
-              />
+            <input
+              id="agentName"
+              type="text"
+              className="input input-bordered w-full"
+              value={persisted.agentName ?? ''}
+              onChange={(e) => setPersisted((p) => ({ ...p, agentName: e.target.value }))}
+              placeholder="Agent name, e.g. Moon Hunter"
+              maxLength={40}
+            />
+
+            {/* Fund rows */}
+            <div className="rounded-lg border border-base-content/10 overflow-hidden">
+              {/* Extra TON */}
+              <div className="flex items-center justify-between px-4 py-3">
+                <div className="flex items-center gap-2">
+                  <span className="h-2.5 w-2.5 rounded-full" style={{ background: TOKEN_COLORS.TON }} />
+                  <span className="text-sm font-semibold">Extra TON</span>
+                  <span className="text-[10px] opacity-40">gas & fees</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <button className="btn btn-ghost btn-xs btn-square" type="button" onClick={() => {
+                    const cur = parseFloat(persisted.deployAmountTon || '0');
+                    if (cur > 0) setPersisted((p) => ({ ...p, deployAmountTon: String(Math.max(0, cur - 1)) }));
+                  }}><Minus className="h-3 w-3" /></button>
+                  <input type="text" className="input input-bordered input-sm w-16 text-center mono font-semibold" value={persisted.deployAmountTon} onChange={(e) => setPersisted((p) => ({ ...p, deployAmountTon: e.target.value }))} inputMode="decimal" />
+                  <button className="btn btn-ghost btn-xs btn-square" type="button" onClick={() => {
+                    const cur = parseFloat(persisted.deployAmountTon || '0');
+                    setPersisted((p) => ({ ...p, deployAmountTon: String(cur + 1) }));
+                  }}><Plus className="h-3 w-3" /></button>
+                </div>
+              </div>
+
+              {/* AGNT topup */}
+              <div className="flex items-center justify-between px-4 py-3 border-t border-base-content/5">
+                <div className="flex items-center gap-2">
+                  <span className="h-2.5 w-2.5 rounded-full" style={{ background: TOKEN_COLORS.AGNT }} />
+                  <span className="text-sm font-semibold">AGNT topup</span>
+                  <span className="text-[10px] opacity-40">base capital</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <button className="btn btn-ghost btn-xs btn-square" type="button" onClick={() => {
+                    const cur = parseFloat(persisted.agntTopup || '0');
+                    if (cur > 0) setPersisted((p) => ({ ...p, agntTopup: String(Math.max(0, cur - 1)) }));
+                  }}><Minus className="h-3 w-3" /></button>
+                  <input type="text" className="input input-bordered input-sm w-16 text-center mono font-semibold" value={persisted.agntTopup ?? '0'} onChange={(e) => setPersisted((p) => ({ ...p, agntTopup: e.target.value }))} inputMode="decimal" />
+                  <button className="btn btn-ghost btn-xs btn-square" type="button" onClick={() => {
+                    const cur = parseFloat(persisted.agntTopup || '0');
+                    setPersisted((p) => ({ ...p, agntTopup: String(cur + 1) }));
+                  }}><Plus className="h-3 w-3" /></button>
+                </div>
+              </div>
+
+              {/* Quote token topup */}
+              {persisted.quoteToken && persisted.quoteToken !== 'AGNT' && (
+                <div className="flex items-center justify-between px-4 py-3 border-t border-base-content/5">
+                  <div className="flex items-center gap-2">
+                    <span className="h-2.5 w-2.5 rounded-full" style={{ background: TOKEN_COLORS[persisted.quoteToken] ?? '#888' }} />
+                    <span className="text-sm font-semibold">{persisted.quoteToken} topup</span>
+                    <span className="text-[10px] opacity-40">quote capital</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <button className="btn btn-ghost btn-xs btn-square" type="button" onClick={() => {
+                      const cur = parseFloat(persisted.quoteTopup || '0');
+                      if (cur > 0) setPersisted((p) => ({ ...p, quoteTopup: String(Math.max(0, cur - 1)) }));
+                    }}><Minus className="h-3 w-3" /></button>
+                    <input type="text" className="input input-bordered input-sm w-16 text-center mono font-semibold" value={persisted.quoteTopup ?? '0'} onChange={(e) => setPersisted((p) => ({ ...p, quoteTopup: e.target.value }))} inputMode="decimal" />
+                    <button className="btn btn-ghost btn-xs btn-square" type="button" onClick={() => {
+                      const cur = parseFloat(persisted.quoteTopup || '0');
+                      setPersisted((p) => ({ ...p, quoteTopup: String(cur + 1) }));
+                    }}><Plus className="h-3 w-3" /></button>
+                  </div>
+                </div>
+              )}
+
+              {/* WHERE YOUR TON GOES */}
+              <div className="border-t border-base-content/10 px-4 py-3 space-y-1.5">
+                <div className="text-[10px] uppercase tracking-wider font-semibold opacity-40">Where your TON goes</div>
+                <div className="flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-1.5">
+                    <span className="h-1.5 w-1.5 rounded-full bg-purple-400" />
+                    <span className="opacity-60">AI service provider</span>
+                    {selectedModelOption && (
+                      <span className="opacity-40">({shortModelName(selectedModelOption.name)})</span>
+                    )}
+                  </div>
+                  <span className="mono opacity-60">
+                    {selectedModelOption?.pricing?.[0]
+                      ? `${selectedModelOption.pricing[0].price} ${selectedModelOption.pricing[0].currency}/${selectedModelOption.pricing[0].cntDecisions} dec`
+                      : '—'}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-1.5">
+                    <span className="h-1.5 w-1.5 rounded-full bg-orange-400" />
+                    <span className="opacity-60">Service fee for deploying agent</span>
+                  </div>
+                  <span className="mono opacity-60">~0.6 TON</span>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-1.5">
+                    <span className="h-1.5 w-1.5 rounded-full bg-blue-400" />
+                    <span className="opacity-60">Gas</span>
+                    <span className="opacity-30">(stays on agent wallet for orders)</span>
+                  </div>
+                  <span className="mono opacity-60">{persisted.deployAmountTon || '0'} TON</span>
+                </div>
+              </div>
+
+              {/* Total */}
+              <div className="border-t border-base-content/10 px-4 py-2.5 flex items-center justify-between">
+                <span className="text-xs opacity-50">Deploy ~0.6 TON &nbsp;+ {persisted.deployAmountTon || '0'} TON gas</span>
+                <span className="text-sm font-bold mono">Total: {totalDeployTon} TON</span>
+              </div>
             </div>
 
-            <label className="text-xs opacity-50 block">Extra Funds (TON) <span className="opacity-60">— added on top of deploy fee</span></label>
-            <div className="flex items-center gap-2">
-              <button
-                className="btn btn-ghost btn-sm btn-square"
-                type="button"
-                onClick={() => {
-                  const cur = parseFloat(persisted.deployAmountTon || '0');
-                  if (cur > 0) setPersisted((p) => ({ ...p, deployAmountTon: String(Math.max(0, cur - 1)) }));
-                }}
-              >
-                <Minus className="h-3.5 w-3.5" />
-              </button>
-              <input
-                type="text"
-                className="input input-bordered flex-1 text-center mono text-lg font-semibold"
-                value={persisted.deployAmountTon}
-                onChange={(e) => setPersisted((p) => ({ ...p, deployAmountTon: e.target.value }))}
-                inputMode="decimal"
-                placeholder="5"
-              />
-              <button
-                className="btn btn-ghost btn-sm btn-square"
-                type="button"
-                onClick={() => {
-                  const cur = parseFloat(persisted.deployAmountTon || '0');
-                  setPersisted((p) => ({ ...p, deployAmountTon: String(cur + 1) }));
-                }}
-              >
-                <Plus className="h-3.5 w-3.5" />
-              </button>
-            </div>
-            <div className="flex items-center justify-center gap-3 text-[11px] opacity-40">
-              <span>~0.6 TON deploy fee + your funds</span>
-              <span className="opacity-40">&middot;</span>
-              <span>Agent starts trading immediately</span>
+            {/* Footer note */}
+            <div className="flex items-center gap-1.5 text-[10px] opacity-40">
+              <Info className="h-3 w-3 shrink-0" />
+              Tokens transferred to agent&apos;s on-chain wallet for <strong className="opacity-70">{persisted.baseToken ?? 'AGNT'}/{persisted.quoteToken ?? '...'}</strong>. Signed via TonConnect.
             </div>
 
+            {/* Validation checklist */}
+            <div className="flex items-center gap-3 text-xs">
+              <span className={hasName ? 'opacity-80' : 'opacity-30'}>&middot; Name</span>
+              <span className={hasPair ? 'opacity-80' : 'opacity-30'}>&middot; Pair</span>
+              <span className={hasStrategy ? 'opacity-80' : 'opacity-30'}>&middot; Strategy</span>
+            </div>
+
+            {/* Deploy button */}
             <button
               className={`btn btn-success btn-lg w-full gap-2 text-base font-semibold shadow-md ${busy ? 'btn-disabled' : ''}`}
               onClick={() => void deployAndRegister()}
@@ -1012,11 +1147,7 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
               ) : (
                 <Rocket className="h-4.5 w-4.5" />
               )}
-              {busyLabel ?? (
-                parseFloat(persisted.deployAmountTon || '0') > 0
-                  ? `Deploy + Fund ${persisted.deployAmountTon} TON`
-                  : 'Deploy Agent'
-              )}
+              {busyLabel ?? `Deploy \u00B7 ${totalDeployTon} TON`}
             </button>
 
             {canRetryRegisterOnly && (
@@ -1029,6 +1160,8 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
                 Retry registration only
               </button>
             )}
+
+            <p className="text-center text-xs opacity-40">Agent starts trading immediately</p>
           </div>
 
           {/* Contract Address (shown after deploy) */}
