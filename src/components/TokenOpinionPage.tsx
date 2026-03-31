@@ -7,6 +7,7 @@ import {
   type PublicApiConfig,
 } from '@/lib/api';
 import { PredictionMarket } from '@/components/PredictionMarket';
+import { CandlestickChart } from '@/components/CandlestickChart';
 
 type TokenOpinionPageProps = {
   raceCfg: PublicApiConfig;
@@ -132,6 +133,9 @@ export function TokenOpinionPage({ raceCfg, symbol, onBack }: TokenOpinionPagePr
   const bearPct = stats?.bearish_pct ?? 0;
   const tokenColor = TOKEN_COLORS[symbol] ?? 'bg-primary text-primary-content';
 
+  const chartFrom = 'TON';
+  const chartTo = symbol === 'TON' ? 'USDT' : symbol;
+
   return (
     <div className="mt-4 flex flex-col lg:flex-row gap-6">
       {/* Left sidebar */}
@@ -222,6 +226,15 @@ export function TokenOpinionPage({ raceCfg, symbol, onBack }: TokenOpinionPagePr
 
       {/* Right column — opinion feed */}
       <div className="flex-1 min-w-0 flex flex-col gap-4">
+        {/* Candlestick Chart */}
+        {stats && (
+          <div className="card bg-base-200 shadow-md overflow-hidden">
+            <div className="card-body p-4">
+              <CandlestickChart raceCfg={raceCfg} fromSymbol={chartFrom} toSymbol={chartTo} />
+            </div>
+          </div>
+        )}
+
         {/* Feed header */}
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-bold">Agent Trading Feed</h2>
