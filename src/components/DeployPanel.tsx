@@ -17,7 +17,6 @@ function explorerLink(addr: string): string {
 }
 
 const TRADABLE_TOKENS = ['AGNT', 'TON', 'NOT', 'BUILD', 'USDT'];
-const DEFAULT_TRADING_TOKENS = ['AGNT', 'TON', 'NOT'];
 
 const QUOTE_TOKENS = ['AGNT', 'NOT', 'BUILD', 'USDT'];
 const TOKEN_COLORS: Record<string, string> = {
@@ -40,19 +39,6 @@ function parseSuggestedTokens(pairs: string): string[] {
   return Array.from(tokens);
 }
 
-/** Build trading_pairs string from selected tokens. Pairs each non-AGNT token with AGNT + cross-pairs. */
-function buildTradingPairs(tokens: string[]): string {
-  const set = new Set(tokens.map((t) => t.toUpperCase()));
-  set.add('AGNT'); // always included
-  const pairs: string[] = [];
-  const arr = Array.from(set);
-  for (let i = 0; i < arr.length; i++) {
-    for (let j = i + 1; j < arr.length; j++) {
-      pairs.push(`${arr[i]}/${arr[j]}`);
-    }
-  }
-  return pairs.join(',');
-}
 
 const FALLBACK_AI_MODELS: AiModelOption[] = [
   { id: 'Qwen/Qwen3-32B', name: 'Qwen3-32B', provider: 'Qwen' },
