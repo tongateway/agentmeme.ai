@@ -304,7 +304,10 @@ export function ContractDetailPanel({ contract, raceCfg, theme, onDeleted, onSta
 
   // AI responses: load from cache first, then refresh
   const aiCacheKey = aiResponsesCacheKey(contract.id);
-  const cachedAi = useMemo(() => readCache<AiResponse[]>(aiCacheKey), [aiCacheKey]);
+  const cachedAi = useMemo(() => {
+    const raw = readCache<AiResponse[]>(aiCacheKey);
+    return Array.isArray(raw) ? raw : null;
+  }, [aiCacheKey]);
   const [aiResponses, setAiResponses] = useState<AiResponse[]>(cachedAi ?? []);
   const [aiLoading, setAiLoading] = useState(!cachedAi); // only show spinner if no cache
   const [aiRefreshing, setAiRefreshing] = useState(false); // background refresh indicator
@@ -315,7 +318,10 @@ export function ContractDetailPanel({ contract, raceCfg, theme, onDeleted, onSta
 
   // Token balances (TON + jettons) — cached
   const balCacheKey = balancesCacheKey(contract.address);
-  const cachedBalances = useMemo(() => readCache<TokenBalanceRow[]>(balCacheKey), [balCacheKey]);
+  const cachedBalances = useMemo(() => {
+    const raw = readCache<TokenBalanceRow[]>(balCacheKey);
+    return Array.isArray(raw) ? raw : null;
+  }, [balCacheKey]);
   const [tokenBalances, setTokenBalances] = useState<TokenBalanceRow[]>(cachedBalances ?? []);
   const [balancesLoading, setBalancesLoading] = useState(!cachedBalances);
   const [balancesRefreshing, setBalancesRefreshing] = useState(false);

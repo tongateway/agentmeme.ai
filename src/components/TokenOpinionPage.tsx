@@ -92,6 +92,12 @@ export function TokenOpinionPage({ raceCfg, symbol, onBack }: TokenOpinionPagePr
     void load(0, false);
   }, [load]);
 
+  // Must be before early returns to satisfy Rules of Hooks
+  const tradeOpinions = useMemo(
+    () => opinions.filter((op) => op.action === 'create_order' || op.action === 'close_order'),
+    [opinions],
+  );
+
   const handleLoadMore = () => {
     const next = offset + PAGE_SIZE;
     setOffset(next);
@@ -135,12 +141,6 @@ export function TokenOpinionPage({ raceCfg, symbol, onBack }: TokenOpinionPagePr
 
   const chartFrom = 'TON';
   const chartTo = symbol === 'TON' ? 'USDT' : symbol;
-
-  // Filter to only show trade actions (BUY/SELL/CLOSE), not HOLD/WAIT
-  const tradeOpinions = useMemo(
-    () => opinions.filter((op) => op.action === 'create_order' || op.action === 'close_order'),
-    [opinions],
-  );
 
   return (
     <div className="mt-4 flex flex-col lg:flex-row gap-6">
