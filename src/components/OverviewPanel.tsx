@@ -165,7 +165,7 @@ export function OverviewPanel({ contracts, raceCfg, theme }: OverviewPanelProps)
       try {
         const all = await Promise.all(
           contracts.map(async (c, idx) => {
-            const responses = await getRaceAiResponses(raceCfg, {
+            const { results: responses } = await getRaceAiResponses(raceCfg, {
               smartContractId: c.id,
               limit: 120,
             });

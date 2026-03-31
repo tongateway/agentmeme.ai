@@ -507,7 +507,7 @@ export function ContractDetailPanel({ contract, raceCfg, theme, onDeleted, onSta
     }
     setAiError(null);
     try {
-      const data = await getRaceAiResponses(raceCfg, {
+      const { results: data } = await getRaceAiResponses(raceCfg, {
         smartContractId: contract.id,
         limit: 50,
       });

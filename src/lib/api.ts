@@ -656,24 +656,28 @@ export async function listContractsFromLeaderboard(cfg: PublicApiConfig): Promis
   }));
 }
 
+export type AiResponsePage = { results: AiResponse[]; total: number };
+
 export async function getRaceAiResponses(
   cfg: PublicApiConfig,
-  opts?: { smartContractId?: string; limit?: number; offset?: number },
-): Promise<AiResponse[]> {
+  opts?: { smartContractId?: string; limit?: number; offset?: number; actions?: string[]; tokenSymbol?: string },
+): Promise<AiResponsePage> {
   const params = new URLSearchParams();
   if (opts?.smartContractId) params.set('smart_contract_id', opts.smartContractId);
   if (opts?.limit != null) params.set('limit', String(opts.limit));
   if (opts?.offset != null) params.set('offset', String(opts.offset));
+  if (opts?.actions?.length) params.set('actions', opts.actions.join(','));
+  if (opts?.tokenSymbol) params.set('token_symbol', opts.tokenSymbol);
   const qs = params.toString();
   const res = await fetch(raceUrl(cfg, `/api/ai-responses${qs ? `?${qs}` : ''}`), {
     method: 'GET',
     headers: publicGetHeaders(cfg),
   });
   const data = await jsonOrThrow(res);
-  // API returns { results: [...] } or a plain array
-  if (Array.isArray(data)) return data;
-  if (data && Array.isArray(data.results)) return data.results;
-  return [];
+  // API returns { results: [...], total } or a plain array
+  if (Array.isArray(data)) return { results: data, total: data.length };
+  if (data && Array.isArray(data.results)) return { results: data.results, total: data.total ?? data.results.length };
+  return { results: [], total: 0 };
 }
 
 /** Fetch a single AI response by ID (includes live bullish/bearish counts). */
@@ -1498,11 +1502,10 @@ export async function getTokenOpinions(cfg: PublicApiConfig): Promise<TokenOpini
   return jsonOrThrow(res);
 }
 
-export async function getTokenOpinionDetail(cfg: PublicApiConfig, symbol: string, opts?: { limit?: number; offset?: number; actions?: string[] }): Promise<TokenOpinionDetail> {
+export async function getTokenOpinionDetail(cfg: PublicApiConfig, symbol: string, opts?: { limit?: number; offset?: number }): Promise<TokenOpinionDetail> {
   const params = new URLSearchParams();
   if (opts?.limit != null) params.set('limit', String(opts.limit));
   if (opts?.offset != null) params.set('offset', String(opts.offset));
-  if (opts?.actions?.length) params.set('actions', opts.actions.join(','));
   const qs = params.toString();
   const res = await fetch(raceUrl(cfg, `/api/token-opinions/${encodeURIComponent(symbol)}${qs ? `?${qs}` : ''}`), {
     method: 'GET',

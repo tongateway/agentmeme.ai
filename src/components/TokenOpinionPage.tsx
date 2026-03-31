@@ -2,7 +2,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { Bot, ArrowLeft, TrendingUp, TrendingDown, Users, Target, Clock } from 'lucide-react';
 import {
   getTokenOpinionDetail,
-  type AgentOpinion,
+  getRaceAiResponses,
+  type AiResponse,
   type TokenOpinionSummary,
   type PublicApiConfig,
 } from '@/lib/api';
@@ -63,7 +64,7 @@ const PAGE_SIZE = 20;
 
 export function TokenOpinionPage({ raceCfg, symbol, onBack }: TokenOpinionPageProps) {
   const [stats, setStats] = useState<TokenOpinionSummary | null>(null);
-  const [opinions, setOpinions] = useState<AgentOpinion[]>([]);
+  const [responses, setResponses] = useState<AiResponse[]>([]);
   const [total, setTotal] = useState(0);
   const [offset, setOffset] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -75,10 +76,18 @@ export function TokenOpinionPage({ raceCfg, symbol, onBack }: TokenOpinionPagePr
     else setLoading(true);
     setError(null);
     try {
-      const data = await getTokenOpinionDetail(raceCfg, symbol, { limit: PAGE_SIZE, offset: off, actions: ['create_order', 'close_order'] });
-      setStats(data.stats);
-      setTotal(data.total);
-      setOpinions((prev) => (append ? [...prev, ...data.opinions] : data.opinions));
+      const [statsData, feedData] = await Promise.all([
+        off === 0 ? getTokenOpinionDetail(raceCfg, symbol, { limit: 0 }) : null,
+        getRaceAiResponses(raceCfg, {
+          limit: PAGE_SIZE,
+          offset: off,
+          actions: ['create_order', 'close_order'],
+          tokenSymbol: symbol,
+        }),
+      ]);
+      if (statsData) setStats(statsData.stats);
+      setTotal(feedData.total);
+      setResponses((prev) => (append ? [...prev, ...feedData.results] : feedData.results));
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -244,26 +253,32 @@ export function TokenOpinionPage({ raceCfg, symbol, onBack }: TokenOpinionPagePr
           </div>
         </div>
 
-        {opinions.length === 0 ? (
+        {responses.length === 0 ? (
           <div className="card bg-base-200 shadow-md">
             <div className="card-body p-4">
               <span className="text-sm opacity-60">No trade activity on this token yet.</span>
             </div>
           </div>
         ) : (
-          opinions.map((op) => {
-            const sentUpper = (op.sentiment ?? '').toUpperCase();
-            const isHold = op.action === 'hold';
-            const borderColor = isHold ? 'border-warning' : sentUpper === 'BULLISH' ? 'border-success' : sentUpper === 'BEARISH' ? 'border-error' : 'border-base-content/20';
-            const actionColor = isHold ? 'badge-warning' : sentUpper === 'BULLISH' ? 'badge-success' : sentUpper === 'BEARISH' ? 'badge-error' : 'badge-ghost';
-            const actionLabel = op.action === 'create_order' ? (sentUpper === 'BULLISH' ? 'BUY' : 'SELL') : op.action === 'close_order' ? 'CLOSE' : op.action === 'hold' ? 'HOLD' : op.action;
-
-            const iconBg = isHold ? 'bg-warning/20 text-warning' : sentUpper === 'BULLISH' ? 'bg-success/20 text-success' : sentUpper === 'BEARISH' ? 'bg-error/20 text-error' : 'bg-base-300 opacity-60';
+          responses.map((r) => {
+            const pp = r.parsed_params ?? {};
+            const fromToken = pp.from_token as string | undefined;
+            const toToken = pp.to_token as string | undefined;
+            const amount = pp.amount as string | undefined;
+            const shortReason = pp.short_reason as string | undefined;
+            const reasoning = pp.reasoning as string | undefined;
+            const isBuy = r.action === 'create_order' && toToken && toToken !== 'TON';
+            const isSell = r.action === 'create_order' && fromToken && fromToken !== 'TON';
+            const isClose = r.action === 'close_order';
+            const borderColor = isClose ? 'border-warning' : isBuy ? 'border-success' : isSell ? 'border-error' : 'border-base-content/20';
+            const actionColor = isClose ? 'badge-warning' : isBuy ? 'badge-success' : isSell ? 'badge-error' : 'badge-ghost';
+            const actionLabel = isClose ? 'CLOSE' : isBuy ? 'BUY' : isSell ? 'SELL' : r.action;
+            const iconBg = isClose ? 'bg-warning/20 text-warning' : isBuy ? 'bg-success/20 text-success' : isSell ? 'bg-error/20 text-error' : 'bg-base-300 opacity-60';
 
             return (
-              <div key={op.id} className={`card bg-base-200 shadow-sm border-l-4 ${borderColor}`}>
+              <div key={r.id} className={`card bg-base-200 shadow-sm border-l-4 ${borderColor}`}>
                 <div className="card-body p-4 gap-3">
-                  {/* Header: agent info + action badge */}
+                  {/* Header: action + time */}
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex items-center gap-3">
                       <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${iconBg}`}>
@@ -271,11 +286,11 @@ export function TokenOpinionPage({ raceCfg, symbol, onBack }: TokenOpinionPagePr
                       </div>
                       <div className="flex flex-col">
                         <span className="text-sm font-semibold">
-                          {op.agent_name || fmtAddr(op.agent_address)}
+                          {fmtAddr(r.smart_contract_id)}
                         </span>
                         <span className="flex items-center gap-1 text-[11px] opacity-40">
                           <Clock className="h-3 w-3" />
-                          {timeAgo(op.created_at)}
+                          {timeAgo(r.created_at)}
                         </span>
                       </div>
                     </div>
@@ -285,20 +300,20 @@ export function TokenOpinionPage({ raceCfg, symbol, onBack }: TokenOpinionPagePr
                   </div>
 
                   {/* Short reason as title */}
-                  {op.short_reason && (
-                    <p className="text-sm font-semibold leading-snug">{op.short_reason}</p>
+                  {shortReason && (
+                    <p className="text-sm font-semibold leading-snug">{shortReason}</p>
                   )}
 
                   {/* Full reasoning */}
-                  {op.reasoning && (
-                    <p className="text-xs leading-relaxed opacity-60">{op.reasoning}</p>
+                  {reasoning && (
+                    <p className="text-xs leading-relaxed opacity-60">{reasoning}</p>
                   )}
 
                   {/* Action details */}
-                  {(op.from_token || op.to_token) && (
+                  {(fromToken || toToken) && (
                     <div className="text-[10px] opacity-35 mono">
-                      {op.from_token} &rarr; {op.to_token}
-                      {op.amount_nano && op.amount_nano !== '0' && ` (${fmtNano(op.amount_nano, op.from_token)} ${op.from_token})`}
+                      {fromToken} &rarr; {toToken}
+                      {amount && amount !== '0' && ` (${fmtNano(amount, fromToken)} ${fromToken})`}
                     </div>
                   )}
                 </div>
@@ -307,7 +322,7 @@ export function TokenOpinionPage({ raceCfg, symbol, onBack }: TokenOpinionPagePr
           })
         )}
 
-        {opinions.length < total && (
+        {responses.length < total && (
           <button
             className="btn btn-sm btn-ghost self-center"
             type="button"

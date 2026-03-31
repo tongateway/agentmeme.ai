@@ -89,7 +89,7 @@ export function HomePage({ onNavigate, onDeploy, onOpenContract, raceCfg }: Home
       const [tokenData, lb, responses] = await Promise.all([
         getTokenOpinions(raceCfg).catch(() => [] as TokenOpinionSummary[]),
         getRaceLeaderboard(raceCfg, { limit: 100, sortBy: 'profit_pct' }).catch(() => [] as LeaderboardEntry[]),
-        getRaceAiResponses(raceCfg, { limit: 20 }).catch(() => [] as AiResponse[]),
+        getRaceAiResponses(raceCfg, { limit: 20 }).then((p) => p.results).catch(() => [] as AiResponse[]),
       ]);
       const sorted = (Array.isArray(tokenData) ? tokenData : []).sort(
         (a, b) => b.total_trades_24h - a.total_trades_24h,
