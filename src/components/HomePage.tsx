@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
-  Bot, Rocket, TrendingUp, TrendingDown, Target, Search, Trophy,
-  ChevronRight, Clock,
+  Bot, Rocket, TrendingUp, TrendingDown, Target, Trophy,
+  ChevronRight, Clock, ShieldCheck, Code, FileCheck,
 } from 'lucide-react';
 import {
   getTokenOpinions,
@@ -82,7 +82,6 @@ export function HomePage({ onNavigate, onDeploy, onOpenContract, raceCfg }: Home
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [aiResponses, setAiResponses] = useState<AiResponse[]>([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
 
   const load = useCallback(async () => {
     try {
@@ -154,13 +153,7 @@ export function HomePage({ onNavigate, onDeploy, onOpenContract, raceCfg }: Home
     })
     .slice(0, 6);
 
-  /* ---------- filtered tokens ---------- */
-  const q = search.trim().toLowerCase();
-  const filteredTokens = q
-    ? tokens.filter(
-        (t) => t.token_symbol.toLowerCase().includes(q) || (t.token_name ?? '').toLowerCase().includes(q),
-      )
-    : tokens;
+  const filteredTokens = tokens;
 
   return (
     <div className="flex flex-col gap-6 pb-20">
@@ -380,18 +373,9 @@ export function HomePage({ onNavigate, onDeploy, onOpenContract, raceCfg }: Home
         </section>
       )}
 
-      {/* 5. Token Search + Table */}
+      {/* 5. Token Table */}
       <section className="flex flex-col gap-3">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 opacity-40" />
-          <input
-            type="text"
-            className="input input-bordered w-full pl-9"
-            placeholder="Search tokens…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </div>
+        <h2 className="text-2xl font-bold">Agent Coin Hub</h2>
 
         <div className="card bg-base-200 shadow-md">
           <div className="card-body p-3 sm:p-5 gap-3">
@@ -488,7 +472,7 @@ export function HomePage({ onNavigate, onDeploy, onOpenContract, raceCfg }: Home
                     {filteredTokens.length === 0 && (
                       <tr>
                         <td colSpan={7} className="text-center py-6 text-sm opacity-40">
-                          No tokens match &ldquo;{search}&rdquo;
+                          No tokens available yet.
                         </td>
                       </tr>
                     )}
@@ -496,6 +480,34 @@ export function HomePage({ onNavigate, onDeploy, onOpenContract, raceCfg }: Home
                 </table>
               </div>
             )}
+          </div>
+        </div>
+      </section>
+
+      {/* 6. Why Trust Us */}
+      <section className="flex flex-col gap-3">
+        <h2 className="text-2xl font-bold">Why Trust Us</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="card bg-base-200 shadow-sm">
+            <div className="card-body items-center text-center p-5 gap-2">
+              <Code className="h-8 w-8 opacity-60" />
+              <h3 className="font-bold">Open Source</h3>
+              <p className="text-xs opacity-60">All code is fully open-source and available on GitHub for anyone to review, audit, and verify.</p>
+            </div>
+          </div>
+          <div className="card bg-base-200 shadow-sm">
+            <div className="card-body items-center text-center p-5 gap-2">
+              <FileCheck className="h-8 w-8 opacity-60" />
+              <h3 className="font-bold">Audited Contracts</h3>
+              <p className="text-xs opacity-60">Smart contracts are audited and verifiable on-chain. Every transaction is transparent and traceable.</p>
+            </div>
+          </div>
+          <div className="card bg-base-200 shadow-sm">
+            <div className="card-body items-center text-center p-5 gap-2">
+              <ShieldCheck className="h-8 w-8 opacity-60" />
+              <h3 className="font-bold">Transparent Decisions</h3>
+              <p className="text-xs opacity-60">Every AI trade decision is recorded with full reasoning, so you can review agent logic at any time.</p>
+            </div>
           </div>
         </div>
       </section>
