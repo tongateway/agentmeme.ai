@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTonConnectUI } from '@tonconnect/ui-react';
-import { Address } from '@ton/core';
+import { Address, beginCell } from '@ton/core';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import {
   getRaceAiResponses,
@@ -29,7 +29,7 @@ import {
   Trash2, ArrowDownToLine, ArrowUpFromLine, XCircle,
   Share2, Check, Pause, Play, Wallet, AlertTriangle, RefreshCw,
   FileText, Copy, Pencil, Save,
-  Bot, Zap, Activity, ArrowUpRight, Clock,
+  Bot, Zap, Activity, ArrowUpRight, Clock, ShieldOff,
 } from 'lucide-react';
 import { buildShareUrl } from './ShareCard';
 import { nanoFromTon } from '@/lib/ton/agentWalletV5';
@@ -649,6 +649,39 @@ export function ContractDetailPanel({ contract, raceCfg, theme, onDeleted, onSta
     }
   }, [raceCfg, contract.id, isActive, onStatusChanged]);
 
+  const [revokeBusy, setRevokeBusy] = useState(false);
+  const [revokeSuccess, setRevokeSuccess] = useState(false);
+
+  const handleRevokeAccess = useCallback(async () => {
+    setRevokeBusy(true);
+    setError(null);
+    try {
+      const bounceable = Address.parse(contract.address).toString({ bounceable: true });
+      // set_signature_allowed: op=0x73657473, query_id=0, new_status=false(-1 is true, 0 is false)
+      const body = beginCell()
+        .storeUint(0x73657473, 32) // op: set_signature_allowed ("sets")
+        .storeUint(0, 64)          // query_id
+        .storeInt(0, 1)            // new_status = false
+        .endCell();
+
+      await tonConnectUI.sendTransaction({
+        validUntil: Math.floor(Date.now() / 1000) + 10 * 60,
+        messages: [
+          {
+            address: bounceable,
+            amount: nanoFromTon('0.05'),
+            payload: body.toBoc().toString('base64'),
+          },
+        ],
+      });
+      setRevokeSuccess(true);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setRevokeBusy(false);
+    }
+  }, [contract.address, tonConnectUI]);
+
   const canDelete = withdrawDone.has('jetton') && withdrawDone.has('ton');
 
   // Chart data: sorted oldest → newest
@@ -1057,6 +1090,16 @@ export function ContractDetailPanel({ contract, raceCfg, theme, onDeleted, onSta
                     >
                       <ArrowDownToLine className="h-4 w-4" />
                       {withdrawBusy === 'withdraw' ? 'Withdrawing...' : withdrawDone.has('jetton') && withdrawDone.has('ton') ? 'All withdrawn' : 'Withdraw all'}
+                    </button>
+
+                    <button
+                      className={`btn btn-outline btn-sm gap-1 ${revokeSuccess ? 'btn-success' : 'btn-error'}`}
+                      onClick={() => void handleRevokeAccess()}
+                      disabled={revokeBusy || revokeSuccess}
+                      type="button"
+                    >
+                      <ShieldOff className="h-4 w-4" />
+                      {revokeBusy ? 'Revoking...' : revokeSuccess ? 'Access revoked' : 'Revoke access'}
                     </button>
                   </div>
 
