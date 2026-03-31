@@ -669,7 +669,11 @@ export async function getRaceAiResponses(
     method: 'GET',
     headers: publicGetHeaders(cfg),
   });
-  return jsonOrThrow(res);
+  const data = await jsonOrThrow(res);
+  // API returns { results: [...] } or a plain array
+  if (Array.isArray(data)) return data;
+  if (data && Array.isArray(data.results)) return data.results;
+  return [];
 }
 
 /** Fetch a single AI response by ID (includes live bullish/bearish counts). */
@@ -1524,6 +1528,39 @@ export async function getTokenPredictionAccuracy(
     { method: 'GET', headers: publicGetHeaders(cfg) },
   );
   return jsonOrThrow(res);
+}
+
+/* ==========================================================================
+ * Candles (OHLCV)
+ * ========================================================================== */
+
+export type CandleData = {
+  t: number;  // unix timestamp
+  o: number;  // open
+  h: number;  // high
+  l: number;  // low
+  c: number;  // close
+  v: number;  // volume
+};
+
+export type CandleInterval = '1m' | '5m' | '15m' | '1h' | '1d';
+
+export async function getCandles(
+  cfg: PublicApiConfig,
+  from: string,
+  to: string,
+  opts?: { interval?: CandleInterval; period?: string },
+): Promise<CandleData[]> {
+  const params = new URLSearchParams();
+  if (opts?.interval) params.set('interval', opts.interval);
+  if (opts?.period) params.set('period', opts.period);
+  const qs = params.toString();
+  const res = await fetch(
+    raceUrl(cfg, `/api/candles/${encodeURIComponent(from)}/${encodeURIComponent(to)}${qs ? `?${qs}` : ''}`),
+    { method: 'GET', headers: publicGetHeaders(cfg) },
+  );
+  const data = await jsonOrThrow(res);
+  return (data as { candles: CandleData[] }).candles ?? [];
 }
 
 /* ==========================================================================
