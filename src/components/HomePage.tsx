@@ -102,8 +102,6 @@ export function HomePage({ onNavigate, onDeploy, onOpenContract, raceCfg }: Home
 
   useEffect(() => {
     void load();
-    const iv = setInterval(() => void load(), 30_000);
-    return () => clearInterval(iv);
   }, [load]);
 
   /* ---------- computed stats ---------- */

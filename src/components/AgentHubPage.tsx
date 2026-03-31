@@ -81,8 +81,6 @@ export function AgentHubPage({ raceCfg, onSelectToken, onDeploy, onViewLeaderboa
 
   useEffect(() => {
     void load();
-    const iv = setInterval(() => void load(), 60_000);
-    return () => clearInterval(iv);
   }, [load]);
 
   const maxAgents = Math.max(0, ...tokens.map((x) => x.active_agents));
