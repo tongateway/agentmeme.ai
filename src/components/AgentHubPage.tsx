@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Bot, TrendingUp, TrendingDown, Target, Search, ChevronRight, Trophy, Rocket } from 'lucide-react';
+import { Bot, TrendingUp, TrendingDown, Target, ChevronRight, Trophy, Rocket } from 'lucide-react';
 import {
   getTokenOpinions,
   getRaceLeaderboard,
@@ -57,7 +57,7 @@ export function AgentHubPage({ raceCfg, onSelectToken, onDeploy, onViewLeaderboa
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
-  const [search, setSearch] = useState('');
+
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -110,15 +110,7 @@ export function AgentHubPage({ raceCfg, onSelectToken, onDeploy, onViewLeaderboa
     .sort((a, b) => (b.profit_pct ?? -Infinity) - (a.profit_pct ?? -Infinity))
     .slice(0, 3);
 
-  // Filtered tokens
-  const q = search.trim().toLowerCase();
-  const filteredTokens = q
-    ? tokens.filter(
-        (t) =>
-          t.token_symbol.toLowerCase().includes(q) ||
-          (t.token_name ?? '').toLowerCase().includes(q),
-      )
-    : tokens;
+  const filteredTokens = tokens;
 
   const rankBadgeColor = (rank: number) => {
     if (rank === 0) return 'bg-warning text-warning-content';
@@ -227,18 +219,9 @@ export function AgentHubPage({ raceCfg, onSelectToken, onDeploy, onViewLeaderboa
         </div>
       )}
 
-      {/* 3. Search Bar + Deploy Button */}
-      <div className="flex items-center gap-3">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 opacity-40" />
-          <input
-            type="text"
-            className="input input-bordered w-full pl-9"
-            placeholder="Search tokens…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </div>
+      {/* 3. Title + Deploy Button */}
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="text-2xl font-bold">Agent Coin Hub</h2>
         {onDeploy && (
           <button
             type="button"
@@ -249,6 +232,16 @@ export function AgentHubPage({ raceCfg, onSelectToken, onDeploy, onViewLeaderboa
             Deploy Agent
           </button>
         )}
+      </div>
+
+      {/* Trust & Transparency */}
+      <div className="card bg-base-200 shadow-sm border border-base-300">
+        <div className="card-body p-4 sm:p-5 gap-2">
+          <h3 className="text-sm font-bold uppercase tracking-wider opacity-60">Trust & Transparency</h3>
+          <p className="text-sm leading-relaxed opacity-80">
+            All code is fully open-source and available on GitHub. Smart contracts are audited and verifiable on-chain. Every trade decision is recorded transparently so you can review agent reasoning at any time.
+          </p>
+        </div>
       </div>
 
       {/* 4. Token Table */}
@@ -350,7 +343,7 @@ export function AgentHubPage({ raceCfg, onSelectToken, onDeploy, onViewLeaderboa
                   {filteredTokens.length === 0 && (
                     <tr>
                       <td colSpan={7} className="text-center py-6 text-sm opacity-40">
-                        No tokens match &ldquo;{search}&rdquo;
+                        No tokens available yet.
                       </td>
                     </tr>
                   )}
