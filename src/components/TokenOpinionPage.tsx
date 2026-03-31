@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Bot, ArrowLeft, TrendingUp, TrendingDown, Users, Target, Clock } from 'lucide-react';
 import {
   getTokenOpinionDetail,
@@ -136,6 +136,12 @@ export function TokenOpinionPage({ raceCfg, symbol, onBack }: TokenOpinionPagePr
   const chartFrom = 'TON';
   const chartTo = symbol === 'TON' ? 'USDT' : symbol;
 
+  // Filter to only show trade actions (BUY/SELL/CLOSE), not HOLD/WAIT
+  const tradeOpinions = useMemo(
+    () => opinions.filter((op) => op.action === 'create_order' || op.action === 'close_order'),
+    [opinions],
+  );
+
   return (
     <div className="mt-4 flex flex-col lg:flex-row gap-6">
       {/* Left sidebar */}
@@ -244,14 +250,14 @@ export function TokenOpinionPage({ raceCfg, symbol, onBack }: TokenOpinionPagePr
           </div>
         </div>
 
-        {opinions.length === 0 ? (
+        {tradeOpinions.length === 0 ? (
           <div className="card bg-base-200 shadow-md">
             <div className="card-body p-4">
-              <span className="text-sm opacity-60">No opinions on this token yet.</span>
+              <span className="text-sm opacity-60">No trade activity on this token yet.</span>
             </div>
           </div>
         ) : (
-          opinions.map((op) => {
+          tradeOpinions.map((op) => {
             const sentUpper = (op.sentiment ?? '').toUpperCase();
             const isHold = op.action === 'hold';
             const borderColor = isHold ? 'border-warning' : sentUpper === 'BULLISH' ? 'border-success' : sentUpper === 'BEARISH' ? 'border-error' : 'border-base-content/20';
