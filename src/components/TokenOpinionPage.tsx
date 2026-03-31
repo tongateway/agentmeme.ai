@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Bot, ArrowLeft, TrendingUp, TrendingDown, Users, Target, Clock } from 'lucide-react';
 import {
   getTokenOpinionDetail,
@@ -75,7 +75,7 @@ export function TokenOpinionPage({ raceCfg, symbol, onBack }: TokenOpinionPagePr
     else setLoading(true);
     setError(null);
     try {
-      const data = await getTokenOpinionDetail(raceCfg, symbol, { limit: PAGE_SIZE, offset: off });
+      const data = await getTokenOpinionDetail(raceCfg, symbol, { limit: PAGE_SIZE, offset: off, actions: ['create_order', 'close_order'] });
       setStats(data.stats);
       setTotal(data.total);
       setOpinions((prev) => (append ? [...prev, ...data.opinions] : data.opinions));
@@ -91,12 +91,6 @@ export function TokenOpinionPage({ raceCfg, symbol, onBack }: TokenOpinionPagePr
     setOffset(0);
     void load(0, false);
   }, [load]);
-
-  // Must be before early returns to satisfy Rules of Hooks
-  const tradeOpinions = useMemo(
-    () => opinions.filter((op) => op.action === 'create_order' || op.action === 'close_order'),
-    [opinions],
-  );
 
   const handleLoadMore = () => {
     const next = offset + PAGE_SIZE;
@@ -250,14 +244,14 @@ export function TokenOpinionPage({ raceCfg, symbol, onBack }: TokenOpinionPagePr
           </div>
         </div>
 
-        {tradeOpinions.length === 0 ? (
+        {opinions.length === 0 ? (
           <div className="card bg-base-200 shadow-md">
             <div className="card-body p-4">
               <span className="text-sm opacity-60">No trade activity on this token yet.</span>
             </div>
           </div>
         ) : (
-          tradeOpinions.map((op) => {
+          opinions.map((op) => {
             const sentUpper = (op.sentiment ?? '').toUpperCase();
             const isHold = op.action === 'hold';
             const borderColor = isHold ? 'border-warning' : sentUpper === 'BULLISH' ? 'border-success' : sentUpper === 'BEARISH' ? 'border-error' : 'border-base-content/20';

@@ -1498,10 +1498,11 @@ export async function getTokenOpinions(cfg: PublicApiConfig): Promise<TokenOpini
   return jsonOrThrow(res);
 }
 
-export async function getTokenOpinionDetail(cfg: PublicApiConfig, symbol: string, opts?: { limit?: number; offset?: number }): Promise<TokenOpinionDetail> {
+export async function getTokenOpinionDetail(cfg: PublicApiConfig, symbol: string, opts?: { limit?: number; offset?: number; actions?: string[] }): Promise<TokenOpinionDetail> {
   const params = new URLSearchParams();
   if (opts?.limit != null) params.set('limit', String(opts.limit));
   if (opts?.offset != null) params.set('offset', String(opts.offset));
+  if (opts?.actions?.length) params.set('actions', opts.actions.join(','));
   const qs = params.toString();
   const res = await fetch(raceUrl(cfg, `/api/token-opinions/${encodeURIComponent(symbol)}${qs ? `?${qs}` : ''}`), {
     method: 'GET',

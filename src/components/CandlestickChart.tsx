@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { createChart, type IChartApi, type UTCTimestamp } from 'lightweight-charts';
+import { createChart, CandlestickSeries, HistogramSeries, type IChartApi, type UTCTimestamp } from 'lightweight-charts';
 import { getCandles, type CandleInterval, type PublicApiConfig } from '@/lib/api';
 
 type CandlestickChartProps = {
@@ -88,9 +88,7 @@ export function CandlestickChart({ raceCfg, fromSymbol, toSymbol }: CandlestickC
           return;
         }
 
-        // Candlestick series
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const candleSeries = (chart as any).addCandlestickSeries({
+        const candleSeries = chart.addSeries(CandlestickSeries, {
           upColor: '#00C389',
           downColor: '#FF5353',
           borderUpColor: '#00C389',
@@ -109,9 +107,7 @@ export function CandlestickChart({ raceCfg, fromSymbol, toSymbol }: CandlestickC
           })),
         );
 
-        // Volume histogram series
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const volumeSeries = (chart as any).addHistogramSeries({
+        const volumeSeries = chart.addSeries(HistogramSeries, {
           color: '#26a69a80',
           priceFormat: { type: 'volume' },
           priceScaleId: '',
