@@ -81,13 +81,19 @@ export function TokenOpinionPage({ raceCfg, symbol, onBack }: TokenOpinionPagePr
         getRaceAiResponses(raceCfg, {
           limit: PAGE_SIZE,
           offset: off,
-          actions: ['create_order', 'close_order'],
+          actions: ['create_order'],
           tokenSymbol: symbol,
         }),
       ]);
       if (statsData) setStats(statsData.stats);
+      // Only show trades involving this token (BUY = to_token matches, SELL = from_token matches)
+      const sym = symbol.toUpperCase();
+      const relevant = feedData.results.filter((r) => {
+        const pp = r.parsed_params ?? {};
+        return (pp.to_token as string)?.toUpperCase() === sym || (pp.from_token as string)?.toUpperCase() === sym;
+      });
       setTotal(feedData.total);
-      setResponses((prev) => (append ? [...prev, ...feedData.results] : feedData.results));
+      setResponses((prev) => (append ? [...prev, ...relevant] : relevant));
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -268,13 +274,11 @@ export function TokenOpinionPage({ raceCfg, symbol, onBack }: TokenOpinionPagePr
             const shortReason = pp.short_reason as string | undefined;
             const humanOpinion = pp.human_opinion as string | undefined;
             const reasoning = pp.reasoning as string | undefined;
-            const isBuy = r.action === 'create_order' && toToken?.toUpperCase() === symbol;
-            const isSell = r.action === 'create_order' && fromToken?.toUpperCase() === symbol;
-            const isClose = r.action === 'close_order';
-            const borderColor = isClose ? 'border-warning' : isBuy ? 'border-success' : isSell ? 'border-error' : 'border-base-content/20';
-            const actionColor = isClose ? 'badge-warning' : isBuy ? 'badge-success' : isSell ? 'badge-error' : 'badge-ghost';
-            const actionLabel = isClose ? 'CLOSE' : isBuy ? 'BUY' : isSell ? 'SELL' : r.action;
-            const iconBg = isClose ? 'bg-warning/20 text-warning' : isBuy ? 'bg-success/20 text-success' : isSell ? 'bg-error/20 text-error' : 'bg-base-300 opacity-60';
+            const isBuy = toToken?.toUpperCase() === symbol;
+            const borderColor = isBuy ? 'border-success' : 'border-error';
+            const actionColor = isBuy ? 'badge-success' : 'badge-error';
+            const actionLabel = isBuy ? 'BUY' : 'SELL';
+            const iconBg = isBuy ? 'bg-success/20 text-success' : 'bg-error/20 text-error';
 
             return (
               <div key={r.id} className={`card bg-base-200 shadow-sm border-l-4 ${borderColor}`}>
