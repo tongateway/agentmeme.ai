@@ -18,8 +18,12 @@ function explorerLink(addr: string): string {
 
 const TRADABLE_TOKENS = ['AGNT', 'TON', 'NOT', 'BUILD', 'USDT'];
 
-const BASE_TOKENS = ['AGNT', 'NOT', 'BUILD', 'USDT'];
-const QUOTE_TOKENS = ['AGNT', 'NOT', 'BUILD', 'USDT'];
+const SUPPORTED_PAIRS: [string, string][] = [['AGNT', 'USDT'], ['USDT', 'NOT'], ['USDT', 'BUILD']];
+const BASE_TOKENS = [...new Set(SUPPORTED_PAIRS.map(([b]) => b))];
+
+function quotesForBase(base: string): string[] {
+  return SUPPORTED_PAIRS.filter(([b]) => b === base).map(([, q]) => q);
+}
 const TOKEN_COLORS: Record<string, string> = {
   AGNT: '#F5A623',
   NOT: '#4A90D9',
@@ -852,40 +856,36 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
 
             {/* Token picker pills — picks base or quote depending on pickingSide */}
             <div className="flex flex-wrap gap-2 mb-2">
-              {(pickingSide === 'base' ? BASE_TOKENS : QUOTE_TOKENS).map((token) => {
+              {(() => {
                 const curBase = persisted.baseToken ?? 'AGNT';
                 const curQuote = persisted.quoteToken;
-                const otherSide = pickingSide === 'base' ? curQuote : curBase;
-                const isOther = token === otherSide;
-                const isSelected = pickingSide === 'base' ? token === curBase : token === curQuote;
-                return (
-                  <button
-                    key={token}
-                    type="button"
-                    className={`btn btn-sm rounded-full px-4 gap-1.5 ${
-                      isSelected
-                        ? 'btn-primary'
-                        : isOther
-                          ? 'btn-ghost border border-base-content/10 opacity-40'
-                          : 'btn-ghost border border-base-content/15'
-                    }`}
-                    disabled={isOther}
-                    onClick={() => {
-                      if (isOther) return;
-                      if (pickingSide === 'base') {
-                        setPersisted((p) => ({ ...p, baseToken: token }));
-                      } else {
-                        setPersisted((p) => ({ ...p, quoteToken: token }));
-                      }
-                      setPickingSide(null);
-                    }}
-                  >
-                    <span className="h-2 w-2 rounded-full" style={{ background: TOKEN_COLORS[token] ?? '#888' }} />
-                    {token}
-                    {isOther && <span className="text-[10px] opacity-60">{pickingSide === 'base' ? 'q' : 'b'}</span>}
-                  </button>
-                );
-              })}
+                const options = pickingSide === 'base' ? BASE_TOKENS : quotesForBase(curBase);
+                return options.map((token) => {
+                  const isSelected = pickingSide === 'base' ? token === curBase : token === curQuote;
+                  return (
+                    <button
+                      key={token}
+                      type="button"
+                      className={`btn btn-sm rounded-full px-4 gap-1.5 ${
+                        isSelected ? 'btn-primary' : 'btn-ghost border border-base-content/15'
+                      }`}
+                      onClick={() => {
+                        if (pickingSide === 'base') {
+                          const newQuotes = quotesForBase(token);
+                          const keepQuote = curQuote && newQuotes.includes(curQuote) ? curQuote : newQuotes[0];
+                          setPersisted((p) => ({ ...p, baseToken: token, quoteToken: keepQuote }));
+                        } else {
+                          setPersisted((p) => ({ ...p, quoteToken: token }));
+                        }
+                        setPickingSide(null);
+                      }}
+                    >
+                      <span className="h-2 w-2 rounded-full" style={{ background: TOKEN_COLORS[token] ?? '#888' }} />
+                      {token}
+                    </button>
+                  );
+                });
+              })()}
             </div>
 
           </div>
