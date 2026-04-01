@@ -341,6 +341,7 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
   const [aiModelGroups, setAiModelGroups] = useState<AiModelsByProvider[]>([]);
   const [modelsLoading, setModelsLoading] = useState(false);
   const [modelListOpen, setModelListOpen] = useState(!persisted.aiModel);
+  const [pickingSide, setPickingSide] = useState<'base' | 'quote' | null>(persisted.quoteToken ? null : 'quote');
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [promptVars, setPromptVars] = useState<PromptVariable[]>([]);
   const [generating, setGenerating] = useState(false);
@@ -806,93 +807,86 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
               <span className="text-[10px] opacity-40 ml-1">(1 pair per agent)</span>
             </div>
 
-            {/* Selected pair display */}
+            {/* Selected pair display — click either side to pick */}
             <div className="flex items-center gap-2 mb-3">
-              <span className="inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-bold" style={{ background: 'oklch(var(--bc) / 0.08)' }}>
-                <span className="h-2.5 w-2.5 rounded-full" style={{ background: TOKEN_COLORS[persisted.baseToken ?? 'AGNT'] }} />
-                {persisted.baseToken ?? 'AGNT'}
-              </span>
-              <span className="opacity-40">/</span>
-              {persisted.quoteToken ? (
-                <span className="inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-bold" style={{ background: 'oklch(var(--bc) / 0.08)' }}>
-                  <span className="h-2.5 w-2.5 rounded-full" style={{ background: TOKEN_COLORS[persisted.quoteToken] ?? '#888' }} />
-                  {persisted.quoteToken}
-                </span>
-              ) : (
+              {/* Base token — click to switch to picking base */}
+              {pickingSide === 'base' ? (
+                <button type="button" className="btn btn-sm btn-primary rounded-full gap-1 px-3" onClick={() => setPickingSide(null)}>
+                  pick <ArrowRight className="h-3 w-3" />
+                </button>
+              ) : (persisted.baseToken ?? 'AGNT') ? (
                 <button
                   type="button"
-                  className="btn btn-sm btn-primary rounded-full gap-1 px-3"
-                  onClick={() => setPersisted((p) => ({ ...p, quoteToken: 'NOT' }))}
+                  className="inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-bold cursor-pointer hover:opacity-70 transition-opacity"
+                  style={{ background: 'oklch(var(--bc) / 0.08)' }}
+                  onClick={() => setPickingSide('base')}
                 >
+                  <span className="h-2.5 w-2.5 rounded-full" style={{ background: TOKEN_COLORS[persisted.baseToken ?? 'AGNT'] }} />
+                  {persisted.baseToken ?? 'AGNT'}
+                </button>
+              ) : null}
+
+              <span className="opacity-40">/</span>
+
+              {/* Quote token — click to switch to picking quote */}
+              {pickingSide === 'quote' ? (
+                <button type="button" className="btn btn-sm btn-primary rounded-full gap-1 px-3" onClick={() => setPickingSide(null)}>
+                  pick <ArrowRight className="h-3 w-3" />
+                </button>
+              ) : persisted.quoteToken ? (
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-bold cursor-pointer hover:opacity-70 transition-opacity"
+                  style={{ background: 'oklch(var(--bc) / 0.08)' }}
+                  onClick={() => setPickingSide('quote')}
+                >
+                  <span className="h-2.5 w-2.5 rounded-full" style={{ background: TOKEN_COLORS[persisted.quoteToken] ?? '#888' }} />
+                  {persisted.quoteToken}
+                </button>
+              ) : (
+                <button type="button" className="btn btn-sm btn-primary rounded-full gap-1 px-3" onClick={() => setPickingSide('quote')}>
                   pick <ArrowRight className="h-3 w-3" />
                 </button>
               )}
             </div>
 
-            {/* Token picker pills */}
+            {/* Token picker pills — picks base or quote depending on pickingSide */}
             <div className="flex flex-wrap gap-2 mb-2">
-              {QUOTE_TOKENS.map((token) => {
+              {(pickingSide === 'base' ? BASE_TOKENS : QUOTE_TOKENS).map((token) => {
                 const curBase = persisted.baseToken ?? 'AGNT';
-                const isBase = token === curBase;
-                const isQuote = token === persisted.quoteToken;
+                const curQuote = persisted.quoteToken;
+                const otherSide = pickingSide === 'base' ? curQuote : curBase;
+                const isOther = token === otherSide;
+                const isSelected = pickingSide === 'base' ? token === curBase : token === curQuote;
                 return (
                   <button
                     key={token}
                     type="button"
                     className={`btn btn-sm rounded-full px-4 gap-1.5 ${
-                      isQuote
+                      isSelected
                         ? 'btn-primary'
-                        : isBase
+                        : isOther
                           ? 'btn-ghost border border-base-content/10 opacity-40'
                           : 'btn-ghost border border-base-content/15'
                     }`}
-                    disabled={isBase}
+                    disabled={isOther}
                     onClick={() => {
-                      if (isBase) return;
-                      setPersisted((p) => ({ ...p, quoteToken: token }));
+                      if (isOther) return;
+                      if (pickingSide === 'base') {
+                        setPersisted((p) => ({ ...p, baseToken: token }));
+                      } else {
+                        setPersisted((p) => ({ ...p, quoteToken: token }));
+                      }
+                      setPickingSide(null);
                     }}
                   >
                     <span className="h-2 w-2 rounded-full" style={{ background: TOKEN_COLORS[token] ?? '#888' }} />
                     {token}
-                    {isBase && <span className="text-[10px] opacity-60">b</span>}
+                    {isOther && <span className="text-[10px] opacity-60">{pickingSide === 'base' ? 'q' : 'b'}</span>}
                   </button>
                 );
               })}
             </div>
-
-            {/* Base token selector (collapsed by default) */}
-            <details className="mb-2">
-              <summary className="text-[10px] opacity-40 cursor-pointer hover:opacity-60">Change base token</summary>
-              <div className="flex flex-wrap gap-2 mt-2">
-                {BASE_TOKENS.map((token) => {
-                  const curBase = persisted.baseToken ?? 'AGNT';
-                  const isSelected = token === curBase;
-                  const isQuote = token === persisted.quoteToken;
-                  return (
-                    <button
-                      key={token}
-                      type="button"
-                      className={`btn btn-sm rounded-full px-4 gap-1.5 ${
-                        isSelected
-                          ? 'btn-secondary'
-                          : isQuote
-                            ? 'btn-ghost border border-base-content/10 opacity-40'
-                            : 'btn-ghost border border-base-content/15'
-                      }`}
-                      disabled={isQuote}
-                      onClick={() => {
-                        if (isQuote) return;
-                        setPersisted((p) => ({ ...p, baseToken: token }));
-                      }}
-                    >
-                      <span className="h-2 w-2 rounded-full" style={{ background: TOKEN_COLORS[token] ?? '#888' }} />
-                      {token}
-                      {isSelected && <Check className="h-3 w-3" />}
-                    </button>
-                  );
-                })}
-              </div>
-            </details>
 
             <div className="flex items-center gap-1.5 text-[10px] opacity-40">
               <Info className="h-3 w-3" />
