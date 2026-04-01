@@ -888,10 +888,6 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
               })}
             </div>
 
-            <div className="flex items-center gap-1.5 text-[10px] opacity-40">
-              <Info className="h-3 w-3" />
-              TON = gas/deploy only, not tradeable. AGNT pre-selected but changeable.
-            </div>
           </div>
 
           <div className="my-2" />
