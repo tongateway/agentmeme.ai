@@ -18,6 +18,7 @@ function explorerLink(addr: string): string {
 
 const TRADABLE_TOKENS = ['AGNT', 'TON', 'NOT', 'BUILD', 'USDT'];
 
+const BASE_TOKENS = ['AGNT', 'NOT', 'BUILD', 'USDT'];
 const QUOTE_TOKENS = ['AGNT', 'NOT', 'BUILD', 'USDT'];
 const TOKEN_COLORS: Record<string, string> = {
   AGNT: '#F5A623',
@@ -828,17 +829,18 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
               )}
             </div>
 
-            {/* Quote token picker */}
+            {/* Token picker pills */}
             <div className="flex flex-wrap gap-2 mb-2">
               {QUOTE_TOKENS.map((token) => {
-                const isBase = token === (persisted.baseToken ?? 'AGNT');
-                const selected = token === persisted.quoteToken;
+                const curBase = persisted.baseToken ?? 'AGNT';
+                const isBase = token === curBase;
+                const isQuote = token === persisted.quoteToken;
                 return (
                   <button
                     key={token}
                     type="button"
                     className={`btn btn-sm rounded-full px-4 gap-1.5 ${
-                      selected
+                      isQuote
                         ? 'btn-primary'
                         : isBase
                           ? 'btn-ghost border border-base-content/10 opacity-40'
@@ -857,6 +859,40 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
                 );
               })}
             </div>
+
+            {/* Base token selector (collapsed by default) */}
+            <details className="mb-2">
+              <summary className="text-[10px] opacity-40 cursor-pointer hover:opacity-60">Change base token</summary>
+              <div className="flex flex-wrap gap-2 mt-2">
+                {BASE_TOKENS.map((token) => {
+                  const curBase = persisted.baseToken ?? 'AGNT';
+                  const isSelected = token === curBase;
+                  const isQuote = token === persisted.quoteToken;
+                  return (
+                    <button
+                      key={token}
+                      type="button"
+                      className={`btn btn-sm rounded-full px-4 gap-1.5 ${
+                        isSelected
+                          ? 'btn-secondary'
+                          : isQuote
+                            ? 'btn-ghost border border-base-content/10 opacity-40'
+                            : 'btn-ghost border border-base-content/15'
+                      }`}
+                      disabled={isQuote}
+                      onClick={() => {
+                        if (isQuote) return;
+                        setPersisted((p) => ({ ...p, baseToken: token }));
+                      }}
+                    >
+                      <span className="h-2 w-2 rounded-full" style={{ background: TOKEN_COLORS[token] ?? '#888' }} />
+                      {token}
+                      {isSelected && <Check className="h-3 w-3" />}
+                    </button>
+                  );
+                })}
+              </div>
+            </details>
 
             <div className="flex items-center gap-1.5 text-[10px] opacity-40">
               <Info className="h-3 w-3" />
