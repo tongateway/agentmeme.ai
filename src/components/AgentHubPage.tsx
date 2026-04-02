@@ -232,16 +232,6 @@ export function AgentHubPage({ raceCfg, onSelectToken, onDeploy, onViewLeaderboa
         )}
       </div>
 
-      {/* Trust & Transparency */}
-      <div className="card bg-base-200 shadow-sm border border-base-300">
-        <div className="card-body p-4 sm:p-5 gap-2">
-          <h3 className="text-sm font-bold uppercase tracking-wider opacity-60">Trust & Transparency</h3>
-          <p className="text-sm leading-relaxed opacity-80">
-            All code is fully open-source and available on GitHub. Smart contracts are audited and verifiable on-chain. Every trade decision is recorded transparently so you can review agent reasoning at any time.
-          </p>
-        </div>
-      </div>
-
       {/* 4. Token Table */}
       <div className="card bg-base-200 shadow-md">
         <div className="card-body p-3 sm:p-5 gap-3">
