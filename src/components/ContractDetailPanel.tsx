@@ -16,6 +16,7 @@ import {
   withdrawTon,
   closeAllOrders,
   deleteRaceContract,
+  getDexOrderStats,
   hexBocToBase64,
   type AiResponse,
   type ContractListItem,
@@ -337,6 +338,10 @@ export function ContractDetailPanel({ contract, raceCfg, theme, onDeleted, onSta
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [detailTab, setDetailTab] = useState<'overview' | 'orders' | 'ai'>('overview');
 
+  // DEX order stats
+  const [dexOpenOrders, setDexOpenOrders] = useState(0);
+  const [dexClosedOrders, setDexClosedOrders] = useState(0);
+
   // Address copy feedback
   const [addrCopied, setAddrCopied] = useState(false);
 
@@ -529,6 +534,22 @@ export function ContractDetailPanel({ contract, raceCfg, theme, onDeleted, onSta
     void loadAiResponses(!!cachedAi);
   }, [loadAiResponses, cachedAi]);
 
+  // Fetch DEX order stats
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const rawAddr = Address.parse(contract.address).toRawString();
+        const stats = await getDexOrderStats(rawAddr);
+        if (!cancelled) {
+          setDexOpenOrders(stats.open);
+          setDexClosedOrders(stats.closed);
+        }
+      } catch { /* ignore */ }
+    })();
+    return () => { cancelled = true; };
+  }, [contract.address]);
+
   // --- Withdrawal handlers ---
 
   const handleCloseOrders = useCallback(async () => {
@@ -702,8 +723,8 @@ export function ContractDetailPanel({ contract, raceCfg, theme, onDeleted, onSta
   const maxDec = contract.max_decisions ?? 0;
   const decPct = maxDec > 0 ? Math.round((usedDec / maxDec) * 100) : 0;
 
-  const openOrders = (contract as any).open_orders ?? 0;
-  const closedOrders = (contract as any).closed_orders ?? 0;
+  const openOrders = dexOpenOrders;
+  const closedOrders = dexClosedOrders;
 
   const createdDate = new Date(contract.created_at);
   const createdDay = createdDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
