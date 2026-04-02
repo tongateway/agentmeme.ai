@@ -855,6 +855,11 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
             </div>
 
             {/* Token picker pills — picks base or quote depending on pickingSide */}
+            {pickingSide && (
+              <div className="text-[10px] uppercase tracking-wider font-semibold opacity-40 mb-1">
+                {pickingSide === 'base' ? 'Select base token' : 'Select quote token'}
+              </div>
+            )}
             <div className="flex flex-wrap gap-2 mb-2">
               {(() => {
                 const curBase = persisted.baseToken ?? 'AGNT';
