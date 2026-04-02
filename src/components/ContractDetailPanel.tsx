@@ -204,7 +204,7 @@ function BalanceChart({ points }: { points: ChartPoint[]; theme: AppTheme }) {
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between">
         <div>
-          <div className="text-xs opacity-50">Balance (USD)</div>
+          <div className="text-xs opacity-50">Balance (USD) <span className="opacity-60">· at last decision</span></div>
           <div className="flex items-baseline gap-2">
             <span className="text-3xl font-bold mono tabular-nums">
               ${currentBalance.toFixed(2)}
