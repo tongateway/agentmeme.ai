@@ -320,7 +320,7 @@ export default function App() {
       <header className="navbar mx-auto max-w-6xl px-4 sm:px-6 pt-6 flex-col gap-3 sm:flex-row">
         <div className="flex-1">
           <div className="flex items-center gap-2 cursor-pointer" onClick={() => setPage('home')}>
-            <h1 className="text-2xl font-semibold tracking-tight">AI Trader Race</h1>
+            <pre className="text-[6px] sm:text-[8px] leading-none font-mono select-none opacity-80" style={{ letterSpacing: '-0.5px' }}>{`   _                  _    __  __ \n  / \\    __ _  _ __  | |_ |  \\/  |\n / _ \\  / _\` || '_ \\ | __|| |\\/| |\n/ ___ \\| (_| || | | || |_ | |  | |\n/_/   \\_\\\\__, ||_| |_| \\__||_|  |_|\n         |___/`}</pre>
             <span className="badge badge-neutral badge-sm uppercase tracking-wider">TON dApp</span>
           </div>
         </div>
