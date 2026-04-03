@@ -990,20 +990,25 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
                   {promptVars.map((v) => {
                     const inPrompt = persisted.prompt.includes(`{${v.key}}`);
                     return (
-                      <button
-                        key={v.key}
-                        type="button"
-                        className={`btn btn-xs gap-1 font-mono transition-colors ${
-                          inPrompt
-                            ? 'btn-primary border-primary/40'
-                            : 'btn-ghost border border-base-content/10 hover:border-primary/40 hover:bg-primary/10'
-                        }`}
-                        title={v.description}
-                        onClick={() => insertPromptVar(v)}
-                      >
-                        <span className={inPrompt ? '' : 'text-primary/80'}>{`{${v.key}}`}</span>
-                        {inPrompt && <Check className="h-3 w-3" />}
-                      </button>
+                      <div key={v.key} className="group relative">
+                        <button
+                          type="button"
+                          className={`btn btn-xs gap-1 font-mono transition-colors ${
+                            inPrompt
+                              ? 'btn-primary border-primary/40'
+                              : 'btn-ghost border border-base-content/10 hover:border-primary/40 hover:bg-primary/10'
+                          }`}
+                          onClick={() => insertPromptVar(v)}
+                        >
+                          <span className={inPrompt ? '' : 'text-primary/80'}>{`{${v.key}}`}</span>
+                          {inPrompt && <Check className="h-3 w-3" />}
+                        </button>
+                        {v.description && (
+                          <div className="pointer-events-none absolute left-1/2 -translate-x-1/2 bottom-full mb-1.5 hidden group-hover:block z-20 whitespace-nowrap rounded bg-base-300 border border-base-content/10 px-2 py-1 text-[10px] opacity-0 group-hover:opacity-100 transition-opacity shadow-md">
+                            {v.description}
+                          </div>
+                        )}
+                      </div>
                     );
                   })}
                 </div>
