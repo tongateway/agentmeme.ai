@@ -630,11 +630,14 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
       const gasNano = BigInt(nanoFromTon('0.1'));
       const totalNano = deployFeeNano + gasNano + userFundsNano;
 
+      // Use non-bounceable address for deploy (contract doesn't exist yet)
+      const deployAddress = Address.parse(deployData.mint_keeper_address).toString({ bounceable: false });
+
       await tonConnectUI.sendTransaction({
         validUntil: Math.floor(Date.now() / 1000) + 10 * 60,
         messages: [
           {
-            address: deployData.mint_keeper_address,
+            address: deployAddress,
             amount: String(totalNano),
             stateInit: hexBocToBase64(deployData.state_init_boc_hex),
             payload: hexBocToBase64(deployData.body_boc_hex),
