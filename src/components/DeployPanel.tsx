@@ -806,94 +806,83 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
 
           {/* Section 2: Trading Pair */}
           <div>
-            <div className="flex items-center gap-2 mb-3">
+            <div className="flex items-center gap-2 mb-2">
               <div className="flex h-7 w-7 items-center justify-center rounded-full bg-success/20 text-[11px] font-bold text-success">2</div>
               <span className="text-base font-bold">Trading Pair</span>
               <span className="text-[10px] opacity-40 ml-1">(1 pair per agent)</span>
             </div>
 
-            {/* Selected pair display — click either side to pick */}
-            <div className="flex items-center gap-2 mb-3">
-              {/* Base token — click to switch to picking base */}
-              {pickingSide === 'base' ? (
-                <button type="button" className="btn btn-sm btn-primary rounded-full gap-1 px-3" onClick={() => setPickingSide(null)}>
-                  pick <ArrowRight className="h-3 w-3" />
-                </button>
-              ) : (persisted.baseToken ?? 'AGNT') ? (
+            {pickingSide ? (
+              /* Expanded: picking a side */
+              <div className="rounded-lg border border-primary/30 bg-primary/5 p-3">
+                <div className="text-[10px] uppercase tracking-wider font-semibold opacity-50 mb-2">
+                  {pickingSide === 'base' ? 'Select base token' : 'Select quote token'}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {(() => {
+                    const curBase = persisted.baseToken ?? 'AGNT';
+                    const curQuote = persisted.quoteToken;
+                    const options = pickingSide === 'base' ? BASE_TOKENS : quotesForBase(curBase);
+                    return options.map((token) => {
+                      const isSelected = pickingSide === 'base' ? token === curBase : token === curQuote;
+                      return (
+                        <button
+                          key={token}
+                          type="button"
+                          className={`btn btn-sm rounded-full px-4 gap-1.5 ${
+                            isSelected ? 'btn-primary' : 'btn-ghost border border-base-content/15'
+                          }`}
+                          onClick={() => {
+                            if (pickingSide === 'base') {
+                              const newQuotes = quotesForBase(token);
+                              const keepQuote = curQuote && newQuotes.includes(curQuote) ? curQuote : newQuotes[0];
+                              setPersisted((p) => ({ ...p, baseToken: token, quoteToken: keepQuote }));
+                            } else {
+                              setPersisted((p) => ({ ...p, quoteToken: token }));
+                            }
+                            setPickingSide(null);
+                          }}
+                        >
+                          <span className="h-2 w-2 rounded-full" style={{ background: TOKEN_COLORS[token] ?? '#888' }} />
+                          {token}
+                        </button>
+                      );
+                    });
+                  })()}
+                </div>
+                <button type="button" className="text-[10px] opacity-40 hover:opacity-70 mt-2" onClick={() => setPickingSide(null)}>Cancel</button>
+              </div>
+            ) : (
+              /* Compact: show selected pair inline — click to edit */
+              <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  className="inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-bold cursor-pointer hover:opacity-70 transition-opacity"
+                  className="inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-bold hover:ring-2 hover:ring-primary/30 transition-all cursor-pointer"
                   style={{ background: 'oklch(var(--bc) / 0.08)' }}
                   onClick={() => setPickingSide('base')}
                 >
                   <span className="h-2.5 w-2.5 rounded-full" style={{ background: TOKEN_COLORS[persisted.baseToken ?? 'AGNT'] }} />
                   {persisted.baseToken ?? 'AGNT'}
                 </button>
-              ) : null}
-
-              <span className="opacity-40">/</span>
-
-              {/* Quote token — click to switch to picking quote */}
-              {pickingSide === 'quote' ? (
-                <button type="button" className="btn btn-sm btn-primary rounded-full gap-1 px-3" onClick={() => setPickingSide(null)}>
-                  pick <ArrowRight className="h-3 w-3" />
-                </button>
-              ) : persisted.quoteToken ? (
-                <button
-                  type="button"
-                  className="inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-bold cursor-pointer hover:opacity-70 transition-opacity"
-                  style={{ background: 'oklch(var(--bc) / 0.08)' }}
-                  onClick={() => setPickingSide('quote')}
-                >
-                  <span className="h-2.5 w-2.5 rounded-full" style={{ background: TOKEN_COLORS[persisted.quoteToken] ?? '#888' }} />
-                  {persisted.quoteToken}
-                </button>
-              ) : (
-                <button type="button" className="btn btn-sm btn-primary rounded-full gap-1 px-3" onClick={() => setPickingSide('quote')}>
-                  pick <ArrowRight className="h-3 w-3" />
-                </button>
-              )}
-            </div>
-
-            {/* Token picker pills — picks base or quote depending on pickingSide */}
-            {pickingSide && (
-              <div className="text-[10px] uppercase tracking-wider font-semibold opacity-40 mb-1">
-                {pickingSide === 'base' ? 'Select base token' : 'Select quote token'}
+                <span className="opacity-40 text-sm">/</span>
+                {persisted.quoteToken ? (
+                  <button
+                    type="button"
+                    className="inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-bold hover:ring-2 hover:ring-primary/30 transition-all cursor-pointer"
+                    style={{ background: 'oklch(var(--bc) / 0.08)' }}
+                    onClick={() => setPickingSide('quote')}
+                  >
+                    <span className="h-2.5 w-2.5 rounded-full" style={{ background: TOKEN_COLORS[persisted.quoteToken] ?? '#888' }} />
+                    {persisted.quoteToken}
+                  </button>
+                ) : (
+                  <button type="button" className="btn btn-sm btn-primary rounded-full gap-1 px-3" onClick={() => setPickingSide('quote')}>
+                    pick <ArrowRight className="h-3 w-3" />
+                  </button>
+                )}
+                <span className="text-[10px] opacity-30 ml-1">click to change</span>
               </div>
             )}
-            <div className="flex flex-wrap gap-2 mb-2">
-              {(() => {
-                const curBase = persisted.baseToken ?? 'AGNT';
-                const curQuote = persisted.quoteToken;
-                const options = pickingSide === 'base' ? BASE_TOKENS : quotesForBase(curBase);
-                return options.map((token) => {
-                  const isSelected = pickingSide === 'base' ? token === curBase : token === curQuote;
-                  return (
-                    <button
-                      key={token}
-                      type="button"
-                      className={`btn btn-sm rounded-full px-4 gap-1.5 ${
-                        isSelected ? 'btn-primary' : 'btn-ghost border border-base-content/15'
-                      }`}
-                      onClick={() => {
-                        if (pickingSide === 'base') {
-                          const newQuotes = quotesForBase(token);
-                          const keepQuote = curQuote && newQuotes.includes(curQuote) ? curQuote : newQuotes[0];
-                          setPersisted((p) => ({ ...p, baseToken: token, quoteToken: keepQuote }));
-                        } else {
-                          setPersisted((p) => ({ ...p, quoteToken: token }));
-                        }
-                        setPickingSide(null);
-                      }}
-                    >
-                      <span className="h-2 w-2 rounded-full" style={{ background: TOKEN_COLORS[token] ?? '#888' }} />
-                      {token}
-                    </button>
-                  );
-                });
-              })()}
-            </div>
-
           </div>
 
           <div className="my-2" />
