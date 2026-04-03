@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useTonConnectUI } from '@tonconnect/ui-react';
+import { useTonAddress, useTonConnectUI } from '@tonconnect/ui-react';
 import { Address, beginCell } from '@ton/core';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import {
@@ -289,8 +289,10 @@ function BalanceChart({ points }: { points: ChartPoint[]; theme: AppTheme }) {
 
 export function ContractDetailPanel({ contract, raceCfg, theme, onDeleted, onStatusChanged }: ContractDetailPanelProps) {
   const [tonConnectUI] = useTonConnectUI();
+  const tonAddress = useTonAddress();
 
   const [topupAmount, setTopupAmount] = useState('5');
+  const [topupToken, setTopupToken] = useState('TON');
   const [topupBusy, setTopupBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -488,21 +490,58 @@ export function ContractDetailPanel({ contract, raceCfg, theme, onDeleted, onSta
     setTopupBusy(true);
     setError(null);
     try {
-      await tonConnectUI.sendTransaction({
-        validUntil: Math.floor(Date.now() / 1000) + 10 * 60,
-        messages: [
-          {
-            address: Address.parse(contract.address).toString({ bounceable: false }),
-            amount: nanoFromTon(topupAmount),
-          },
-        ],
-      });
+      const amt = parseFloat(topupAmount || '0') || 0;
+      if (amt <= 0) throw new Error('Amount must be greater than 0');
+      const contractAddr = Address.parse(contract.address);
+
+      if (topupToken === 'TON') {
+        await tonConnectUI.sendTransaction({
+          validUntil: Math.floor(Date.now() / 1000) + 10 * 60,
+          messages: [{
+            address: contractAddr.toString({ bounceable: false }),
+            amount: nanoFromTon(String(amt)),
+          }],
+        });
+      } else {
+        // Jetton transfer
+        if (!tonAddress) throw new Error('Wallet not connected');
+        const tokens = await getRaceTokens(raceCfg);
+        const tokenInfo = tokens.find((t) => t.symbol.toUpperCase() === topupToken.toUpperCase());
+        if (!tokenInfo) throw new Error(`Token ${topupToken} not found`);
+        const nano = BigInt(Math.round(amt * 10 ** tokenInfo.decimals));
+        // Resolve user's jetton wallet
+        const jwRes = await fetch(
+          `https://toncenter.com/api/v3/jetton/wallets?owner_address=${encodeURIComponent(tonAddress)}&jetton_address=${encodeURIComponent(tokenInfo.address)}&limit=1`,
+        );
+        const jwData = (await jwRes.json()) as { jetton_wallets?: { address: string }[] };
+        const jwAddr = jwData.jetton_wallets?.[0]?.address;
+        if (!jwAddr) throw new Error(`You don't hold ${topupToken}`);
+        const ownerAddr = Address.parse(tonAddress);
+        const body = beginCell()
+          .storeUint(0xf8a7ea5, 32)
+          .storeUint(0, 64)
+          .storeCoins(nano)
+          .storeAddress(contractAddr)
+          .storeAddress(ownerAddr)
+          .storeBit(false)
+          .storeCoins(1n)
+          .storeBit(false)
+          .endCell();
+        await tonConnectUI.sendTransaction({
+          validUntil: Math.floor(Date.now() / 1000) + 10 * 60,
+          messages: [{
+            address: Address.parse(jwAddr).toString({ bounceable: true }),
+            amount: nanoFromTon('0.065'),
+            payload: body.toBoc().toString('base64'),
+          }],
+        });
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
       setTopupBusy(false);
     }
-  }, [contract.address, topupAmount, tonConnectUI]);
+  }, [contract.address, topupAmount, topupToken, tonAddress, raceCfg, tonConnectUI]);
 
   const loadAiResponses = useCallback(async (isBackground = false) => {
     if (isBackground) {
@@ -1079,9 +1118,19 @@ export function ContractDetailPanel({ contract, raceCfg, theme, onDeleted, onSta
                         value={topupAmount}
                         onChange={(e) => setTopupAmount(e.target.value)}
                         inputMode="decimal"
-                        placeholder="TON"
+                        placeholder="0"
                       />
-                      <span className="text-xs opacity-40">TON</span>
+                      <select
+                        className="select select-bordered select-xs text-xs mono"
+                        value={topupToken}
+                        onChange={(e) => setTopupToken(e.target.value)}
+                      >
+                        <option value="TON">TON</option>
+                        <option value="AGNT">AGNT</option>
+                        <option value="NOT">NOT</option>
+                        <option value="BUILD">BUILD</option>
+                        <option value="USDT">USDT</option>
+                      </select>
                       <button
                         className={`btn btn-outline btn-xs gap-1 ${topupBusy ? 'btn-disabled' : ''}`}
                         onClick={() => void topupContract()}
