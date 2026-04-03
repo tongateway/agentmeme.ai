@@ -624,12 +624,11 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
 
       // 2. Deploy MintKeeper via the data returned by the backend
       //    value_nanoton = claimMintFlowFees + protocolFee (from backend)
-      const deployTonStr = String(parseFloat(persisted.deployAmountTon || '0') || 0);
+      const deployTonStr = String(Math.max(0, parseFloat(persisted.deployAmountTon || '0') || 0));
       const userFundsNano = BigInt(nanoFromTon(deployTonStr));
-      const deployFeeNano = BigInt(deployData.value_nanoton || 0);
+      const deployFeeNano = BigInt(Math.max(0, Math.floor(Number(deployData.value_nanoton) || 0)));
       const gasNano = BigInt(nanoFromTon('0.1'));
       const totalNano = deployFeeNano + gasNano + userFundsNano;
-      if (totalNano <= 0n) throw new Error('Total deploy amount must be greater than 0');
 
       await tonConnectUI.sendTransaction({
         validUntil: Math.floor(Date.now() / 1000) + 10 * 60,
