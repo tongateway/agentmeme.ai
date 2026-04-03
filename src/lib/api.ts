@@ -502,11 +502,11 @@ export type CloseAllOrdersResult = {
   body_hex: string;
 };
 
-export async function withdrawJetton(cfg: PublicApiConfig, contractId: string, jettonMasterAddress: string): Promise<WithdrawJettonResult> {
+export async function withdrawJetton(cfg: PublicApiConfig, contractId: string, jettonMasterAddress: string, destination?: string): Promise<WithdrawJettonResult> {
   const res = await fetch(raceUrl(cfg, `/api/contracts/${contractId}/withdraw-jetton`), {
     method: 'POST',
     headers: publicPostHeaders(cfg),
-    body: JSON.stringify({ jetton_master_address: jettonMasterAddress }),
+    body: JSON.stringify({ jetton_master_address: jettonMasterAddress, ...(destination ? { destination } : {}) }),
   });
   return jsonOrThrow(res);
 }
@@ -526,11 +526,11 @@ export async function generateStrategy(cfg: PublicApiConfig, ownerAddress: strin
   return jsonOrThrow(res);
 }
 
-export async function withdrawTon(cfg: PublicApiConfig, contractId: string, amount: number): Promise<WithdrawTonResult> {
+export async function withdrawTon(cfg: PublicApiConfig, contractId: string, amount: number, destination?: string): Promise<WithdrawTonResult> {
   const res = await fetch(raceUrl(cfg, `/api/contracts/${contractId}/withdraw-ton`), {
     method: 'POST',
     headers: publicPostHeaders(cfg),
-    body: JSON.stringify({ amount }),
+    body: JSON.stringify({ amount, ...(destination ? { destination } : {}) }),
   });
   return jsonOrThrow(res);
 }
