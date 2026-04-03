@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useTonAddress, useTonConnectUI } from '@tonconnect/ui-react';
+import { useTonConnectUI } from '@tonconnect/ui-react';
 import { Address, beginCell } from '@ton/core';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import {
@@ -289,10 +289,6 @@ function BalanceChart({ points }: { points: ChartPoint[]; theme: AppTheme }) {
 
 export function ContractDetailPanel({ contract, raceCfg, theme, onDeleted, onStatusChanged }: ContractDetailPanelProps) {
   const [tonConnectUI] = useTonConnectUI();
-  const tonAddress = useTonAddress();
-  const ownerRaw = useMemo(() => {
-    try { return tonAddress ? Address.parse(tonAddress).toRawString() : null; } catch { return null; }
-  }, [tonAddress]);
 
   const [topupAmount, setTopupAmount] = useState('5');
   const [topupBusy, setTopupBusy] = useState(false);
@@ -595,7 +591,7 @@ export function ContractDetailPanel({ contract, raceCfg, theme, onDeleted, onSta
       const jettons = await getJettonBalances(contract.address).catch(() => []);
       if (jettons.length > 0) {
         const jettonResults = await Promise.allSettled(
-          jettons.map((j) => withdrawJetton(raceCfg, contract.id, j.jettonAddress, ownerRaw ?? undefined)),
+          jettons.map((j) => withdrawJetton(raceCfg, contract.id, j.jettonAddress)),
         );
         for (const jr of jettonResults) {
           if (jr.status === 'fulfilled' && jr.value.body_hex) {
@@ -620,7 +616,7 @@ export function ContractDetailPanel({ contract, raceCfg, theme, onDeleted, onSta
         const tonRow = tokenBalances.find((t) => t.symbol === 'TON');
         tonAmount = tonRow?.amount ?? 0;
       }
-      const tonResult = await withdrawTon(raceCfg, contract.id, tonAmount, ownerRaw ?? undefined).then(
+      const tonResult = await withdrawTon(raceCfg, contract.id, tonAmount).then(
         (v) => ({ status: 'fulfilled' as const, value: v }),
         (e) => ({ status: 'rejected' as const, reason: e }),
       );
