@@ -1,11 +1,43 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTonAddress, useTonConnectUI, useTonWallet } from '@tonconnect/ui-react';
-import { Address } from '@ton/core';
+import { Address, beginCell } from '@ton/core';
 import { Rocket, Wallet, ChevronDown, ChevronUp, ExternalLink, Minus, Plus, FileText, Zap, Check, ArrowRight, Info } from 'lucide-react';
 import {
   nanoFromTon,
 } from '@/lib/ton/agentWalletV5';
-import { getRaceAiModels, getPromptVariables, registerRaceContract, generateStrategy, hexBocToBase64, type AiModelOption, type AiModelsByProvider, type PromptVariable, type PublicApiConfig } from '@/lib/api';
+import { getRaceAiModels, getRaceTokens, getPromptVariables, registerRaceContract, generateStrategy, hexBocToBase64, type AiModelOption, type AiModelsByProvider, type PromptVariable, type PublicApiConfig, type RaceToken } from '@/lib/api';
+
+/** Build a jetton transfer body cell (op 0xf8a7ea5). */
+function buildJettonTransferBody(opts: {
+  queryId?: number;
+  amount: bigint;
+  destination: Address;
+  responseDestination: Address;
+  forwardTonAmount?: bigint;
+}): string {
+  const cell = beginCell()
+    .storeUint(0xf8a7ea5, 32)           // op: transfer
+    .storeUint(opts.queryId ?? 0, 64)    // query_id
+    .storeCoins(opts.amount)             // jetton amount
+    .storeAddress(opts.destination)       // to (agent contract)
+    .storeAddress(opts.responseDestination) // response_destination (owner)
+    .storeBit(false)                     // no custom_payload
+    .storeCoins(opts.forwardTonAmount ?? 0n) // forward_ton_amount
+    .storeBit(false)                     // no forward_payload
+    .endCell();
+  return cell.toBoc().toString('base64');
+}
+
+/** Resolve the user's jetton wallet address for a given jetton master. */
+async function resolveJettonWallet(ownerAddress: string, jettonMaster: string): Promise<string> {
+  const res = await fetch(
+    `https://toncenter.com/api/v3/jetton/wallets?owner_address=${encodeURIComponent(ownerAddress)}&jetton_address=${encodeURIComponent(jettonMaster)}&limit=1`,
+  );
+  const data = (await res.json()) as { jetton_wallets?: { address: string }[] };
+  const addr = data.jetton_wallets?.[0]?.address;
+  if (!addr) throw new Error('Jetton wallet not found — do you hold this token?');
+  return addr;
+}
 
 function fmtAddr(addr: string): string {
   if (addr.length <= 16) return addr;
@@ -632,17 +664,55 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
 
       // Use non-bounceable address for deploy (contract doesn't exist yet)
       const deployAddress = Address.parse(deployData.mint_keeper_address).toString({ bounceable: false });
+      const contractAddr = Address.parse(deployData.mint_keeper_address);
+      const ownerAddr = Address.parse(tonAddress);
+
+      const messages: { address: string; amount: string; stateInit?: string; payload?: string }[] = [
+        {
+          address: deployAddress,
+          amount: String(totalNano),
+          stateInit: hexBocToBase64(deployData.state_init_boc_hex),
+          payload: hexBocToBase64(deployData.body_boc_hex),
+        },
+      ];
+
+      // 3. Build jetton transfer messages for AGNT + quote token topups
+      const agntAmount = parseFloat(persisted.agntTopup || '0') || 0;
+      const quoteAmount = parseFloat(persisted.quoteTopup || '0') || 0;
+      const base = persisted.baseToken ?? 'AGNT';
+      const quote = persisted.quoteToken;
+
+      if (agntAmount > 0 || quoteAmount > 0) {
+        const tokens = await getRaceTokens(raceCfg);
+        const tokenMap = new Map<string, RaceToken>();
+        for (const t of tokens) tokenMap.set(t.symbol.toUpperCase(), t);
+
+        const addJettonMsg = async (symbol: string, amount: number) => {
+          const tokenInfo = tokenMap.get(symbol.toUpperCase());
+          if (!tokenInfo) throw new Error(`Token ${symbol} not found`);
+          const nano = BigInt(Math.round(amount * 10 ** tokenInfo.decimals));
+          if (nano <= 0n) return;
+          const jettonWallet = await resolveJettonWallet(tonAddress, tokenInfo.address);
+          const payload = buildJettonTransferBody({
+            amount: nano,
+            destination: contractAddr,
+            responseDestination: ownerAddr,
+            forwardTonAmount: 1n, // minimal forward for notification
+          });
+          messages.push({
+            address: Address.parse(jettonWallet).toString({ bounceable: true }),
+            amount: nanoFromTon('0.065'), // gas for jetton transfer
+            payload,
+          });
+        };
+
+        if (agntAmount > 0) await addJettonMsg(base, agntAmount);
+        if (quoteAmount > 0 && quote) await addJettonMsg(quote, quoteAmount);
+      }
 
       await tonConnectUI.sendTransaction({
         validUntil: Math.floor(Date.now() / 1000) + 10 * 60,
-        messages: [
-          {
-            address: deployAddress,
-            amount: String(totalNano),
-            stateInit: hexBocToBase64(deployData.state_init_boc_hex),
-            payload: hexBocToBase64(deployData.body_boc_hex),
-          },
-        ],
+        messages,
       });
 
       // Transaction signed — clear pending state
