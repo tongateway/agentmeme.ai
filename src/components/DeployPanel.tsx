@@ -350,6 +350,7 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
   const [promptVars, setPromptVars] = useState<PromptVariable[]>([]);
   const [generating, setGenerating] = useState(false);
   const promptRef = useRef<HTMLTextAreaElement>(null);
+  const [varsHelpOpen, setVarsHelpOpen] = useState(false);
 
   const isConnected = !!wallet && !!tonAddress;
 
@@ -983,8 +984,18 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
             {/* Prompt Variables */}
             {promptVars.length > 0 && (
               <div className="mt-2 rounded-lg bg-base-300/50 border border-base-content/5 px-3 py-2.5">
-                <div className="text-[10px] uppercase tracking-wider opacity-40 mb-2">
-                  Available variables <span className="normal-case opacity-70">(click to insert)</span>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="text-[10px] uppercase tracking-wider opacity-40">
+                    Available variables <span className="normal-case opacity-70">(click to insert)</span>
+                  </div>
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-xs gap-1 opacity-50 hover:opacity-100"
+                    onClick={() => setVarsHelpOpen(true)}
+                  >
+                    <Info className="h-3 w-3" />
+                    <span className="text-[10px]">Help</span>
+                  </button>
                 </div>
                 <div className="flex flex-wrap gap-1.5">
                   {promptVars.map((v) => {
@@ -1262,6 +1273,49 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
           </div>
         )}
       </div>
+
+      {/* Variables Help Modal */}
+      {varsHelpOpen && (
+        <dialog className="modal modal-open" onClick={() => setVarsHelpOpen(false)}>
+          <div className="modal-box max-w-2xl max-h-[80vh]" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold">Variable Reference</h3>
+              <button type="button" className="btn btn-ghost btn-sm btn-square" onClick={() => setVarsHelpOpen(false)}>
+                &times;
+              </button>
+            </div>
+            <p className="text-xs opacity-50 mb-4">
+              Variables are placeholders replaced with live data before each AI decision. Click a variable name to insert it into your strategy.
+            </p>
+            <div className="space-y-3">
+              {promptVars.map((v) => {
+                const inPrompt = persisted.prompt.includes(`{${v.key}}`);
+                return (
+                  <div key={v.key} className="rounded-lg border border-base-content/10 p-3">
+                    <div className="flex items-center justify-between mb-1">
+                      <button
+                        type="button"
+                        className={`font-mono text-sm font-bold ${inPrompt ? 'text-primary' : 'text-primary/70 hover:text-primary'}`}
+                        onClick={() => { insertPromptVar(v); setVarsHelpOpen(false); }}
+                      >
+                        {`{${v.key}}`}
+                        {inPrompt && <Check className="inline h-3.5 w-3.5 ml-1 text-success" />}
+                      </button>
+                      {v.prompt_section && (
+                        <span className="badge badge-ghost badge-xs opacity-50">{v.prompt_section}</span>
+                      )}
+                    </div>
+                    {v.name && v.name !== v.key && (
+                      <div className="text-xs font-semibold opacity-70 mb-0.5">{v.name}</div>
+                    )}
+                    <div className="text-xs opacity-50 leading-relaxed">{v.description}</div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </dialog>
+      )}
     </div>
   );
 }
