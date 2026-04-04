@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { TonConnectButton, useTonAddress, useTonWallet } from '@tonconnect/ui-react';
 import { Address } from '@ton/core';
 import { Sun, Moon, ShieldAlert, RefreshCw } from 'lucide-react';
-import { listContractsFromLeaderboard, listRaceContracts, updateRaceContract, primeKnownPrices, type ContractListItem } from './lib/api';
+import { listContractsFromLeaderboard, listRaceContracts, getRaceContractDetail, updateRaceContract, primeKnownPrices, type ContractListItem } from './lib/api';
 import type { PublicApiConfig } from './lib/api';
 import { useLocalStorageState } from './lib/storage';
 import { useAuth } from './lib/useAuth';
@@ -183,6 +183,34 @@ export default function App() {
     () => (tab.kind === 'contract' ? allContracts?.find((c) => c.id === tab.contractId) : null),
     [allContracts, tab],
   );
+
+  // If contract not in local list (e.g. opened via URL), fetch it directly
+  useEffect(() => {
+    if (tab.kind !== 'contract') return;
+    if (activeContract) return; // already found
+    if (allContracts == null) return; // still loading
+    let cancelled = false;
+    (async () => {
+      try {
+        const detail = await getRaceContractDetail(raceCfg, tab.contractId);
+        if (cancelled) return;
+        const item: ContractListItem = {
+          id: detail.id,
+          address: detail.address,
+          name: detail.name,
+          owner_address: detail.owner_address,
+          is_active: detail.is_active,
+          status: detail.status,
+          ai_model: detail.ai_model,
+          ai_provider: detail.ai_provider,
+          created_at: detail.created_at,
+          updated_at: detail.updated_at,
+        };
+        setAllContracts((prev) => (prev ? [...prev, item] : [item]));
+      } catch { /* contract not found — stay on deploy */ }
+    })();
+    return () => { cancelled = true; };
+  }, [tab, activeContract, allContracts, raceCfg]);
 
   const refreshContracts = useCallback(async () => {
     try {
