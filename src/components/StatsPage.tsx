@@ -366,7 +366,9 @@ function OrderBookTable({
               <div className="w-12 h-1 rounded-full bg-success" />
               <div className="text-center">
                 <div className="text-[10px] opacity-40">Spread</div>
-                <div className="mono text-xs font-bold">{stats.spreadPct.toFixed(2)}%</div>
+                <div className={`mono text-xs font-bold ${stats.spreadPct < 0 ? 'text-warning' : ''}`}>
+                  {stats.spreadPct < 0 ? 'Crossed' : `${stats.spreadPct.toFixed(2)}%`}
+                </div>
               </div>
               <div className="w-12 h-1 rounded-full bg-error" />
             </div>
@@ -803,7 +805,7 @@ export function StatsPage({ raceCfg, pairSlug, onPairChange }: StatsPageProps) {
               <span>Bid <span className="text-success font-bold">{fmtRate(stats.bestBid ?? 0)}</span></span>
               <span>Ask <span className="text-error font-bold">{fmtRate(stats.bestAsk ?? 0)}</span></span>
               {stats.spreadPct != null && (
-                <span>Spread <span className="text-warning font-bold">{stats.spreadPct.toFixed(2)}%</span></span>
+                <span>Spread <span className="text-warning font-bold">{stats.spreadPct < 0 ? 'Crossed' : `${stats.spreadPct.toFixed(2)}%`}</span></span>
               )}
             </>
           ) : (
