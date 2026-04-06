@@ -229,7 +229,7 @@ function OrderBookTable({
   normalized,
   stats,
   fromUpper,
-  toUpper: _toUpper,
+  toUpper,
   fromPriceUsd,
   amountPriceUsd: _amountPriceUsd,
   refreshTick,
@@ -259,10 +259,11 @@ function OrderBookTable({
               <span className="text-[10px] text-success opacity-60">Buy orders</span>
             </div>
             <div className="flex items-center gap-2 px-3 py-2 text-[10px] uppercase tracking-wider opacity-40 border-b border-base-content/5">
-              <span className="w-28 sm:w-36 text-right">Price ({fromUpper})</span>
+              <span className="w-24 sm:w-32 text-right">Price ({fromUpper})</span>
               <span className="flex-1 text-right">Amount ({fromUpper})</span>
+              <span className="w-24 text-right hidden sm:block">Total ({toUpper})</span>
               <span className="w-16 text-right hidden sm:block">USD</span>
-              <span className="w-10 text-right">Qty</span>
+              <span className="w-8 text-right">Qty</span>
             </div>
             {normalized.bids.length === 0 ? (
               <div className="text-center py-4 text-xs opacity-40">No bids</div>
@@ -271,6 +272,7 @@ function OrderBookTable({
                 {normalized.bids.map((lvl, i) => {
                   const pct = maxAmount > 0 ? (lvl.amount / maxAmount) * 100 : 0;
                   const usdVal = fromPriceUsd != null ? lvl.amount * fromPriceUsd : null;
+                  const toTotal = lvl.price > 0 ? lvl.amount / lvl.price : 0;
                   return (
                     <div
                       key={`bid-${i}-${refreshTick}`}
@@ -281,14 +283,15 @@ function OrderBookTable({
                         className="absolute inset-y-0 right-0 bg-success/10 transition-[width] duration-700 ease-out"
                         style={{ width: `${Math.min(100, pct)}%` }}
                       />
-                      <span className="relative z-10 w-28 sm:w-36 text-right text-success font-medium">
+                      <span className="relative z-10 w-24 sm:w-32 text-right text-success font-medium">
                         {fmtRate(lvl.price)}
                       </span>
                       <span className="relative z-10 flex-1 text-right">{fmtAmount(lvl.amount)}</span>
+                      <span className="relative z-10 w-24 text-right opacity-50 hidden sm:block">{fmtAmount(toTotal)}</span>
                       <span className="relative z-10 w-16 text-right opacity-40 text-[10px] hidden sm:block">
                         {usdVal != null ? fmtUsd(usdVal) : '\u2014'}
                       </span>
-                      <span className="relative z-10 w-10 text-right opacity-50">{lvl.orderCount}</span>
+                      <span className="relative z-10 w-8 text-right opacity-50">{lvl.orderCount}</span>
                     </div>
                   );
                 })}
@@ -309,10 +312,11 @@ function OrderBookTable({
               <span className="text-[10px] text-error opacity-60">Sell orders</span>
             </div>
             <div className="flex items-center gap-2 px-3 py-2 text-[10px] uppercase tracking-wider opacity-40 border-b border-base-content/5">
-              <span className="w-28 sm:w-36 text-right">Price ({fromUpper})</span>
+              <span className="w-24 sm:w-32 text-right">Price ({fromUpper})</span>
               <span className="flex-1 text-right">Amount ({fromUpper})</span>
+              <span className="w-24 text-right hidden sm:block">Total ({toUpper})</span>
               <span className="w-16 text-right hidden sm:block">USD</span>
-              <span className="w-10 text-right">Qty</span>
+              <span className="w-8 text-right">Qty</span>
             </div>
             {asksReversed.length === 0 ? (
               <div className="text-center py-4 text-xs opacity-40">No asks</div>
@@ -321,6 +325,7 @@ function OrderBookTable({
                 {asksReversed.map((lvl, i) => {
                   const pct = maxAmount > 0 ? (lvl.amount / maxAmount) * 100 : 0;
                   const usdVal = fromPriceUsd != null ? lvl.amount * fromPriceUsd : null;
+                  const toTotal = lvl.price > 0 ? lvl.amount / lvl.price : 0;
                   return (
                     <div
                       key={`ask-${i}-${refreshTick}`}
@@ -331,14 +336,15 @@ function OrderBookTable({
                         className="absolute inset-y-0 right-0 bg-error/10 transition-[width] duration-700 ease-out"
                         style={{ width: `${Math.min(100, pct)}%` }}
                       />
-                      <span className="relative z-10 w-28 sm:w-36 text-right text-error font-medium">
+                      <span className="relative z-10 w-24 sm:w-32 text-right text-error font-medium">
                         {fmtRate(lvl.price)}
                       </span>
                       <span className="relative z-10 flex-1 text-right">{fmtAmount(lvl.amount)}</span>
+                      <span className="relative z-10 w-24 text-right opacity-50 hidden sm:block">{fmtAmount(toTotal)}</span>
                       <span className="relative z-10 w-16 text-right opacity-40 text-[10px] hidden sm:block">
                         {usdVal != null ? fmtUsd(usdVal) : '\u2014'}
                       </span>
-                      <span className="relative z-10 w-10 text-right opacity-50">{lvl.orderCount}</span>
+                      <span className="relative z-10 w-8 text-right opacity-50">{lvl.orderCount}</span>
                     </div>
                   );
                 })}
