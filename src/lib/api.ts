@@ -1253,16 +1253,16 @@ export async function getDexOrderBook(opts: {
   const toDec = Number(data.to_decimals ?? 9);
   const fromDec = Number(data.from_decimals ?? 9);
   const priceFactor = 1e18;           // price_rate is always 18-decimal (vault format)
-  const baseFactor = 10 ** toDec;     // to_symbol (base) nano → human
-  const quoteFactor = 10 ** fromDec;  // from_symbol (quote) nano → human
+  const amountFactor = 10 ** fromDec; // order book amounts use from_decimals as scale
+  const valueFactor = 10 ** fromDec;  // values also in from_decimals scale
 
   const parseLevel = (l: Record<string, unknown>): DexOrderBookLevel => ({
     price_rate: Number(l.price_rate ?? 0) / priceFactor,
-    total_amount: Number(l.total_amount ?? 0) / baseFactor,
+    total_amount: Number(l.total_amount ?? 0) / amountFactor,
     order_count: Number(l.order_count ?? 0),
-    total_value: Number(l.total_value ?? 0) / quoteFactor,
-    cumulative_amount: Number(l.cumulative_amount ?? 0) / baseFactor,
-    cumulative_value: Number(l.cumulative_value ?? 0) / quoteFactor,
+    total_value: Number(l.total_value ?? 0) / valueFactor,
+    cumulative_amount: Number(l.cumulative_amount ?? 0) / amountFactor,
+    cumulative_value: Number(l.cumulative_value ?? 0) / valueFactor,
   });
 
   const asks = Array.isArray(data.asks) ? data.asks.map((a: Record<string, unknown>) => parseLevel(a)) : [];
