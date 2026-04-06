@@ -85,61 +85,17 @@ function parseTradingTokens(pairs: string | null | undefined): Set<string> {
   return tokens;
 }
 
-function tokensToTradingPairs(tokens: Set<string>): string {
-  const arr = Array.from(tokens);
-  const pairs: string[] = [];
-  for (let i = 0; i < arr.length; i++) {
-    for (let j = i + 1; j < arr.length; j++) {
-      pairs.push(`${arr[i]}/${arr[j]}`);
-    }
-  }
-  return pairs.join(',');
-}
 
-function TradingPairsRow({ contract, raceCfg }: { contract: ContractListItem; raceCfg: PublicApiConfig }) {
-  const [tokens, setTokens] = useState(() => parseTradingTokens(contract.trading_pairs));
-  const [saving, setSaving] = useState(false);
-
-  // Sync if contract changes
-  useEffect(() => {
-    setTokens(parseTradingTokens(contract.trading_pairs));
-  }, [contract.trading_pairs]);
-
-  const toggle = useCallback(async (token: string) => {
-    if (token === 'AGNT') return;
-    const next = new Set(tokens);
-    if (next.has(token)) next.delete(token); else next.add(token);
-    setTokens(next);
-    setSaving(true);
-    try {
-      await updateRaceContract(raceCfg, contract.id, { trading_pairs: tokensToTradingPairs(next) });
-    } catch {
-      setTokens(parseTradingTokens(contract.trading_pairs)); // revert
-    } finally {
-      setSaving(false);
-    }
-  }, [tokens, raceCfg, contract.id, contract.trading_pairs]);
+function TradingPairsRow({ contract }: { contract: ContractListItem; raceCfg: PublicApiConfig }) {
+  const tokens = parseTradingTokens(contract.trading_pairs);
 
   return (
     <div className="flex items-center justify-between gap-4">
       <div className="text-sm opacity-60 shrink-0">Trading Pairs</div>
       <div className="flex items-center gap-1 flex-wrap justify-end">
-        {ALL_TOKENS.map((t) => {
-          const isAgnt = t === 'AGNT';
-          const active = tokens.has(t);
-          return (
-            <button
-              key={t}
-              type="button"
-              disabled={saving || isAgnt}
-              className={`btn btn-xs ${active ? (isAgnt ? 'btn-primary cursor-default' : 'btn-primary') : 'btn-ghost border border-base-content/10'}`}
-              onClick={() => void toggle(t)}
-            >
-              {t}
-            </button>
-          );
-        })}
-        {saving && <span className="loading loading-spinner loading-xs ml-1" />}
+        {ALL_TOKENS.filter((t) => tokens.has(t)).map((t) => (
+          <span key={t} className="badge badge-sm badge-primary">{t}</span>
+        ))}
       </div>
     </div>
   );
