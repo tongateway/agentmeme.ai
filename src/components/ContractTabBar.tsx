@@ -120,14 +120,13 @@ export function ContractTabBar({ contracts, activeTab, onTabChange, loading, onR
             ) : (
               <span className="mono text-xs">{(c.name && c.name.trim()) || fmtAddrShort(c.address)}</span>
             )}
-            {c.status === 'deploying' ? (
-              <span className="badge badge-xs badge-warning animate-pulse">DEPLOYING</span>
-            ) : c.status === 'paused' ? (
-              <span className="badge badge-xs badge-ghost">PAUSED</span>
-            ) : (
-              <span className={`badge badge-xs ${c.status === 'active' ? 'badge-success' : 'badge-ghost'}`}>
-                {(c.status ?? 'active').toUpperCase()}
-              </span>
+            <span className={`h-2 w-2 rounded-full shrink-0 ${
+              c.status === 'deploying' ? 'bg-warning animate-pulse' :
+              c.status === 'paused' ? 'bg-base-content/30' :
+              'bg-success'
+            }`} title={(c.status ?? 'active').toUpperCase()} />
+            {c.trading_pairs && (
+              <span className="text-[10px] opacity-40">{c.trading_pairs}</span>
             )}
           </button>
         );
