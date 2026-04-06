@@ -106,6 +106,7 @@ type NormalizedLevel = {
 type NormalizedBook = {
   asks: NormalizedLevel[];
   bids: NormalizedLevel[];
+  inverted: boolean; // true when price was inverted (rate > 1 pairs like USDT/BUILD)
 };
 
 /**
@@ -123,13 +124,15 @@ type NormalizedBook = {
  */
 function normalizeOpen4DevBook(book: DexOrderBookResponse): NormalizedBook {
   const ref = book.mid_price ?? null;
-  // Adjust for decimal difference: price_rate is in nano-to/nano-from space,
-  // so inverted price must be scaled by 10^(to_dec - from_dec) to get human units
   const decAdj = 10 ** ((book.to_decimals ?? 9) - (book.from_decimals ?? 9));
+  // When rate < 1 (e.g. AGNT/USDT), it already represents the "small" price
+  // direction and should NOT be inverted — just scale by decimal adjustment.
+  // When rate >> 1 (e.g. USDT/BUILD), invert to get the human-readable price.
+  const shouldInvert = ref != null ? ref > 1 : true;
 
   const toDisplayPrice = (priceRate: number): number => {
-    if (ref != null && ref > 0 && priceRate < ref / 1000) return priceRate * decAdj;
-    return (1 / priceRate) * decAdj;
+    if (shouldInvert) return (1 / priceRate) * decAdj;
+    return priceRate * decAdj;
   };
 
   const asks: NormalizedLevel[] = book.asks
@@ -151,7 +154,7 @@ function normalizeOpen4DevBook(book: DexOrderBookResponse): NormalizedBook {
   asks.sort((a, b) => a.price - b.price);
   bids.sort((a, b) => b.price - a.price);
 
-  return { asks, bids };
+  return { asks, bids, inverted: shouldInvert };
 }
 
 /* ---------- stats from normalized book ---------- */
@@ -242,6 +245,15 @@ function OrderBookTable({
     return Math.max(maxAsk, maxBid);
   }, [normalized]);
 
+  // Column labels depend on whether price was inverted
+  // Inverted (USDT/BUILD): price=fromSymbol, asks amount=fromSymbol, bids amount=toSymbol
+  // Not inverted (AGNT/USDT): price=toSymbol, asks amount=fromSymbol, bids amount=toSymbol
+  const priceLabel = normalized.inverted ? fromUpper : toUpper;
+  const askAmtLabel = fromUpper;
+  const askTotalLabel = toUpper;
+  const bidAmtLabel = toUpper;
+  const bidTotalLabel = fromUpper;
+
   const asksReversed = useMemo(() => [...normalized.asks].reverse(), [normalized.asks]);
 
   return (
@@ -259,9 +271,9 @@ function OrderBookTable({
               <span className="text-[10px] text-success opacity-60">Buy orders</span>
             </div>
             <div className="flex items-center gap-2 px-3 py-2 text-[10px] uppercase tracking-wider opacity-40 border-b border-base-content/5">
-              <span className="w-24 sm:w-32 text-right">Price ({fromUpper})</span>
-              <span className="flex-1 text-right">Amount ({toUpper})</span>
-              <span className="w-24 text-right hidden sm:block">Total ({fromUpper})</span>
+              <span className="w-24 sm:w-32 text-right">Price ({priceLabel})</span>
+              <span className="flex-1 text-right">Amount ({bidAmtLabel})</span>
+              <span className="w-24 text-right hidden sm:block">Total ({bidTotalLabel})</span>
               <span className="w-16 text-right hidden sm:block">USD</span>
               <span className="w-8 text-right">Qty</span>
             </div>
@@ -272,7 +284,7 @@ function OrderBookTable({
                 {normalized.bids.map((lvl, i) => {
                   const pct = maxAmount > 0 ? (lvl.amount / maxAmount) * 100 : 0;
                   const usdVal = amountPriceUsd != null ? lvl.amount * amountPriceUsd : null;
-                  const fromTotal = lvl.amount * lvl.price;
+                  const fromTotal = normalized.inverted ? lvl.amount * lvl.price : (lvl.price > 0 ? lvl.amount / lvl.price : 0);
                   return (
                     <div
                       key={`bid-${i}-${refreshTick}`}
@@ -312,9 +324,9 @@ function OrderBookTable({
               <span className="text-[10px] text-error opacity-60">Sell orders</span>
             </div>
             <div className="flex items-center gap-2 px-3 py-2 text-[10px] uppercase tracking-wider opacity-40 border-b border-base-content/5">
-              <span className="w-24 sm:w-32 text-right">Price ({fromUpper})</span>
-              <span className="flex-1 text-right">Amount ({fromUpper})</span>
-              <span className="w-24 text-right hidden sm:block">Total ({toUpper})</span>
+              <span className="w-24 sm:w-32 text-right">Price ({priceLabel})</span>
+              <span className="flex-1 text-right">Amount ({askAmtLabel})</span>
+              <span className="w-24 text-right hidden sm:block">Total ({askTotalLabel})</span>
               <span className="w-16 text-right hidden sm:block">USD</span>
               <span className="w-8 text-right">Qty</span>
             </div>
@@ -325,7 +337,7 @@ function OrderBookTable({
                 {asksReversed.map((lvl, i) => {
                   const pct = maxAmount > 0 ? (lvl.amount / maxAmount) * 100 : 0;
                   const usdVal = fromPriceUsd != null ? lvl.amount * fromPriceUsd : null;
-                  const toTotal = lvl.price > 0 ? lvl.amount / lvl.price : 0;
+                  const toTotal = normalized.inverted ? (lvl.price > 0 ? lvl.amount / lvl.price : 0) : lvl.amount * lvl.price;
                   return (
                     <div
                       key={`ask-${i}-${refreshTick}`}
