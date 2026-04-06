@@ -99,7 +99,7 @@ function fmtUsd(n: number): string {
 
 type NormalizedLevel = {
   price: number; // fromSymbol per toSymbol
-  amount: number; // in toSymbol
+  amount: number; // in fromSymbol
   orderCount: number;
 };
 
@@ -229,9 +229,9 @@ function OrderBookTable({
   normalized,
   stats,
   fromUpper,
-  toUpper,
-  fromPriceUsd: _fromPriceUsd,
-  amountPriceUsd,
+  toUpper: _toUpper,
+  fromPriceUsd,
+  amountPriceUsd: _amountPriceUsd,
   refreshTick,
   sourceLabel,
   realStats24h: _realStats24h,
@@ -260,7 +260,7 @@ function OrderBookTable({
             </div>
             <div className="flex items-center gap-2 px-3 py-2 text-[10px] uppercase tracking-wider opacity-40 border-b border-base-content/5">
               <span className="w-28 sm:w-36 text-right">Price ({fromUpper})</span>
-              <span className="flex-1 text-right">Amount ({toUpper})</span>
+              <span className="flex-1 text-right">Amount ({fromUpper})</span>
               <span className="w-16 text-right hidden sm:block">USD</span>
               <span className="w-10 text-right">Qty</span>
             </div>
@@ -270,7 +270,7 @@ function OrderBookTable({
               <div className="flex flex-col">
                 {normalized.bids.map((lvl, i) => {
                   const pct = maxAmount > 0 ? (lvl.amount / maxAmount) * 100 : 0;
-                  const usdVal = amountPriceUsd != null ? lvl.amount * amountPriceUsd : null;
+                  const usdVal = fromPriceUsd != null ? lvl.amount * fromPriceUsd : null;
                   return (
                     <div
                       key={`bid-${i}-${refreshTick}`}
@@ -310,7 +310,7 @@ function OrderBookTable({
             </div>
             <div className="flex items-center gap-2 px-3 py-2 text-[10px] uppercase tracking-wider opacity-40 border-b border-base-content/5">
               <span className="w-28 sm:w-36 text-right">Price ({fromUpper})</span>
-              <span className="flex-1 text-right">Amount ({toUpper})</span>
+              <span className="flex-1 text-right">Amount ({fromUpper})</span>
               <span className="w-16 text-right hidden sm:block">USD</span>
               <span className="w-10 text-right">Qty</span>
             </div>
@@ -320,7 +320,7 @@ function OrderBookTable({
               <div className="flex flex-col">
                 {asksReversed.map((lvl, i) => {
                   const pct = maxAmount > 0 ? (lvl.amount / maxAmount) * 100 : 0;
-                  const usdVal = amountPriceUsd != null ? lvl.amount * amountPriceUsd : null;
+                  const usdVal = fromPriceUsd != null ? lvl.amount * fromPriceUsd : null;
                   return (
                     <div
                       key={`ask-${i}-${refreshTick}`}
