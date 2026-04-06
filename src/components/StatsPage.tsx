@@ -123,10 +123,13 @@ type NormalizedBook = {
  */
 function normalizeOpen4DevBook(book: DexOrderBookResponse): NormalizedBook {
   const ref = book.mid_price ?? null;
+  // Adjust for decimal difference: price_rate is in nano-to/nano-from space,
+  // so inverted price must be scaled by 10^(to_dec - from_dec) to get human units
+  const decAdj = 10 ** ((book.to_decimals ?? 9) - (book.from_decimals ?? 9));
 
   const toDisplayPrice = (priceRate: number): number => {
-    if (ref != null && ref > 0 && priceRate < ref / 1000) return priceRate;
-    return 1 / priceRate;
+    if (ref != null && ref > 0 && priceRate < ref / 1000) return priceRate * decAdj;
+    return (1 / priceRate) * decAdj;
   };
 
   const asks: NormalizedLevel[] = book.asks
