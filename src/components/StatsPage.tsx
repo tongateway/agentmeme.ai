@@ -125,15 +125,14 @@ type NormalizedBook = {
 function normalizeOpen4DevBook(book: DexOrderBookResponse): NormalizedBook {
   const ref = book.mid_price ?? null;
   const decAdj = 10 ** ((book.to_decimals ?? 9) - (book.from_decimals ?? 9));
-  // When rate < 1 (e.g. AGNT/USDT), it already represents the "small" price
-  // direction and should NOT be inverted — just scale by decimal adjustment.
-  // When rate >> 1 (e.g. USDT/BUILD), invert to get the human-readable price.
-  const shouldInvert = ref != null ? ref > 1 : true;
-
+  // Asks have large rates (to/from >> 1), bids have tiny rates (to/from << 1).
+  // Invert large rates, apply direct scaling to small rates.
+  // This produces consistent human-readable prices for both sides.
   const toDisplayPrice = (priceRate: number): number => {
-    if (shouldInvert) return (1 / priceRate) * decAdj;
+    if (priceRate > 1) return (1 / priceRate) * decAdj;
     return priceRate * decAdj;
   };
+  const shouldInvert = ref != null ? ref > 1 : true;
 
   const asks: NormalizedLevel[] = book.asks
     .filter((a) => a.price_rate > 0)
