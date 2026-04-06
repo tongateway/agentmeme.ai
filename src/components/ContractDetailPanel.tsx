@@ -72,29 +72,17 @@ function tonscanLink(addr: string): string {
   return `https://tonscan.org/address/${addr}`;
 }
 
-const ALL_TOKENS = ['AGNT', 'TON', 'NOT', 'BUILD', 'USDT'];
-
-function parseTradingTokens(pairs: string | null | undefined): Set<string> {
-  const tokens = new Set<string>(['AGNT']);
-  if (!pairs) return tokens;
-  for (const pair of pairs.split(',')) {
-    for (const t of pair.trim().split('/')) {
-      if (t.trim()) tokens.add(t.trim().toUpperCase());
-    }
-  }
-  return tokens;
-}
 
 
 function TradingPairsRow({ contract }: { contract: ContractListItem; raceCfg: PublicApiConfig }) {
-  const tokens = parseTradingTokens(contract.trading_pairs);
+  const pairs = (contract.trading_pairs ?? '').split(',').map((p) => p.trim()).filter(Boolean);
 
   return (
     <div className="flex items-center justify-between gap-4">
       <div className="text-sm opacity-60 shrink-0">Trading Pairs</div>
       <div className="flex items-center gap-1 flex-wrap justify-end">
-        {ALL_TOKENS.filter((t) => tokens.has(t)).map((t) => (
-          <span key={t} className="badge badge-sm badge-primary">{t}</span>
+        {pairs.map((p) => (
+          <span key={p} className="badge badge-sm badge-primary">{p}</span>
         ))}
       </div>
     </div>
