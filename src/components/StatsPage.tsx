@@ -734,22 +734,16 @@ export function StatsPage({ raceCfg, pairSlug, onPairChange }: StatsPageProps) {
       <div className="flex flex-wrap items-center gap-2">
         {pairs.map((p, idx) => {
           const isSelected = selectedPairIdx === idx && !reversed;
-          const isHot = p.hot && !isSelected;
           return (
             <button
               key={p.slug}
               className={`btn btn-sm rounded-full px-4 ${
-                isSelected
-                  ? 'btn-primary'
-                  : isHot
-                    ? 'border-2 border-orange-500/60 bg-orange-500/10 text-orange-300 hover:bg-orange-500/20 hover:border-orange-400'
-                    : 'btn-ghost border border-base-content/10'
+                isSelected ? 'btn-primary' : 'btn-ghost border border-base-content/10'
               }`}
               onClick={() => selectPair(idx)}
               type="button"
             >
               {p.label}
-              {p.hot && <span className="h-1.5 w-1.5 rounded-full bg-success inline-block ml-1" />}
             </button>
           );
         })}
