@@ -108,8 +108,8 @@ export function HomePage({ onNavigate, onDeploy, onOpenContract, raceCfg }: Home
   const maxAgents = Math.max(0, ...tokens.map((x) => x.active_agents));
   const maxTrades = Math.max(0, ...tokens.map((x) => x.total_trades_24h));
 
-  const totalActiveAgents = tokens.reduce((sum, t) => sum + t.active_agents, 0);
-  const totalTrades24h = tokens.reduce((sum, t) => sum + t.total_trades_24h, 0);
+  const totalActiveAgents = tokens.reduce((sum, t) => sum + (t.active_agents || 0), 0);
+  const totalTrades24h = tokens.reduce((sum, t) => sum + (t.total_trades_24h || 0), 0);
 
   const bullishCount = tokens.filter((t) => (t.consensus ?? '').toUpperCase() === 'BULLISH').length;
   const bearishCount = tokens.filter((t) => (t.consensus ?? '').toUpperCase() === 'BEARISH').length;

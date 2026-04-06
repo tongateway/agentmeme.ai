@@ -664,7 +664,10 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
 
       // Use non-bounceable address for deploy (contract doesn't exist yet)
       const deployAddress = Address.parse(deployData.mint_keeper_address).toString({ bounceable: false });
-      const contractAddr = Address.parse(deployData.mint_keeper_address);
+      // Agent's final wallet address (not the MintKeeper) — jetton topups go here
+      const agentWalletAddr = persisted.contractAddress
+        ? Address.parse(persisted.contractAddress)
+        : Address.parse(deployData.mint_keeper_address);
       const ownerAddr = Address.parse(tonAddress);
 
       const messages: { address: string; amount: string; stateInit?: string; payload?: string }[] = [
@@ -695,7 +698,7 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
           const jettonWallet = await resolveJettonWallet(tonAddress, tokenInfo.address);
           const payload = buildJettonTransferBody({
             amount: nano,
-            destination: contractAddr,
+            destination: agentWalletAddr,
             responseDestination: ownerAddr,
             forwardTonAmount: 1n, // minimal forward for notification
           });
