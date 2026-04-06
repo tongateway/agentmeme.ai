@@ -73,7 +73,8 @@ function fmtRate(n: number): string {
   if (n >= 1_000) return n.toLocaleString(undefined, { maximumFractionDigits: 2 });
   if (n >= 1) return n.toFixed(4);
   if (n >= 0.0001) return n.toFixed(6);
-  return n.toExponential(3);
+  if (n >= 0.0000001) return n.toFixed(9);
+  return n.toFixed(12);
 }
 
 function fmtAmount(n: number): string {
@@ -90,7 +91,8 @@ function fmtUsd(n: number): string {
   if (n >= 1_000) return `$${n.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
   if (n >= 1) return `$${n.toFixed(2)}`;
   if (n >= 0.01) return `$${n.toFixed(2)}`;
-  return `$${n.toFixed(4)}`;
+  if (n >= 0.0001) return `$${n.toFixed(4)}`;
+  return `$${n.toFixed(6)}`;
 }
 
 /* ---------- normalized level ---------- */
