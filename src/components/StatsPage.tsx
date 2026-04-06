@@ -231,7 +231,7 @@ function OrderBookTable({
   fromUpper,
   toUpper,
   fromPriceUsd,
-  amountPriceUsd: _amountPriceUsd,
+  amountPriceUsd,
   refreshTick,
   sourceLabel,
   realStats24h: _realStats24h,
@@ -260,8 +260,8 @@ function OrderBookTable({
             </div>
             <div className="flex items-center gap-2 px-3 py-2 text-[10px] uppercase tracking-wider opacity-40 border-b border-base-content/5">
               <span className="w-24 sm:w-32 text-right">Price ({fromUpper})</span>
-              <span className="flex-1 text-right">Amount ({fromUpper})</span>
-              <span className="w-24 text-right hidden sm:block">Total ({toUpper})</span>
+              <span className="flex-1 text-right">Amount ({toUpper})</span>
+              <span className="w-24 text-right hidden sm:block">Total ({fromUpper})</span>
               <span className="w-16 text-right hidden sm:block">USD</span>
               <span className="w-8 text-right">Qty</span>
             </div>
@@ -271,8 +271,8 @@ function OrderBookTable({
               <div className="flex flex-col">
                 {normalized.bids.map((lvl, i) => {
                   const pct = maxAmount > 0 ? (lvl.amount / maxAmount) * 100 : 0;
-                  const usdVal = fromPriceUsd != null ? lvl.amount * fromPriceUsd : null;
-                  const toTotal = lvl.price > 0 ? lvl.amount / lvl.price : 0;
+                  const usdVal = amountPriceUsd != null ? lvl.amount * amountPriceUsd : null;
+                  const fromTotal = lvl.amount * lvl.price;
                   return (
                     <div
                       key={`bid-${i}-${refreshTick}`}
@@ -287,7 +287,7 @@ function OrderBookTable({
                         {fmtRate(lvl.price)}
                       </span>
                       <span className="relative z-10 flex-1 text-right">{fmtAmount(lvl.amount)}</span>
-                      <span className="relative z-10 w-24 text-right opacity-50 hidden sm:block">{fmtAmount(toTotal)}</span>
+                      <span className="relative z-10 w-24 text-right opacity-50 hidden sm:block">{fmtAmount(fromTotal)}</span>
                       <span className="relative z-10 w-16 text-right opacity-40 text-[10px] hidden sm:block">
                         {usdVal != null ? fmtUsd(usdVal) : '\u2014'}
                       </span>
