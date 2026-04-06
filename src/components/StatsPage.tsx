@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { BarChart3, ArrowDownUp, RefreshCw, TrendingUp, ArrowUp, ArrowDown } from 'lucide-react';
+import { BarChart3, ArrowDownUp, TrendingUp, ArrowUp, ArrowDown } from 'lucide-react';
 import {
   getDexCoinPrice,
   getDexOrderBook,
@@ -729,9 +729,6 @@ export function StatsPage({ raceCfg, pairSlug, onPairChange }: StatsPageProps) {
             </div>
           </div>
         </div>
-        <button type="button" className="btn btn-sm btn-ghost gap-1.5 opacity-60" onClick={() => setRefreshTick(t => t + 1)}>
-          <RefreshCw className="h-3.5 w-3.5" /> Refresh
-        </button>
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
