@@ -38,15 +38,7 @@ const DEFAULT_PAIRS: TradingPair[] = [
     quoteVault: 'EQBrozHGTEwumr5ND62CpUXqmfYyi1UucbIj-15ZJnlFLe9U',
     hot: true,
   },
-  {
-    slug: 'USDT-NOT',
-    label: 'USDT / NOT',
-    fromSymbol: 'USDT',
-    toSymbol: 'NOT',
-    baseVault: 'EQAD7f1rDyPODd6XYfORpVoKP6ZgEOVKCzu4U2dws_gjR7fS',
-    quoteVault: 'EQBrozHGTEwumr5ND62CpUXqmfYyi1UucbIj-15ZJnlFLe9U',
-  },
-  {
+{
     slug: 'USDT-BUILD',
     label: 'USDT / BUILD',
     fromSymbol: 'USDT',
