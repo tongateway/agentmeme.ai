@@ -349,7 +349,6 @@ export default function App() {
         <div className="flex-1">
           <div className="flex items-center gap-2 cursor-pointer" onClick={() => setPage('home')}>
             <pre className="text-[6px] sm:text-[8px] leading-none font-mono select-none opacity-80" style={{ letterSpacing: '-0.5px' }}>{`   _                  _    __  __ \n  / \\    __ _  _ __  | |_ |  \\/  |\n / _ \\  / _\` || '_ \\ | __|| |\\/| |\n/ ___ \\| (_| || | | || |_ | |  | |\n/_/   \\_\\\\__, ||_| |_| \\__||_|  |_|\n         |___/`}</pre>
-            <span className="badge badge-neutral badge-sm uppercase tracking-wider">TON dApp</span>
           </div>
         </div>
 
