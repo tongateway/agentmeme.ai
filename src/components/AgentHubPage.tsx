@@ -88,7 +88,7 @@ export function AgentHubPage({ raceCfg, onSelectToken, onDeploy, onViewLeaderboa
 
   // Stats bar calculations
   const totalActiveAgents = tokens.reduce((sum, t) => sum + t.active_agents, 0);
-  const totalTrades24h = tokens.reduce((sum, t) => sum + t.total_trades_24h, 0);
+  const totalTrades24h = tokens.reduce((sum, t) => sum + (t.total_trades_24h || 0), 0);
 
   const bullishCount = tokens.filter((t) => (t.consensus ?? '').toUpperCase() === 'BULLISH').length;
   const bearishCount = tokens.filter((t) => (t.consensus ?? '').toUpperCase() === 'BEARISH').length;
