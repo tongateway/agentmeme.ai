@@ -7,9 +7,13 @@ import { HomePage } from './components/HomePage';
 import { AgentHubPage } from './components/AgentHubPage';
 import { TokenOpinionPage } from './components/TokenOpinionPage';
 import { StatsPage } from './components/StatsPage';
+import { LeaderboardPage } from './components/LeaderboardPage';
+import { DocsPage } from './components/DocsPage';
+import { DeployPanel, type Persisted } from './components/DeployPanel';
 import { primeKnownPrices, type PublicApiConfig } from '../lib/api';
 import { useLocalStorageState } from '../lib/storage';
 import { useAuth } from '../lib/useAuth';
+import { generateAgentKeypair } from '../lib/crypto';
 
 type Page = 'home' | 'leaderboard' | 'stats' | 'trader' | 'docs' | 'agent-hub';
 
@@ -23,6 +27,7 @@ const VALID_PAGES = new Set<Page>([
 ]);
 
 const THEME_KEY = 'ai-trader-race:theme';
+const PERSISTED_KEY = 'ai-trader-race:v2:deploy';
 
 function routeFromHash(): Page {
   const raw = window.location.hash.replace(/^#\/?/, '');
@@ -61,6 +66,28 @@ function V2AppInner() {
   useEffect(() => {
     void primeKnownPrices(raceCfg);
   }, [raceCfg]);
+
+  // Deploy panel persisted state
+  const createInitialPersisted = useCallback((): Persisted => {
+    const kp = generateAgentKeypair();
+    return {
+      prompt: '',
+      deployAmountTon: '1',
+      topupAmountTon: '5',
+      walletId: 0,
+      agentPublicKeyHex: kp.publicKeyHex,
+      agentSecretKeyHex: kp.secretKeyHex,
+      contractAddress: null,
+      raceContractId: null,
+    };
+  }, []);
+
+  const [persisted, setPersisted] = useLocalStorageState<Persisted>(PERSISTED_KEY, createInitialPersisted);
+  const [, setMyContractIds] = useLocalStorageState<string[]>('ai-trader-race:v2:contracts', []);
+
+  const handleContractRegistered = useCallback((contractId: string) => {
+    setMyContractIds((prev) => (prev.includes(contractId) ? prev : [...prev, contractId]));
+  }, [setMyContractIds]);
 
   // Routing
   const [page, setPageState] = useState<Page>(routeFromHash);
@@ -132,11 +159,18 @@ function V2AppInner() {
       case 'stats':
         return <StatsPage raceCfg={raceCfg} isDark={colorMode === 'dark'} />;
       case 'trader':
-        return <StubPage title="My Agents" />;
+        return (
+          <DeployPanel
+            persisted={persisted}
+            setPersisted={setPersisted}
+            raceCfg={raceCfg}
+            onContractRegistered={handleContractRegistered}
+          />
+        );
       case 'leaderboard':
-        return <StubPage title="Leaderboard" />;
+        return <LeaderboardPage raceCfg={raceCfg} />;
       case 'docs':
-        return <StubPage title="Docs" />;
+        return <DocsPage />;
       default:
         return <StubPage title="Home" />;
     }
