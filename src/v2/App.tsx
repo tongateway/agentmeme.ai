@@ -6,6 +6,7 @@ import { Layout } from './components/Layout';
 import { HomePage } from './components/HomePage';
 import { AgentHubPage } from './components/AgentHubPage';
 import { TokenOpinionPage } from './components/TokenOpinionPage';
+import { StatsPage } from './components/StatsPage';
 import { primeKnownPrices, type PublicApiConfig } from '../lib/api';
 import { useLocalStorageState } from '../lib/storage';
 import { useAuth } from '../lib/useAuth';
@@ -129,7 +130,7 @@ function V2AppInner() {
           />
         );
       case 'stats':
-        return <StubPage title="Order Book" />;
+        return <StatsPage raceCfg={raceCfg} isDark={colorMode === 'dark'} />;
       case 'trader':
         return <StubPage title="My Agents" />;
       case 'leaderboard':
