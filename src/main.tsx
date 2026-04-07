@@ -20,12 +20,29 @@ const manifestUrl =
 // Lazy-load V2 app so it doesn't bloat the v1 bundle
 const V2App = lazy(() => import('./v2/App.tsx'));
 
-const isV2 = window.location.pathname.startsWith('/v2');
+// Lazy-load V3 app so it doesn't bloat the v1/v2 bundles
+const V3App = lazy(() => import('./v3/App.tsx'));
+
+// Lazy-load V4 app (shadcn/ui-style clean homepage)
+const V4App = lazy(() => import('./v4/App.tsx'));
+
+const pathname = window.location.pathname;
+const isV2 = pathname.startsWith('/v2');
+const isV3 = pathname.startsWith('/v3');
+const isV4 = pathname.startsWith('/v4');
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <TonConnectUIProvider manifestUrl={manifestUrl}>
-      {isV2 ? (
+      {isV4 ? (
+        <Suspense fallback={null}>
+          <V4App />
+        </Suspense>
+      ) : isV3 ? (
+        <Suspense fallback={null}>
+          <V3App />
+        </Suspense>
+      ) : isV2 ? (
         <Suspense fallback={null}>
           <V2App />
         </Suspense>
