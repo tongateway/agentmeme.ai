@@ -64,7 +64,7 @@ export default function V4App() {
   }, []);
 
   return (
-    <div className={cn('min-h-screen bg-white dark:bg-neutral-950 text-neutral-900 dark:text-neutral-50')}>
+    <div id="v4-root" className={cn('min-h-screen bg-white dark:bg-neutral-950 text-neutral-900 dark:text-neutral-50')}>
       {/* Navbar */}
       <header className="sticky top-0 z-50 border-b border-neutral-200 bg-white/90 backdrop-blur dark:border-neutral-800 dark:bg-neutral-950/90">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">

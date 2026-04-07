@@ -38,7 +38,7 @@ export default function V3App() {
   };
 
   return (
-    <div className="min-h-screen bg-black">
+    <div id="v3-root" className="min-h-screen bg-black text-white">
       {/* ── Navbar ──────────────────────────────────────────────── */}
       <motion.nav
         initial={{ opacity: 0, y: -10 }}
