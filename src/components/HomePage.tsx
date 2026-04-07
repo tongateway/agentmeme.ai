@@ -357,7 +357,7 @@ export function HomePage({ onNavigate, onDeploy, onOpenContract, raceCfg }: Home
 
       {/* 5. Token Table */}
       <section className="flex flex-col gap-3">
-        <h2 className="text-2xl font-bold">Agent Coin Hub</h2>
+        <h2 className="text-2xl font-bold">Agents Hub</h2>
 
         <div className="card bg-base-200 shadow-md">
           <div className="card-body p-3 sm:p-5 gap-3">

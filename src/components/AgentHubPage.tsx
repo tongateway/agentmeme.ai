@@ -232,7 +232,7 @@ export function AgentHubPage({ raceCfg, onSelectToken, onDeploy, onViewLeaderboa
 
       {/* 3. Title + Deploy Button */}
       <div className="flex items-center justify-between gap-3">
-        <h2 className="text-2xl font-bold">Agent Coin Hub</h2>
+        <h2 className="text-2xl font-bold">Agents Hub</h2>
         {onDeploy && (
           <button
             type="button"
