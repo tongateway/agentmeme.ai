@@ -5,6 +5,7 @@ import { system } from './theme';
 import { Layout } from './components/Layout';
 import { HomePage } from './components/HomePage';
 import { AgentHubPage } from './components/AgentHubPage';
+import { TokenOpinionPage } from './components/TokenOpinionPage';
 import { primeKnownPrices, type PublicApiConfig } from '../lib/api';
 import { useLocalStorageState } from '../lib/storage';
 import { useAuth } from '../lib/useAuth';
@@ -62,8 +63,10 @@ function V2AppInner() {
 
   // Routing
   const [page, setPageState] = useState<Page>(routeFromHash);
+  const [selectedToken, setSelectedToken] = useState<string | null>(null);
 
   const setPage = useCallback((p: Page) => {
+    setSelectedToken(null);
     setPageState(p);
   }, []);
 
@@ -95,15 +98,23 @@ function V2AppInner() {
   }, [colorMode]);
 
   function renderPage() {
+    // Token detail view overlays the current page
+    if (selectedToken) {
+      return (
+        <TokenOpinionPage
+          raceCfg={raceCfg}
+          symbol={selectedToken}
+          onBack={() => setSelectedToken(null)}
+        />
+      );
+    }
+
     switch (page) {
       case 'home':
         return (
           <HomePage
             raceCfg={raceCfg}
-            onSelectToken={(symbol) => {
-              // TODO: navigate to token detail page when implemented
-              console.info('select token:', symbol);
-            }}
+            onSelectToken={(symbol) => setSelectedToken(symbol)}
             onDeploy={() => setPage('trader')}
             onViewLeaderboard={() => setPage('leaderboard')}
           />
@@ -112,9 +123,7 @@ function V2AppInner() {
         return (
           <AgentHubPage
             raceCfg={raceCfg}
-            onSelectToken={(symbol) => {
-              console.info('select token:', symbol);
-            }}
+            onSelectToken={(symbol) => setSelectedToken(symbol)}
             onDeploy={() => setPage('trader')}
             onViewLeaderboard={() => setPage('leaderboard')}
           />
