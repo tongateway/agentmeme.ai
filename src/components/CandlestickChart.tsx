@@ -28,7 +28,7 @@ export function CandlestickChart({ raceCfg, fromSymbol, toSymbol }: CandlestickC
   const buildChart = useCallback(() => {
     if (!containerRef.current) return null;
 
-    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dracula';
 
     const chart = createChart(containerRef.current, {
       width: containerRef.current.clientWidth,

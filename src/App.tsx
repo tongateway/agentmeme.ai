@@ -133,14 +133,14 @@ export default function App() {
   }, [page, tab, statsPairSlug, hubToken]);
 
   // Theme switcher
-  const [theme, setTheme] = useLocalStorageState<'autumn' | 'dark'>(THEME_KEY, 'autumn');
+  const [theme, setTheme] = useLocalStorageState<'light' | 'dracula'>(THEME_KEY, 'light');
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
   }, [theme]);
 
   const toggleTheme = useCallback(() => {
-    setTheme((t) => (t === 'dark' ? 'autumn' : 'dark'));
+    setTheme((t) => (t === 'dracula' ? 'light' : 'dracula'));
   }, [setTheme]);
 
   const createInitialPersisted = useCallback((): Persisted => {
@@ -382,7 +382,7 @@ export default function App() {
             My Agents
           </button>
           <label className="swap swap-rotate btn btn-ghost btn-sm btn-circle shrink-0" aria-label="Toggle theme">
-            <input type="checkbox" checked={theme === 'dark'} onChange={toggleTheme} />
+            <input type="checkbox" checked={theme === 'dracula'} onChange={toggleTheme} />
             <Sun className="swap-off h-4 w-4" />
             <Moon className="swap-on h-4 w-4" />
           </label>
