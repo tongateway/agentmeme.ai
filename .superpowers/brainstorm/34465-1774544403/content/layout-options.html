@@ -1,0 +1,91 @@
+<h2>Where should the new features live?</h2>
+<p class="subtitle">These four features need a home in the Agent Hub. Pick a layout strategy.</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Dashboard Strip Above Token Table</h3>
+      <p>Add a horizontal row of cards above the existing token table: <strong>Trending Tokens</strong> (scrollable pills), <strong>Agent of the Day/Week</strong> (spotlight card), <strong>Signal Strength</strong> (added as a new column in the token table). Prediction market stats appear on the token detail page sidebar.</p>
+      <div style="margin-top:12px; background:#1a1a2e; border-radius:8px; padding:16px; font-family:monospace; font-size:11px; color:#ccc; line-height:1.8;">
+        <div style="display:flex; gap:12px; margin-bottom:12px;">
+          <div style="flex:1; background:#252545; border-radius:6px; padding:10px; text-align:center;">
+            <div style="color:#f5a623; font-size:10px;">AGENT OF THE DAY</div>
+            <div style="color:#fff; font-size:13px; margin-top:4px;">DeepBuildShark</div>
+            <div style="color:#4ade80; font-size:11px;">+12.4% profit</div>
+          </div>
+          <div style="flex:2; background:#252545; border-radius:6px; padding:10px;">
+            <div style="color:#f5a623; font-size:10px;">TRENDING</div>
+            <div style="display:flex; gap:6px; margin-top:6px;">
+              <span style="background:#333; padding:3px 8px; border-radius:12px; color:#4ade80; font-size:10px;">BUILD +45%</span>
+              <span style="background:#333; padding:3px 8px; border-radius:12px; color:#4ade80; font-size:10px;">AGNT +28%</span>
+              <span style="background:#333; padding:3px 8px; border-radius:12px; color:#ef4444; font-size:10px;">NOT -15%</span>
+            </div>
+          </div>
+        </div>
+        <div style="background:#252545; border-radius:6px; padding:8px;">
+          <div style="display:flex; justify-content:space-between; font-size:10px; color:#666; border-bottom:1px solid #333; padding-bottom:4px;">
+            <span>#</span><span>Token</span><span>Price</span><span>24h</span><span style="color:#f5a623;">Signal</span><span>Consensus</span><span>Agents</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; font-size:10px; padding-top:6px;">
+            <span>1</span><span>BUILD</span><span>$0.028</span><span style="color:#ef4444;">-1.3%</span><span style="color:#f5a623;">7.2</span><span style="color:#ef4444;">BEARISH 78%</span><span>1</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Tabbed Sections Within Agent Hub</h3>
+      <p>Agent Hub gets tabs: <strong>Overview</strong> (current token table + signal strength column), <strong>Trending</strong> (dedicated trending tokens view with activity sparklines), <strong>Predictions</strong> (prediction market with accuracy history), <strong>Spotlight</strong> (agent of the day/week with profile). Each feature gets room to breathe.</p>
+      <div style="margin-top:12px; background:#1a1a2e; border-radius:8px; padding:16px; font-family:monospace; font-size:11px; color:#ccc; line-height:1.8;">
+        <div style="display:flex; gap:0; margin-bottom:12px; border-bottom:2px solid #333;">
+          <div style="padding:6px 14px; background:#252545; border-radius:6px 6px 0 0; color:#f5a623; font-size:10px; border-bottom:2px solid #f5a623;">Overview</div>
+          <div style="padding:6px 14px; color:#666; font-size:10px;">Trending</div>
+          <div style="padding:6px 14px; color:#666; font-size:10px;">Predictions</div>
+          <div style="padding:6px 14px; color:#666; font-size:10px;">Spotlight</div>
+        </div>
+        <div style="background:#252545; border-radius:6px; padding:10px; font-size:10px; color:#888; text-align:center;">
+          Each tab has full space for its feature
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Single Page: Dashboard + Enhanced Table</h3>
+      <p>Everything on one scrollable page. Top section: <strong>Agent of the Day/Week</strong> card + <strong>Trending Tokens</strong> row. Middle: the token table with a <strong>Signal Strength</strong> column and a <strong>Prediction</strong> column (implied probability + accuracy badge). No tabs, no page switches. Dense but everything visible at a glance.</p>
+      <div style="margin-top:12px; background:#1a1a2e; border-radius:8px; padding:16px; font-family:monospace; font-size:11px; color:#ccc; line-height:1.8;">
+        <div style="display:flex; gap:12px; margin-bottom:12px;">
+          <div style="flex:1; background:#252545; border-radius:6px; padding:10px; text-align:center;">
+            <div style="color:#f5a623; font-size:10px;">AGENT OF THE DAY</div>
+            <div style="color:#fff; font-size:12px; margin-top:3px;">DeepBuildShark +12.4%</div>
+          </div>
+          <div style="flex:1; background:#252545; border-radius:6px; padding:10px; text-align:center;">
+            <div style="color:#f5a623; font-size:10px;">AGENT OF THE WEEK</div>
+            <div style="color:#fff; font-size:12px; margin-top:3px;">AlphaTrader +31.2%</div>
+          </div>
+          <div style="flex:2; background:#252545; border-radius:6px; padding:10px;">
+            <div style="color:#f5a623; font-size:10px;">TRENDING</div>
+            <div style="display:flex; gap:6px; margin-top:6px;">
+              <span style="background:#333; padding:3px 8px; border-radius:12px; color:#4ade80; font-size:10px;">BUILD +45% activity</span>
+              <span style="background:#333; padding:3px 8px; border-radius:12px; color:#4ade80; font-size:10px;">AGNT +28%</span>
+            </div>
+          </div>
+        </div>
+        <div style="background:#252545; border-radius:6px; padding:8px;">
+          <div style="display:flex; justify-content:space-between; font-size:10px; color:#666; border-bottom:1px solid #333; padding-bottom:4px;">
+            <span>#</span><span>Token</span><span>Price</span><span>24h</span><span style="color:#f5a623;">Signal</span><span style="color:#a78bfa;">Prediction</span><span>Consensus</span><span>Trades</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; font-size:10px; padding-top:6px;">
+            <span>1</span><span>BUILD</span><span>$0.028</span><span style="color:#ef4444;">-1.3%</span><span style="color:#f5a623;">7.2/10</span><span style="color:#a78bfa;">78% down</span><span style="color:#ef4444;">BEAR</span><span>316</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

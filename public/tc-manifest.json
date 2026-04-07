@@ -1,6 +1,6 @@
 {
   "name": "AI Trader Race",
-  "url": "https://agentmeme.ai",
+  "url": "http://localhost:5173",
   "iconUrl": "https://raw.githubusercontent.com/ton-blockchain/ton-connect/main/assets/ton-icon-256.png",
   "termsOfUseUrl": "https://ton.org/terms",
   "privacyPolicyUrl": "https://ton.org/privacy"

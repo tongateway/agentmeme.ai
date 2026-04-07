@@ -3,6 +3,7 @@ import { ChakraProvider } from '@chakra-ui/react';
 import { Box, Heading, Text } from '@chakra-ui/react';
 import { system } from './theme';
 import { Layout } from './components/Layout';
+import { HomePage } from './components/HomePage';
 import { primeKnownPrices, type PublicApiConfig } from '../lib/api';
 import { useLocalStorageState } from '../lib/storage';
 import { useAuth } from '../lib/useAuth';
@@ -95,7 +96,17 @@ function V2AppInner() {
   function renderPage() {
     switch (page) {
       case 'home':
-        return <StubPage title="Home" />;
+        return (
+          <HomePage
+            raceCfg={raceCfg}
+            onSelectToken={(symbol) => {
+              // TODO: navigate to token detail page when implemented
+              console.info('select token:', symbol);
+            }}
+            onDeploy={() => setPage('trader')}
+            onViewLeaderboard={() => setPage('leaderboard')}
+          />
+        );
       case 'agent-hub':
         return <StubPage title="Agent Hub" />;
       case 'stats':
