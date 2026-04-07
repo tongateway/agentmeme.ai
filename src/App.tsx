@@ -340,7 +340,7 @@ export default function App() {
 
   return (
     <div className="min-h-dvh">
-      <div className="w-full bg-warning/10 border-b border-warning/20 py-1.5 px-4 text-center text-xs sm:text-sm text-warning-content">
+      <div className="w-full bg-warning/10 border-b border-warning/20 py-1.5 px-4 text-center text-xs sm:text-sm text-base-content">
         <span className="font-semibold">Beta Notice:</span>{' '}
         We are currently in Beta. Please use with caution and remember — trade at your own risk, even with AI.
       </div>

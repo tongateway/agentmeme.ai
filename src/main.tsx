@@ -10,8 +10,14 @@ import App from './App.tsx';
 (globalThis as any).Buffer = Buffer;
 
 // Set initial theme from localStorage before React mounts (avoids flash)
-const savedTheme = localStorage.getItem('ai-trader-race:theme');
-document.documentElement.setAttribute('data-theme', savedTheme ? JSON.parse(savedTheme) : 'autumn');
+// Migrate old "light" value to "autumn"
+const rawTheme = localStorage.getItem('ai-trader-race:theme');
+let initialTheme = rawTheme ? JSON.parse(rawTheme) : 'autumn';
+if (initialTheme === 'light') {
+  initialTheme = 'autumn';
+  localStorage.setItem('ai-trader-race:theme', JSON.stringify('autumn'));
+}
+document.documentElement.setAttribute('data-theme', initialTheme);
 
 const manifestUrl =
   import.meta.env.VITE_TONCONNECT_MANIFEST_URL ||
