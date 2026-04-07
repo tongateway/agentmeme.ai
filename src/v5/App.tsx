@@ -7,7 +7,10 @@ import { useLocalStorageState } from '../lib/storage';
 import { useAuth } from '../lib/useAuth';
 // generateAgentKeypair imported when DeployPanel is ready
 import { Button } from './components/ui/button';
+import { HomePage } from './components/HomePage';
+import { AgentHubPage } from './components/AgentHubPage';
 import { cn } from './lib/utils';
+import { TokenOpinionPage } from './components/TokenOpinionPage';
 
 // Lazy stubs — will be replaced by real components
 function StubPage({ name }: { name: string }) {
@@ -52,6 +55,7 @@ export default function V5App() {
 
   const [theme, setTheme] = useLocalStorageState<'light' | 'dark'>(THEME_KEY, 'dark');
   const [page, setPageState] = useState<Page>(pageFromHash().page);
+  const [tokenDetail, setTokenDetail] = useState<string | null>(null);
 
   // Contracts — used by My Agents page (will be wired up)
   const [, setAllContracts] = useState<ContractListItem[] | null>(null);
@@ -68,8 +72,15 @@ export default function V5App() {
 
   const setPage = useCallback((p: Page) => {
     setPageState(p);
+    setTokenDetail(null);
     if (p === 'home') window.location.hash = '';
     else window.location.hash = p;
+  }, []);
+
+  const openToken = useCallback((symbol: string) => {
+    setTokenDetail(symbol);
+    setPageState('agent-hub');
+    window.location.hash = `agent-hub/token/${symbol}`;
   }, []);
 
   useEffect(() => {
@@ -137,8 +148,32 @@ export default function V5App() {
 
       {/* Page content */}
       <main className="mx-auto max-w-6xl px-4 sm:px-6 py-6">
-        {page === 'home' && <StubPage name="Home" />}
-        {page === 'agent-hub' && <StubPage name="Agent Hub" />}
+        {page === 'home' && (
+          <HomePage
+            raceCfg={raceCfg}
+            onSelectToken={openToken}
+            onDeploy={() => setPage('trader')}
+            onViewLeaderboard={() => setPage('leaderboard')}
+          />
+        )}
+        {page === 'agent-hub' && (
+          tokenDetail
+            ? (
+              <TokenOpinionPage
+                raceCfg={raceCfg}
+                symbol={tokenDetail}
+                onBack={() => { setTokenDetail(null); window.location.hash = 'agent-hub'; }}
+              />
+            )
+            : (
+              <AgentHubPage
+                raceCfg={raceCfg}
+                onSelectToken={openToken}
+                onDeploy={() => setPage('trader')}
+                onViewLeaderboard={() => setPage('leaderboard')}
+              />
+            )
+        )}
         {page === 'stats' && <StubPage name="Order Book" />}
         {page === 'trader' && <StubPage name="My Agents" />}
         {page === 'leaderboard' && <StubPage name="Leaderboard" />}
