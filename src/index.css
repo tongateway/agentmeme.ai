@@ -1,10 +1,74 @@
 @import "tailwindcss";
-@plugin "daisyui" {
-  themes: light --default, dark --prefersdark;
+
+@plugin "daisyui/theme" {
+  name: "autumn";
+  default: true;
+  prefersdark: false;
+  color-scheme: "light";
+  --color-base-100: oklch(95.814% 0 0);
+  --color-base-200: oklch(89.107% 0 0);
+  --color-base-300: oklch(82.4% 0 0);
+  --color-base-content: oklch(19.162% 0 0);
+  --color-primary: oklch(40.723% 0.161 17.53);
+  --color-primary-content: oklch(88.144% 0.032 17.53);
+  --color-secondary: oklch(61.676% 0.169 23.865);
+  --color-secondary-content: oklch(12.335% 0.033 23.865);
+  --color-accent: oklch(73.425% 0.094 60.729);
+  --color-accent-content: oklch(14.685% 0.018 60.729);
+  --color-neutral: oklch(54.367% 0.037 51.902);
+  --color-neutral-content: oklch(90.873% 0.007 51.902);
+  --color-info: oklch(69.224% 0.097 207.284);
+  --color-info-content: oklch(13.844% 0.019 207.284);
+  --color-success: oklch(60.995% 0.08 174.616);
+  --color-success-content: oklch(12.199% 0.016 174.616);
+  --color-warning: oklch(70.081% 0.164 56.844);
+  --color-warning-content: oklch(14.016% 0.032 56.844);
+  --color-error: oklch(53.07% 0.241 24.16);
+  --color-error-content: oklch(90.614% 0.048 24.16);
+  --radius-selector: 1rem;
+  --radius-field: 0.5rem;
+  --radius-box: 1rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 1;
+  --noise: 0;
 }
 
-/* Enable Tailwind's dark: variant based on .dark class on html element (used by V4) */
-@variant dark (&:where(.dark, .dark *));
+@plugin "daisyui/theme" {
+  name: "dark";
+  default: false;
+  prefersdark: true;
+  color-scheme: "dark";
+  --color-base-100: oklch(25.33% 0.016 252.42);
+  --color-base-200: oklch(23.26% 0.014 253.1);
+  --color-base-300: oklch(21.15% 0.012 254.09);
+  --color-base-content: oklch(97.807% 0.029 256.847);
+  --color-primary: oklch(58% 0.233 277.117);
+  --color-primary-content: oklch(96% 0.018 272.314);
+  --color-secondary: oklch(65% 0.241 354.308);
+  --color-secondary-content: oklch(94% 0.028 342.258);
+  --color-accent: oklch(77% 0.152 181.912);
+  --color-accent-content: oklch(38% 0.063 188.416);
+  --color-neutral: oklch(14% 0.005 285.823);
+  --color-neutral-content: oklch(92% 0.004 286.32);
+  --color-info: oklch(74% 0.16 232.661);
+  --color-info-content: oklch(29% 0.066 243.157);
+  --color-success: oklch(76% 0.177 163.223);
+  --color-success-content: oklch(37% 0.077 168.94);
+  --color-warning: oklch(82% 0.189 84.429);
+  --color-warning-content: oklch(41% 0.112 45.904);
+  --color-error: oklch(71% 0.194 13.428);
+  --color-error-content: oklch(27% 0.105 12.094);
+  --radius-selector: 0.5rem;
+  --radius-field: 0.25rem;
+  --radius-box: 0.5rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 1;
+  --noise: 0;
+}
 
 * {
   box-sizing: border-box;
@@ -63,34 +127,6 @@
 }
 .animate-fade-in-up {
   animation: fadeInUp 0.5s ease-out forwards;
-}
-
-/* V3/V4 DaisyUI reset — undo component styles within these containers */
-#v3-root *,
-#v4-root *,
-#v5-root * {
-  /* Reset DaisyUI component class overrides */
-  --tw-ring-color: initial;
-  --tw-ring-offset-color: initial;
-}
-
-#v3-root .btn,
-#v4-root .btn,
-#v5-root .btn,
-#v3-root .card,
-#v4-root .card,
-#v5-root .card,
-#v3-root .badge,
-#v4-root .badge,
-#v5-root .badge,
-#v3-root .table,
-#v4-root .table,
-#v5-root .table,
-#v3-root .input,
-#v4-root .input,
-#v5-root .input {
-  all: revert;
-  box-sizing: border-box;
 }
 
 /* Order-book row flash on refresh */
