@@ -1,34 +1,34 @@
-import { type ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
-import { motion } from 'framer-motion';
-import { Bot, BarChart3, ExternalLink, ShieldAlert, RefreshCw } from 'lucide-react';
-import { useTonAddress, useTonWallet, TonConnectButton } from '@tonconnect/ui-react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { TonConnectButton, useTonAddress, useTonWallet } from '@tonconnect/ui-react';
 import { Address } from '@ton/core';
-import { HomePage } from './HomePage';
-import { AgentHubPage } from './components/AgentHubPage';
-import { TokenOpinionPage } from './components/TokenOpinionPage';
-import { StatsPage } from './components/StatsPage';
-import { LeaderboardPage } from './components/LeaderboardPage';
-import { DocsPage } from './components/DocsPage';
-import { ContractTabBar, type TabKey } from './components/ContractTabBar';
-import { ContractDetailPanel } from './components/ContractDetailPanel';
-import { DeployPanel, type Persisted } from './components/DeployPanel';
+import { Sun, Moon, Bot } from 'lucide-react';
+import { motion } from 'framer-motion';
 import {
-  listRaceContracts,
   listContractsFromLeaderboard,
+  listRaceContracts,
+  primeKnownPrices,
   getRaceContractDetail,
   updateRaceContract,
-  primeKnownPrices,
   type ContractListItem,
   type PublicApiConfig,
 } from '../lib/api';
 import { useLocalStorageState } from '../lib/storage';
 import { useAuth } from '../lib/useAuth';
 import { generateAgentKeypair } from '../lib/crypto';
+import { HomePage } from './components/HomePage';
+import { AgentHubPage } from './components/AgentHubPage';
+import { cn } from './utils/cn';
+import { TokenOpinionPage } from '../v5/components/TokenOpinionPage';
+import { StatsPage } from '../v5/components/StatsPage';
+import { LeaderboardPage } from '../v5/components/LeaderboardPage';
+import { DocsPage } from '../v5/components/DocsPage';
+import { ContractTabBar, type TabKey } from '../v5/components/ContractTabBar';
+import { ContractDetailPanel } from '../v5/components/ContractDetailPanel';
+import { DeployPanel, type Persisted } from '../v5/components/DeployPanel';
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
-
-const LS_KEY = 'ai-trader-race:v3';
-const MY_CONTRACTS_KEY = 'ai-trader-race:my-contracts';
+const THEME_KEY = 'ai-trader-race:theme';
+const LS_KEY = 'ai-trader-race:v5';
+const MY_CONTRACTS_KEY = 'ai-trader-race:v5:my-contracts';
 
 function normalizeTonAddress(addr: string): string {
   try {
@@ -38,62 +38,41 @@ function normalizeTonAddress(addr: string): string {
   }
 }
 
-type Page = 'home' | 'agent-hub' | 'token' | 'stats' | 'leaderboard' | 'docs' | 'trader';
+type Page = 'home' | 'leaderboard' | 'stats' | 'trader' | 'docs' | 'agent-hub';
 
-function getInitialPage(): { page: Page; token: string | null; tab: TabKey } {
+function pageFromHash(): { page: Page; sub?: string } {
   const hash = window.location.hash.replace(/^#\/?/, '');
-  if (hash === 'agent-hub') return { page: 'agent-hub', token: null, tab: { kind: 'deploy' } };
-  if (hash === 'stats') return { page: 'stats', token: null, tab: { kind: 'deploy' } };
-  if (hash === 'leaderboard') return { page: 'leaderboard', token: null, tab: { kind: 'deploy' } };
-  if (hash === 'docs') return { page: 'docs', token: null, tab: { kind: 'deploy' } };
-  const tokenMatch = hash.match(/^token\/(.+)$/);
-  if (tokenMatch) return { page: 'token', token: decodeURIComponent(tokenMatch[1]), tab: { kind: 'deploy' } };
-  // Trader routes
-  if (hash === 'trader' || hash === 'trader/deploy') return { page: 'trader', token: null, tab: { kind: 'deploy' } };
-  const contractMatch = hash.match(/^trader\/contract\/(.+)$/);
-  if (contractMatch) return { page: 'trader', token: null, tab: { kind: 'contract', contractId: decodeURIComponent(contractMatch[1]) } };
-  return { page: 'home', token: null, tab: { kind: 'deploy' } };
-}
-
-type NavLinkProps = { href: string; children: ReactNode; active?: boolean; onClick?: (e: React.MouseEvent) => void };
-
-function NavLink({ href, children, active, onClick }: NavLinkProps) {
-  return (
-    <a
-      href={href}
-      onClick={onClick}
-      className={`text-sm transition-colors ${active ? 'text-white' : 'text-gray-400 hover:text-white'}`}
-    >
-      {children}
-    </a>
-  );
+  if (!hash) return { page: 'home' };
+  const [first, ...rest] = hash.split('/');
+  const p = first as Page;
+  const validPages: Page[] = ['home', 'leaderboard', 'stats', 'trader', 'docs', 'agent-hub'];
+  if (validPages.includes(p)) return { page: p, sub: rest.join('/') || undefined };
+  return { page: 'home' };
 }
 
 export default function V3App() {
-  const baseCfg = useMemo<PublicApiConfig>(() => ({ baseUrl: BASE_URL }), []);
+  const raceApiUrl = (
+    (import.meta.env.VITE_RACE_API_URL as string | undefined) ??
+    'https://ai-api.open4dev.xyz'
+  ).trim().replace(/\/$/, '');
 
-  // Auth
-  const { jwtToken, authError, reconnect } = useAuth(baseCfg);
-  const raceCfg = useMemo<PublicApiConfig>(
-    () => ({ baseUrl: BASE_URL, jwtToken }),
-    [jwtToken],
-  );
+  const baseCfg = useMemo<PublicApiConfig>(() => ({ baseUrl: raceApiUrl }), [raceApiUrl]);
+  const { jwtToken } = useAuth(baseCfg);
+  const raceCfg = useMemo<PublicApiConfig>(() => ({ baseUrl: raceApiUrl, jwtToken }), [raceApiUrl, jwtToken]);
 
-  useEffect(() => { primeKnownPrices(raceCfg); }, [raceCfg]);
-
-  const wallet = useTonWallet();
+  useTonWallet(); // keep provider active
   const tonAddress = useTonAddress();
-  const isConnected = !!wallet;
   const walletStorageScope = tonAddress ? normalizeTonAddress(tonAddress) : 'disconnected';
   const persistedStorageKey = `${LS_KEY}:${walletStorageScope}`;
   const myContractsStorageKey = `${MY_CONTRACTS_KEY}:${walletStorageScope}`;
 
-  const initial = getInitialPage();
-  const [page, setPage] = useState<Page>(initial.page);
-  const [selectedToken, setSelectedToken] = useState<string | null>(initial.token);
-  const [tab, setTab] = useState<TabKey>(initial.tab);
+  const [theme, setTheme] = useLocalStorageState<'light' | 'dark'>(THEME_KEY, 'dark');
+  const [page, setPageState] = useState<Page>(pageFromHash().page);
+  const [tokenDetail, setTokenDetail] = useState<string | null>(null);
 
-  // Contract list state
+  // Contract management state
+  const [tab, setTab] = useState<TabKey>({ kind: 'deploy' });
+
   const createInitialPersisted = useCallback((): Persisted => {
     const kp = generateAgentKeypair();
     return {
@@ -112,22 +91,23 @@ export default function V3App() {
   const [myContractIds, setMyContractIds] = useLocalStorageState<string[]>(myContractsStorageKey, []);
   const [allContracts, setAllContracts] = useState<ContractListItem[] | null>(null);
   const [contractsBusy, setContractsBusy] = useState(false);
+
   const walletRawAddress = useMemo(
     () => (tonAddress ? normalizeTonAddress(tonAddress) : null),
     [tonAddress],
   );
 
+  // Filter to user's contracts
   const contracts = useMemo(() => {
     if (!allContracts) return null;
     const idSet = new Set(myContractIds);
-    const matched = allContracts.filter((c) => {
+    return allContracts.filter((c) => {
       if (idSet.has(c.id)) return true;
       if (walletRawAddress && c.owner_address) {
         return normalizeTonAddress(c.owner_address) === walletRawAddress;
       }
       return false;
     });
-    return matched;
   }, [allContracts, myContractIds, walletRawAddress]);
 
   const activeContract = useMemo(
@@ -135,7 +115,7 @@ export default function V3App() {
     [allContracts, tab],
   );
 
-  // If contract not in local list, fetch it directly
+  // If contract not in local list, fetch it
   useEffect(() => {
     if (tab.kind !== 'contract') return;
     if (activeContract) return;
@@ -158,33 +138,60 @@ export default function V3App() {
           updated_at: detail.updated_at,
         };
         setAllContracts((prev) => (prev ? [...prev, item] : [item]));
-      } catch { /* contract not found */ }
+      } catch { /* not found */ }
     })();
     return () => { cancelled = true; };
   }, [tab, activeContract, allContracts, raceCfg]);
 
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', theme === 'dark');
+  }, [theme]);
+
+  const toggleTheme = () => setTheme(theme === 'dark' ? 'light' : 'dark');
+
+  useEffect(() => {
+    void primeKnownPrices(raceCfg);
+  }, []);
+
+  const setPage = useCallback((p: Page) => {
+    setPageState(p);
+    setTokenDetail(null);
+    if (p === 'home') window.location.hash = '';
+    else window.location.hash = p;
+  }, []);
+
+  const openToken = useCallback((symbol: string) => {
+    setTokenDetail(symbol);
+    setPageState('agent-hub');
+    window.location.hash = `agent-hub/token/${symbol}`;
+  }, []);
+
+  useEffect(() => {
+    const onHash = () => {
+      const { page: p } = pageFromHash();
+      setPageState(p);
+    };
+    window.addEventListener('hashchange', onHash);
+    return () => window.removeEventListener('hashchange', onHash);
+  }, []);
+
+  // Fetch contracts
   const refreshContracts = useCallback(async () => {
     try {
       setContractsBusy(true);
       let all = await listRaceContracts(raceCfg, 'active,paused,deploying');
-      if (all.length === 0) {
-        all = await listContractsFromLeaderboard(raceCfg);
-      }
-      all.sort((a, b) => {
-        const byCreated = new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-        if (byCreated !== 0) return byCreated;
-        return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
-      });
+      if (all.length === 0) all = await listContractsFromLeaderboard(raceCfg);
+      all.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
       setAllContracts(all);
-    } catch {
-      // silently fail
-    } finally {
-      setContractsBusy(false);
-    }
+    } catch { /* ignore */ }
+    finally { setContractsBusy(false); }
   }, [raceCfg]);
 
-  useEffect(() => { void refreshContracts(); }, [refreshContracts]);
+  useEffect(() => {
+    void refreshContracts();
+  }, [refreshContracts]);
 
+  // Tab change: reset persisted when switching to deploy
   const handleTabChange = useCallback(
     (newTab: TabKey) => {
       if (newTab.kind === 'deploy') {
@@ -228,9 +235,9 @@ export default function V3App() {
   );
 
   const handleContractStatusChanged = useCallback(
-    (contractId: string, isActive: boolean) => {
+    (contractId: string, newIsActive: boolean) => {
       setAllContracts((prev) =>
-        prev?.map((c) => (c.id === contractId ? { ...c, is_active: isActive, status: isActive ? 'active' : 'paused' } : c)) ?? null,
+        prev?.map((c) => (c.id === contractId ? { ...c, is_active: newIsActive, status: newIsActive ? 'active' : 'paused' } : c)) ?? null,
       );
     },
     [],
@@ -240,210 +247,101 @@ export default function V3App() {
     async (contractId: string, newName: string) => {
       await updateRaceContract(raceCfg, contractId, { name: newName });
       setAllContracts((prev) =>
-        prev?.map((c) => (c.id === contractId ? { ...c, name: newName } : c)) ?? null,
+        prev ? prev.map((c) => (c.id === contractId ? { ...c, name: newName } : c)) : prev,
       );
     },
     [raceCfg],
   );
 
-  // Sync hash <-> state
-  useEffect(() => {
-    const onHashChange = () => {
-      const r = getInitialPage();
-      setPage(r.page);
-      setSelectedToken(r.token);
-      if (r.page === 'trader') setTab(r.tab);
-    };
-    window.addEventListener('hashchange', onHashChange);
-    return () => window.removeEventListener('hashchange', onHashChange);
-  }, []);
-
-  // Update hash on navigation
-  useEffect(() => {
-    let nextHash = '';
-    if (page === 'home') nextHash = '';
-    else if (page === 'agent-hub') nextHash = 'agent-hub';
-    else if (page === 'stats') nextHash = 'stats';
-    else if (page === 'leaderboard') nextHash = 'leaderboard';
-    else if (page === 'docs') nextHash = 'docs';
-    else if (page === 'token' && selectedToken) nextHash = `token/${encodeURIComponent(selectedToken)}`;
-    else if (page === 'trader') {
-      if (tab.kind === 'deploy') nextHash = 'trader/deploy';
-      else nextHash = `trader/contract/${encodeURIComponent(tab.contractId)}`;
-    }
-    const target = nextHash ? `#${nextHash}` : '#';
-    if (window.location.hash !== target && !(target === '#' && window.location.hash === '')) {
-      window.location.hash = target;
-    }
-  }, [page, selectedToken, tab]);
-
-  const navigate = (newPage: Page, token?: string) => {
-    setPage(newPage);
-    setSelectedToken(token ?? null);
-  };
-
-  const handleDeploy = () => {
-    setPage('trader');
-    setTab({ kind: 'deploy' });
-  };
-
-  const handleViewLeaderboard = () => {
-    navigate('leaderboard');
-  };
-
-  const handleSelectToken = (symbol: string) => {
-    navigate('token', symbol);
-  };
-
-  const handleBackToHub = () => {
-    navigate('agent-hub');
-  };
-
-  const openTrader = useCallback(() => {
-    setPage('trader');
-    if (contracts && contracts.length > 0 && tab.kind === 'deploy') {
-      setTab({ kind: 'contract', contractId: contracts[0].id });
-    }
-  }, [contracts, tab.kind]);
-
-  const openContractFromLeaderboard = useCallback((contractId: string) => {
-    setPage('trader');
-    setTab({ kind: 'contract', contractId });
-  }, []);
+  const navLinks: [Page, string][] = [
+    ['home', 'Home'],
+    ['agent-hub', 'Agent Hub'],
+    ['stats', 'Order Book'],
+    ['trader', 'My Agents'],
+    ['leaderboard', 'Leaderboard'],
+    ['docs', 'Docs'],
+  ];
 
   return (
     <div id="v3-root" className="min-h-screen bg-black text-white">
       {/* Navbar */}
-      <motion.nav
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
+      <motion.header
+        initial={{ y: -20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.4 }}
-        className="fixed top-0 z-50 w-full border-b border-white/5 bg-black/80 backdrop-blur-md"
+        className="sticky top-0 z-50 border-b border-white/5 bg-black/90 backdrop-blur"
       >
-        <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
-          {/* Logo */}
+        <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4 sm:px-6">
           <button
             type="button"
-            onClick={() => navigate('home')}
-            className="flex items-center gap-2 font-mono text-sm font-bold text-white"
+            className="flex items-center gap-2 font-bold text-lg tracking-tight"
+            onClick={() => setPage('home')}
           >
-            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#00C389]/20 text-[#00C389]">
-              <Bot size={14} />
-            </div>
-            <span className="text-[#00C389]">AI</span>
-            <span className="text-gray-300">Trader</span>
-            <span className="ml-0.5 rounded bg-[#00C389]/15 px-1 py-0.5 text-[10px] font-semibold text-[#00C389]">
-              RACE
-            </span>
+            <span className="text-[#00C389]">AgntM</span>
           </button>
 
-          {/* Nav links */}
-          <div className="hidden items-center gap-6 md:flex">
-            <NavLink href="#agent-hub" active={page === 'agent-hub'} onClick={(e) => { e?.preventDefault?.(); navigate('agent-hub'); }}>
-              Agent Hub
-            </NavLink>
+          <nav className="hidden items-center gap-1 md:flex">
+            {navLinks.map(([p, label]) => (
+              <button
+                key={p}
+                type="button"
+                onClick={() => setPage(p)}
+                className={cn(
+                  'px-3 py-1.5 rounded-md text-sm font-medium transition-colors',
+                  page === p
+                    ? 'bg-white/10 text-white'
+                    : 'text-gray-400 hover:text-white hover:bg-white/5',
+                )}
+              >
+                {label}
+              </button>
+            ))}
+          </nav>
+
+          <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={openTrader}
-              className={`text-sm transition-colors ${page === 'trader' ? 'text-white' : 'text-gray-400 hover:text-white'}`}
+              onClick={toggleTheme}
+              className="p-2 rounded-md text-gray-400 hover:text-white hover:bg-white/5 transition-colors"
             >
-              My Agents
+              {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
             </button>
-            <NavLink href="#leaderboard" active={page === 'leaderboard'}>Leaderboard</NavLink>
-            <NavLink href="#stats" active={page === 'stats'}>Stats</NavLink>
-            <NavLink href="#docs" active={page === 'docs'}>Docs</NavLink>
-          </div>
-
-          {/* CTA */}
-          <div className="flex items-center gap-3">
-            {page === 'trader' && (
-              <TonConnectButton />
-            )}
-            <a
-              href="/v2"
-              className="hidden items-center gap-1 text-xs text-gray-500 transition-colors hover:text-gray-300 md:flex"
-            >
-              <ExternalLink size={12} />
-              Classic UI
-            </a>
-            <button
-              onClick={handleDeploy}
-              className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-[#00C389] px-4 text-xs font-semibold text-black transition-opacity hover:opacity-90"
-            >
-              <BarChart3 size={13} />
-              Deploy Agent
-            </button>
+            <TonConnectButton />
           </div>
         </div>
-      </motion.nav>
+      </motion.header>
 
       {/* Page content */}
-      <div className="pt-14">
+      <main className="mx-auto max-w-6xl px-4 sm:px-6 py-6">
         {page === 'home' && (
-          <div className="mx-auto max-w-6xl px-4">
-            <HomePage
-              raceCfg={raceCfg}
-              onSelectToken={handleSelectToken}
-              onDeploy={handleDeploy}
-              onViewLeaderboard={handleViewLeaderboard}
-            />
-          </div>
-        )}
-
-        {page === 'agent-hub' && (
-          <div className="mx-auto max-w-6xl px-4">
-            <AgentHubPage
-              raceCfg={raceCfg}
-              onSelectToken={handleSelectToken}
-              onDeploy={handleDeploy}
-              onViewLeaderboard={handleViewLeaderboard}
-            />
-          </div>
-        )}
-
-        {page === 'token' && selectedToken && (
-          <div className="mx-auto max-w-6xl px-4">
-            <TokenOpinionPage
-              raceCfg={raceCfg}
-              symbol={selectedToken}
-              onBack={handleBackToHub}
-            />
-          </div>
-        )}
-
-        {page === 'stats' && <StatsPage raceCfg={raceCfg} />}
-
-        {page === 'leaderboard' && (
-          <LeaderboardPage
+          <HomePage
             raceCfg={raceCfg}
-            onOpenContract={openContractFromLeaderboard}
+            onSelectToken={openToken}
+            onDeploy={() => setPage('trader')}
+            onViewLeaderboard={() => setPage('leaderboard')}
           />
         )}
-
-        {page === 'docs' && <DocsPage />}
-
+        {page === 'agent-hub' && (
+          tokenDetail
+            ? (
+              <TokenOpinionPage
+                raceCfg={raceCfg}
+                symbol={tokenDetail}
+                onBack={() => { setTokenDetail(null); window.location.hash = 'agent-hub'; }}
+              />
+            )
+            : (
+              <AgentHubPage
+                raceCfg={raceCfg}
+                onSelectToken={openToken}
+                onDeploy={() => setPage('trader')}
+                onViewLeaderboard={() => setPage('leaderboard')}
+              />
+            )
+        )}
+        {page === 'stats' && <StatsPage raceCfg={raceCfg} />}
         {page === 'trader' && (
-          <div className="mx-auto max-w-6xl px-4 pt-6 pb-10">
-            {/* Auth warning */}
-            {isConnected && !jwtToken && authError && (
-              <div className="mb-4 flex items-center gap-3 rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3">
-                <ShieldAlert className="h-5 w-5 shrink-0 text-red-400" />
-                <div className="flex-1 text-sm text-red-300">
-                  <span className="font-semibold">Not authenticated:</span>{' '}
-                  {authError}
-                  <span className="text-red-400/70"> — owner actions won&apos;t work.</span>
-                </div>
-                <button
-                  className="inline-flex items-center gap-1 rounded-lg border border-white/10 px-3 py-1 text-xs text-gray-300 transition-colors hover:bg-white/5"
-                  onClick={() => void reconnect()}
-                  type="button"
-                >
-                  <RefreshCw className="h-3.5 w-3.5" />
-                  Reconnect
-                </button>
-              </div>
-            )}
-
+          <div className="flex flex-col gap-4">
             <ContractTabBar
               contracts={contracts}
               activeTab={tab}
@@ -451,20 +349,7 @@ export default function V3App() {
               loading={contractsBusy}
               onRename={handleRenameContract}
             />
-
-            {tab.kind === 'contract' && activeContract ? (
-              <ContractDetailPanel
-                key={tab.contractId}
-                contract={activeContract}
-                raceCfg={raceCfg}
-                onDeleted={(id) => void handleContractDeleted(id)}
-                onStatusChanged={handleContractStatusChanged}
-              />
-            ) : tab.kind === 'contract' && allContracts == null ? (
-              <div className="mt-4 flex justify-center py-8">
-                <div className="h-6 w-6 animate-spin rounded-full border-2 border-gray-600 border-t-[#00C389]" />
-              </div>
-            ) : (
+            {tab.kind === 'deploy' && (
               <DeployPanel
                 persisted={persisted}
                 setPersisted={setPersisted}
@@ -472,23 +357,53 @@ export default function V3App() {
                 onContractRegistered={(id) => void handleContractRegistered(id)}
               />
             )}
+            {tab.kind === 'contract' && activeContract && (
+              <ContractDetailPanel
+                contract={activeContract}
+                raceCfg={raceCfg}
+                onDeleted={(id) => void handleContractDeleted(id)}
+                onStatusChanged={handleContractStatusChanged}
+              />
+            )}
           </div>
         )}
-      </div>
+        {page === 'leaderboard' && (
+          <LeaderboardPage
+            raceCfg={raceCfg}
+            onSelectAgent={(contractId) => {
+              setPageState('trader');
+              setTab({ kind: 'contract', contractId });
+              window.location.hash = 'trader';
+            }}
+          />
+        )}
+        {page === 'docs' && <DocsPage />}
+      </main>
 
       {/* Footer */}
-      <footer className="border-t border-white/5 bg-black px-4 py-10">
-        <div className="mx-auto flex max-w-6xl flex-col items-center gap-4 text-center">
-          <div className="flex items-center gap-2 font-mono text-sm text-gray-500">
-            <Bot size={14} className="text-[#00C389]" />
-            AgntM — built on TON
+      <footer className="border-t border-white/5 py-8 mt-auto">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 flex flex-col items-center gap-3 text-sm text-gray-500">
+          <div className="flex items-center gap-2">
+            <Bot className="h-4 w-4 text-[#00C389]" />
+            <span>AgntM — built on TON</span>
           </div>
-          <div className="flex gap-6 text-xs text-gray-600">
-            <a href="#docs" className="hover:text-gray-400">Docs</a>
-            <a href="https://github.com" className="hover:text-gray-400" target="_blank" rel="noopener noreferrer">GitHub</a>
-            <a href="/v2" className="hover:text-gray-400">Classic UI (v2)</a>
+          <div className="flex gap-4 text-xs">
+            <button
+              type="button"
+              onClick={() => setPage('docs')}
+              className="hover:text-gray-300 transition-colors"
+            >
+              Docs
+            </button>
+            <a
+              href="https://github.com/tongateway/orderbook-protocol"
+              target="_blank"
+              rel="noreferrer"
+              className="hover:text-gray-300 transition-colors"
+            >
+              Protocol
+            </a>
           </div>
-          <p className="text-xs text-gray-700">Not financial advice. Trade responsibly.</p>
         </div>
       </footer>
     </div>
