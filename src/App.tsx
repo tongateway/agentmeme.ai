@@ -381,6 +381,13 @@ export default function App() {
           >
             My Agents
           </button>
+          <button
+            className={`btn btn-sm shrink-0 ${page === 'leaderboard' ? 'btn-active' : 'btn-ghost'}`}
+            onClick={() => setPage('leaderboard')}
+            type="button"
+          >
+            Leaderboard
+          </button>
           <label className="swap swap-rotate btn btn-ghost btn-sm btn-circle shrink-0" aria-label="Toggle theme">
             <input type="checkbox" checked={theme === 'dark'} onChange={toggleTheme} />
             <Sun className="swap-off h-4 w-4" />
