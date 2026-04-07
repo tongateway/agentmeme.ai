@@ -1,7 +1,9 @@
-import type { ReactNode } from 'react';
+import { type ReactNode, useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Bot, BarChart3, ExternalLink } from 'lucide-react';
 import { HomePage } from './HomePage';
+import { AgentHubPage } from './components/AgentHubPage';
+import { TokenOpinionPage } from './components/TokenOpinionPage';
 import { type PublicApiConfig } from '../lib/api';
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
@@ -9,6 +11,16 @@ const BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 const raceCfg: PublicApiConfig = {
   baseUrl: BASE_URL,
 };
+
+type Page = 'home' | 'agent-hub' | 'token';
+
+function getInitialPage(): { page: Page; token: string | null } {
+  const hash = window.location.hash.replace(/^#\/?/, '');
+  if (hash === 'agent-hub') return { page: 'agent-hub', token: null };
+  const tokenMatch = hash.match(/^token\/(.+)$/);
+  if (tokenMatch) return { page: 'token', token: decodeURIComponent(tokenMatch[1]) };
+  return { page: 'home', token: null };
+}
 
 type NavLinkProps = { href: string; children: ReactNode };
 
@@ -24,8 +36,33 @@ function NavLink({ href, children }: NavLinkProps) {
 }
 
 export default function V3App() {
+  const [page, setPage] = useState<Page>(getInitialPage().page);
+  const [selectedToken, setSelectedToken] = useState<string | null>(getInitialPage().token);
+
+  // Sync hash <-> state
+  useEffect(() => {
+    const onHashChange = () => {
+      const { page: p, token: t } = getInitialPage();
+      setPage(p);
+      setSelectedToken(t);
+    };
+    window.addEventListener('hashchange', onHashChange);
+    return () => window.removeEventListener('hashchange', onHashChange);
+  }, []);
+
+  const navigate = (newPage: Page, token?: string) => {
+    if (newPage === 'home') {
+      window.location.hash = '';
+    } else if (newPage === 'agent-hub') {
+      window.location.hash = 'agent-hub';
+    } else if (newPage === 'token' && token) {
+      window.location.hash = `token/${encodeURIComponent(token)}`;
+    }
+    setPage(newPage);
+    setSelectedToken(token ?? null);
+  };
+
   const handleDeploy = () => {
-    // Navigate to deploy — fall back to v2 deploy page
     window.location.href = '/v2#/agent-hub';
   };
 
@@ -34,7 +71,19 @@ export default function V3App() {
   };
 
   const handleSelectToken = (symbol: string) => {
-    window.location.href = `/v2#/trader?token=${encodeURIComponent(symbol)}`;
+    navigate('token', symbol);
+  };
+
+  const handleBackToHub = () => {
+    navigate('agent-hub');
+  };
+
+  const handleNavAgentHub = () => {
+    navigate('agent-hub');
+  };
+
+  const handleNavHome = () => {
+    navigate('home');
   };
 
   return (
@@ -48,7 +97,11 @@ export default function V3App() {
       >
         <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
           {/* Logo */}
-          <a href="/v3" className="flex items-center gap-2 font-mono text-sm font-bold text-white">
+          <button
+            type="button"
+            onClick={handleNavHome}
+            className="flex items-center gap-2 font-mono text-sm font-bold text-white"
+          >
             <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#00C389]/20 text-[#00C389]">
               <Bot size={14} />
             </div>
@@ -57,10 +110,17 @@ export default function V3App() {
             <span className="ml-0.5 rounded bg-[#00C389]/15 px-1 py-0.5 text-[10px] font-semibold text-[#00C389]">
               RACE
             </span>
-          </a>
+          </button>
 
           {/* Nav links */}
           <div className="hidden items-center gap-6 md:flex">
+            <button
+              type="button"
+              onClick={handleNavAgentHub}
+              className="text-sm text-gray-400 transition-colors hover:text-white"
+            >
+              Agent Hub
+            </button>
             <NavLink href="/v2#/leaderboard">Leaderboard</NavLink>
             <NavLink href="/v2#/trader">Tokens</NavLink>
             <NavLink href="/v2#/stats">Stats</NavLink>
@@ -89,12 +149,31 @@ export default function V3App() {
 
       {/* Page content — padded for navbar */}
       <div className="pt-14">
-        <HomePage
-          raceCfg={raceCfg}
-          onSelectToken={handleSelectToken}
-          onDeploy={handleDeploy}
-          onViewLeaderboard={handleViewLeaderboard}
-        />
+        <div className="mx-auto max-w-6xl px-4">
+          {page === 'home' && (
+            <HomePage
+              raceCfg={raceCfg}
+              onSelectToken={handleSelectToken}
+              onDeploy={handleDeploy}
+              onViewLeaderboard={handleViewLeaderboard}
+            />
+          )}
+          {page === 'agent-hub' && (
+            <AgentHubPage
+              raceCfg={raceCfg}
+              onSelectToken={handleSelectToken}
+              onDeploy={handleDeploy}
+              onViewLeaderboard={handleViewLeaderboard}
+            />
+          )}
+          {page === 'token' && selectedToken && (
+            <TokenOpinionPage
+              raceCfg={raceCfg}
+              symbol={selectedToken}
+              onBack={handleBackToHub}
+            />
+          )}
+        </div>
       </div>
 
       {/* ── Footer ──────────────────────────────────────────────── */}
