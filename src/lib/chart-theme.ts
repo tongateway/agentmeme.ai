@@ -1,6 +1,6 @@
 import type { DeepPartial, ChartOptions, LineSeriesPartialOptions } from 'lightweight-charts';
 
-export type AppTheme = 'light' | 'dark';
+export type AppTheme = 'autumn' | 'dark';
 
 const DARK: DeepPartial<ChartOptions> = {
   layout: {

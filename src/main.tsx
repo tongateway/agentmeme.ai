@@ -11,7 +11,7 @@ import App from './App.tsx';
 
 // Set initial theme from localStorage before React mounts (avoids flash)
 const savedTheme = localStorage.getItem('ai-trader-race:theme');
-document.documentElement.setAttribute('data-theme', savedTheme ? JSON.parse(savedTheme) : 'dark');
+document.documentElement.setAttribute('data-theme', savedTheme ? JSON.parse(savedTheme) : 'autumn');
 
 const manifestUrl =
   import.meta.env.VITE_TONCONNECT_MANIFEST_URL ||

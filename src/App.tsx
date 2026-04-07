@@ -133,14 +133,14 @@ export default function App() {
   }, [page, tab, statsPairSlug, hubToken]);
 
   // Theme switcher
-  const [theme, setTheme] = useLocalStorageState<'light' | 'dark'>(THEME_KEY, 'light');
+  const [theme, setTheme] = useLocalStorageState<'autumn' | 'dark'>(THEME_KEY, 'autumn');
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
   }, [theme]);
 
   const toggleTheme = useCallback(() => {
-    setTheme((t) => (t === 'dark' ? 'light' : 'dark'));
+    setTheme((t) => (t === 'dark' ? 'autumn' : 'dark'));
   }, [setTheme]);
 
   const createInitialPersisted = useCallback((): Persisted => {
