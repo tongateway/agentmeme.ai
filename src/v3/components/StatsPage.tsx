@@ -12,7 +12,7 @@ import {
   type PublicApiConfig,
   type ScannerStatsResponse,
   type ScannerStatsWindow,
-} from '../../lib/api';
+} from '@/lib/api';
 import { cn } from '../utils/cn';
 
 const AUTO_REFRESH_MS = 10_000;
@@ -26,6 +26,7 @@ type TradingPair = {
   toSymbol: string;
   baseVault: string;
   quoteVault: string;
+  hot?: boolean;
 };
 
 const DEFAULT_PAIRS: TradingPair[] = [
@@ -36,6 +37,7 @@ const DEFAULT_PAIRS: TradingPair[] = [
     toSymbol: 'USDT',
     baseVault: 'EQCfzBzukuhvyXvKwFXq9nffu_YRngAJugAuR5ibQ7Arcl1w',
     quoteVault: 'EQBrozHGTEwumr5ND62CpUXqmfYyi1UucbIj-15ZJnlFLe9U',
+    hot: true,
   },
   {
     slug: 'USDT-BUILD',
@@ -50,7 +52,8 @@ const DEFAULT_PAIRS: TradingPair[] = [
 function pairIdxFromSlug(slug: string | null): number {
   if (!slug) return 0;
   const upper = slug.toUpperCase();
-  const idx = DEFAULT_PAIRS.findIndex((p) => p.slug === upper);
+  const normalized = upper === 'TON-XAUTH' ? 'TON-XAUT' : upper;
+  const idx = DEFAULT_PAIRS.findIndex((p) => p.slug === normalized);
   return idx >= 0 ? idx : 0;
 }
 
@@ -99,10 +102,13 @@ type NormalizedBook = {
 };
 
 /**
- * Normalize the open4dev order book response.
+ * Open4Dev order book API:
+ *   price  = base per quote (toSymbol per fromSymbol)
+ *   total_amount = base amount (toSymbol)
+ *
  * Per-level rate check: rate > 1 → invert, rate < 1 → direct.
  * decAdj = 10^(to_decimals - from_decimals)
- * Bids use to_decimals for amounts, asks use from_decimals.
+ * Bids use to_decimals, asks use from_decimals for amounts.
  */
 function normalizeOpen4DevBook(book: DexOrderBookResponse): NormalizedBook {
   const ref = book.mid_price ?? null;
@@ -112,7 +118,6 @@ function normalizeOpen4DevBook(book: DexOrderBookResponse): NormalizedBook {
     if (priceRate > 1) return (1 / priceRate) * decAdj;
     return priceRate * decAdj;
   };
-
   const shouldInvert = ref != null ? ref > 1 : true;
 
   const asks: NormalizedLevel[] = book.asks
@@ -137,7 +142,7 @@ function normalizeOpen4DevBook(book: DexOrderBookResponse): NormalizedBook {
   return { asks, bids, inverted: shouldInvert };
 }
 
-/* ---------- stats ---------- */
+/* ---------- stats from normalized book ---------- */
 
 type BookStats = {
   totalAskOrders: number;
@@ -148,6 +153,15 @@ type BookStats = {
   bestBid: number | null;
   spread: number | null;
   spreadPct: number | null;
+};
+
+type RealPairStats24h = {
+  bidOrders: number | null;
+  askOrders: number | null;
+  bidVolume: number | null;
+  askVolume: number | null;
+  bidVolumeSymbol: string;
+  askVolumeSymbol: string;
 };
 
 type ActivityVolumeUsdByWindow = {
@@ -161,7 +175,7 @@ type TradingPeriodsState = {
   ask: DexTradingStatsPeriod[];
 };
 
-function computeBookStats(normalized: NormalizedBook): BookStats {
+function computeStats(normalized: NormalizedBook): BookStats {
   const totalAskOrders = normalized.asks.reduce((s, a) => s + a.orderCount, 0);
   const totalBidOrders = normalized.bids.reduce((s, b) => s + b.orderCount, 0);
   const totalAskAmount = normalized.asks.reduce((s, a) => s + a.amount, 0);
@@ -173,10 +187,224 @@ function computeBookStats(normalized: NormalizedBook): BookStats {
     spread != null && bestBid != null && bestBid > 0
       ? (spread / (((bestAsk as number) + bestBid) / 2)) * 100
       : null;
-  return { totalAskOrders, totalBidOrders, totalAskAmount, totalBidAmount, bestAsk, bestBid, spread, spreadPct };
+  return {
+    totalAskOrders,
+    totalBidOrders,
+    totalAskAmount,
+    totalBidAmount,
+    bestAsk,
+    bestBid,
+    spread,
+    spreadPct,
+  };
 }
 
-/* ---------- ActivityWindow ---------- */
+/* ---------- OrderBookTable ---------- */
+
+type OrderBookTableProps = {
+  normalized: NormalizedBook;
+  stats: BookStats;
+  fromUpper: string;
+  toUpper: string;
+  fromPriceUsd: number | null;
+  amountPriceUsd: number | null;
+  refreshTick: number;
+  sourceLabel?: string;
+  realStats24h?: RealPairStats24h | null;
+};
+
+function OrderBookTable({
+  normalized,
+  stats,
+  fromUpper,
+  toUpper,
+  fromPriceUsd,
+  amountPriceUsd,
+  refreshTick,
+  sourceLabel,
+  realStats24h: _realStats24h,
+}: OrderBookTableProps) {
+  const maxAmount = useMemo(() => {
+    const maxAsk = Math.max(...normalized.asks.map((a) => a.amount), 0);
+    const maxBid = Math.max(...normalized.bids.map((b) => b.amount), 0);
+    return Math.max(maxAsk, maxBid);
+  }, [normalized]);
+
+  const priceLabel = normalized.inverted ? fromUpper : toUpper;
+  const askAmtLabel = fromUpper;
+  const askTotalLabel = toUpper;
+  const bidAmtLabel = toUpper;
+  const bidTotalLabel = fromUpper;
+
+  const asksReversed = useMemo(() => [...normalized.asks].reverse(), [normalized.asks]);
+
+  return (
+    <div className="space-y-3">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Bids panel */}
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+          className="bg-gray-900/50 border border-white/10 rounded-xl overflow-hidden"
+        >
+          <div className="flex items-center justify-between px-3 py-2 border-b border-white/10">
+            <div className="flex items-center gap-1.5">
+              <ArrowUp className="h-3.5 w-3.5 text-[#00C389]" />
+              <span className="text-sm font-bold text-white">Bids</span>
+              <span className="text-xs text-gray-500">({normalized.bids.length})</span>
+            </div>
+            <span className="text-[10px] text-[#00C389] opacity-70">Buy orders</span>
+          </div>
+          <div className="flex items-center gap-2 px-3 py-2 text-[10px] uppercase tracking-wider text-gray-500 border-b border-white/5">
+            <span className="w-24 sm:w-32 text-right">Price ({priceLabel})</span>
+            <span className="flex-1 text-right">Amount ({bidAmtLabel})</span>
+            <span className="w-24 text-right hidden sm:block">Total ({bidTotalLabel})</span>
+            <span className="w-16 text-right hidden sm:block">USD</span>
+            <span className="w-8 text-right">Qty</span>
+          </div>
+          {normalized.bids.length === 0 ? (
+            <div className="text-center py-6 text-xs text-gray-500">No bids</div>
+          ) : (
+            <div className="flex flex-col">
+              {normalized.bids.map((lvl, i) => {
+                const pct = maxAmount > 0 ? (lvl.amount / maxAmount) * 100 : 0;
+                const usdVal = amountPriceUsd != null ? lvl.amount * amountPriceUsd : null;
+                const fromTotal = normalized.inverted
+                  ? lvl.amount * lvl.price
+                  : lvl.price > 0
+                    ? lvl.amount / lvl.price
+                    : 0;
+                return (
+                  <div
+                    key={`bid-${i}-${refreshTick}`}
+                    className="relative flex items-center gap-2 px-3 py-1 text-xs font-mono"
+                    style={{ animationDelay: `${i * 30}ms` }}
+                  >
+                    <div
+                      className="absolute inset-y-0 right-0 bg-[#00C389]/10 transition-[width] duration-700 ease-out"
+                      style={{ width: `${Math.min(100, pct)}%` }}
+                    />
+                    <span className="relative z-10 w-24 sm:w-32 text-right text-[#00C389] font-medium">
+                      {fmtRate(lvl.price)}
+                    </span>
+                    <span className="relative z-10 flex-1 text-right text-gray-300">{fmtAmount(lvl.amount)}</span>
+                    <span className="relative z-10 w-24 text-right text-gray-500 hidden sm:block">{fmtAmount(fromTotal)}</span>
+                    <span className="relative z-10 w-16 text-right text-gray-500 text-[10px] hidden sm:block">
+                      {usdVal != null ? fmtUsd(usdVal) : '\u2014'}
+                    </span>
+                    <span className="relative z-10 w-8 text-right text-gray-500">{lvl.orderCount}</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </motion.div>
+
+        {/* Asks panel */}
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.05 }}
+          className="bg-gray-900/50 border border-white/10 rounded-xl overflow-hidden"
+        >
+          <div className="flex items-center justify-between px-3 py-2 border-b border-white/10">
+            <div className="flex items-center gap-1.5">
+              <ArrowDown className="h-3.5 w-3.5 text-red-400" />
+              <span className="text-sm font-bold text-white">Asks</span>
+              <span className="text-xs text-gray-500">({normalized.asks.length})</span>
+            </div>
+            <span className="text-[10px] text-red-400 opacity-70">Sell orders</span>
+          </div>
+          <div className="flex items-center gap-2 px-3 py-2 text-[10px] uppercase tracking-wider text-gray-500 border-b border-white/5">
+            <span className="w-24 sm:w-32 text-right">Price ({priceLabel})</span>
+            <span className="flex-1 text-right">Amount ({askAmtLabel})</span>
+            <span className="w-24 text-right hidden sm:block">Total ({askTotalLabel})</span>
+            <span className="w-16 text-right hidden sm:block">USD</span>
+            <span className="w-8 text-right">Qty</span>
+          </div>
+          {asksReversed.length === 0 ? (
+            <div className="text-center py-6 text-xs text-gray-500">No asks</div>
+          ) : (
+            <div className="flex flex-col">
+              {asksReversed.map((lvl, i) => {
+                const pct = maxAmount > 0 ? (lvl.amount / maxAmount) * 100 : 0;
+                const usdVal = fromPriceUsd != null ? lvl.amount * fromPriceUsd : null;
+                const toTotal = normalized.inverted
+                  ? lvl.price > 0
+                    ? lvl.amount / lvl.price
+                    : 0
+                  : lvl.amount * lvl.price;
+                return (
+                  <div
+                    key={`ask-${i}-${refreshTick}`}
+                    className="relative flex items-center gap-2 px-3 py-1 text-xs font-mono"
+                    style={{ animationDelay: `${i * 30}ms` }}
+                  >
+                    <div
+                      className="absolute inset-y-0 right-0 bg-red-500/10 transition-[width] duration-700 ease-out"
+                      style={{ width: `${Math.min(100, pct)}%` }}
+                    />
+                    <span className="relative z-10 w-24 sm:w-32 text-right text-red-400 font-medium">
+                      {fmtRate(lvl.price)}
+                    </span>
+                    <span className="relative z-10 flex-1 text-right text-gray-300">{fmtAmount(lvl.amount)}</span>
+                    <span className="relative z-10 w-24 text-right text-gray-500 hidden sm:block">{fmtAmount(toTotal)}</span>
+                    <span className="relative z-10 w-16 text-right text-gray-500 text-[10px] hidden sm:block">
+                      {usdVal != null ? fmtUsd(usdVal) : '\u2014'}
+                    </span>
+                    <span className="relative z-10 w-8 text-right text-gray-500">{lvl.orderCount}</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </motion.div>
+      </div>
+
+      {/* Spread summary bar */}
+      {stats.bestBid != null && stats.bestAsk != null && stats.spreadPct != null && (
+        <div className="bg-gray-900/50 border border-white/10 rounded-xl p-3 flex flex-row items-center justify-center gap-6">
+          <div className="text-center">
+            <div className="text-[10px] text-gray-500">Best Bid</div>
+            <div className="font-mono text-sm font-bold text-[#00C389]">
+              {fmtRate(stats.bestBid)}
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-12 h-1 rounded-full bg-[#00C389]" />
+            <div className="text-center">
+              <div className="text-[10px] text-gray-500">Spread</div>
+              <div
+                className={cn(
+                  'font-mono text-xs font-bold',
+                  stats.spreadPct < 0 ? 'text-amber-400' : 'text-gray-300',
+                )}
+              >
+                {stats.spreadPct < 0 ? 'Crossed' : `${stats.spreadPct.toFixed(2)}%`}
+              </div>
+            </div>
+            <div className="w-12 h-1 rounded-full bg-red-500" />
+          </div>
+          <div className="text-center">
+            <div className="text-[10px] text-gray-500">Best Ask</div>
+            <div className="font-mono text-sm font-bold text-red-400">
+              {fmtRate(stats.bestAsk)}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {sourceLabel && (
+        <div className="text-center text-[10px] tracking-wide text-gray-600">
+          {sourceLabel}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ---------- Activity window card ---------- */
 
 function ActivityWindow({
   label,
@@ -194,45 +422,52 @@ function ActivityWindow({
   const rawVolume =
     volumeUsdOverride ??
     Number(String(data.volume_usd ?? '0').replaceAll(',', '').trim());
-  const volume = Number.isFinite(rawVolume) && rawVolume > 0 && rawVolume < 1_000_000_000 ? rawVolume : 0;
+  const volume =
+    Number.isFinite(rawVolume) && rawVolume > 0 && rawVolume < 1_000_000_000 ? rawVolume : 0;
   const volumeText = volume > 0 ? fmtUsd(volume) : '$0.00';
 
   return (
     <div
       className={cn(
-        'relative overflow-hidden rounded-lg border border-white/5 px-3 py-2.5',
-        highlight ? 'bg-white/5' : 'bg-white/[0.03]',
+        'rounded-lg px-3 py-2.5 relative overflow-hidden border',
+        highlight
+          ? 'border-[#00C389]/30 bg-[#00C389]/5'
+          : 'border-white/10 bg-gray-900/50',
       )}
     >
       <div
-        className="absolute bottom-0 left-0 h-[2px] bg-emerald-500/40 transition-all duration-700"
+        className="absolute left-0 bottom-0 h-[2px] bg-[#00C389]/50 transition-all duration-700"
         style={{ width: `${completionPct}%` }}
       />
-      <div className="mb-2 flex items-center justify-between">
-        <span className="rounded border border-white/10 px-1.5 py-0.5 text-[10px] font-semibold text-gray-400">
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 border border-white/10 rounded px-1.5 py-0.5">
           {label}
         </span>
-        <TrendingUp className="h-3.5 w-3.5 text-gray-600" />
+        <TrendingUp className="h-3.5 w-3.5 text-gray-700" />
       </div>
       <div className="grid grid-cols-3 gap-2">
         <div>
-          <div className="text-[9px] uppercase tracking-wide text-gray-600">Open</div>
-          <div className="font-mono text-sm font-semibold text-sky-400">{data.open_orders.toLocaleString()}</div>
+          <div className="text-[9px] uppercase tracking-wide text-gray-500">Open</div>
+          <div className="text-sm font-semibold font-mono text-[#00C389]">
+            {data.open_orders.toLocaleString()}
+          </div>
         </div>
         <div>
-          <div className="text-[9px] uppercase tracking-wide text-gray-600">Filled</div>
-          <div className="font-mono text-sm font-semibold text-emerald-400">{data.completed_orders.toLocaleString()}</div>
+          <div className="text-[9px] uppercase tracking-wide text-gray-500">Filled</div>
+          <div className="text-sm font-semibold font-mono text-emerald-400">
+            {data.completed_orders.toLocaleString()}
+          </div>
         </div>
         <div>
-          <div className="text-[9px] uppercase tracking-wide text-gray-600">Volume</div>
-          <div className="font-mono text-sm font-semibold text-gray-300">{volumeText}</div>
+          <div className="text-[9px] uppercase tracking-wide text-gray-500">Volume</div>
+          <div className="text-sm font-semibold font-mono text-gray-300">
+            {volumeText}
+          </div>
         </div>
       </div>
     </div>
   );
 }
-
-/* ---------- PairActivityRow ---------- */
 
 function PairActivityRow({
   stats,
@@ -246,199 +481,34 @@ function PairActivityRow({
   volumeUsdByWindow?: ActivityVolumeUsdByWindow | null;
 }) {
   return (
-    <div className="rounded-xl border border-white/5 bg-white/[0.02] p-3">
-      <div className="mb-2.5 flex items-center justify-between">
+    <div className="rounded-xl border border-white/10 bg-gray-900/50 p-3">
+      <div className="flex items-center justify-between mb-2.5">
         <div className="flex items-center gap-2">
-          <div className="h-3.5 w-1 rounded-full bg-sky-500/60" />
+          <div className="w-1 h-3.5 rounded-full bg-[#00C389]/60" />
           <span className="text-[11px] font-bold tracking-tight text-gray-400">
             {fromSymbol}/{toSymbol} Order Stats
           </span>
         </div>
-        <div className="h-2 w-2 animate-pulse rounded-full bg-emerald-500/50" />
+        <div className="h-2 w-2 rounded-full bg-[#00C389]/50 animate-pulse" />
       </div>
-      <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
-        <ActivityWindow label="1H" data={stats.windows['1h']} volumeUsdOverride={volumeUsdByWindow?.['1h'] ?? null} />
-        <ActivityWindow label="24H" data={stats.windows['24h']} volumeUsdOverride={volumeUsdByWindow?.['24h'] ?? null} />
-        <ActivityWindow label="MAX" data={stats.windows.all_time} volumeUsdOverride={volumeUsdByWindow?.max ?? null} highlight />
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+        <ActivityWindow
+          label="1H"
+          data={stats.windows['1h']}
+          volumeUsdOverride={volumeUsdByWindow?.['1h'] ?? null}
+        />
+        <ActivityWindow
+          label="24H"
+          data={stats.windows['24h']}
+          volumeUsdOverride={volumeUsdByWindow?.['24h'] ?? null}
+        />
+        <ActivityWindow
+          label="MAX"
+          data={stats.windows.all_time}
+          volumeUsdOverride={volumeUsdByWindow?.max ?? null}
+          highlight
+        />
       </div>
-    </div>
-  );
-}
-
-/* ---------- OrderBookTable ---------- */
-
-type OrderBookTableProps = {
-  normalized: NormalizedBook;
-  stats: BookStats;
-  fromUpper: string;
-  toUpper: string;
-  fromPriceUsd: number | null;
-  amountPriceUsd: number | null;
-  refreshTick: number;
-};
-
-function OrderBookTable({
-  normalized,
-  stats,
-  fromUpper,
-  toUpper,
-  fromPriceUsd,
-  amountPriceUsd,
-  refreshTick,
-}: OrderBookTableProps) {
-  const maxAmount = useMemo(() => {
-    const maxAsk = Math.max(...normalized.asks.map((a) => a.amount), 0);
-    const maxBid = Math.max(...normalized.bids.map((b) => b.amount), 0);
-    return Math.max(maxAsk, maxBid);
-  }, [normalized]);
-
-  // Column headers differ: Bids=Amount(toSymbol)/Total(fromSymbol), Asks=Amount(fromSymbol)/Total(toSymbol)
-  // Price label uses fromUpper when inverted, toUpper when not
-  const priceLabel = normalized.inverted ? fromUpper : toUpper;
-  const askAmtLabel = fromUpper;
-  const askTotalLabel = toUpper;
-  const bidAmtLabel = toUpper;
-  const bidTotalLabel = fromUpper;
-
-  const asksReversed = useMemo(() => [...normalized.asks].reverse(), [normalized.asks]);
-
-  return (
-    <div className="space-y-3">
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        {/* Bids panel */}
-        <div className="overflow-hidden rounded-xl border border-white/5 bg-[#0d1117]">
-          <div className="flex items-center justify-between border-b border-white/5 px-3 py-2">
-            <div className="flex items-center gap-1.5">
-              <ArrowUp className="h-3.5 w-3.5 text-emerald-400" />
-              <span className="text-sm font-bold text-white">Bids</span>
-              <span className="text-xs text-gray-600">({normalized.bids.length})</span>
-            </div>
-            <span className="text-[10px] text-emerald-500/60">Buy orders</span>
-          </div>
-          <div className="flex items-center gap-2 border-b border-white/[0.03] px-3 py-2 text-[10px] uppercase tracking-wider text-gray-600">
-            <span className="w-24 text-right sm:w-32">Price ({priceLabel})</span>
-            <span className="flex-1 text-right">Amount ({bidAmtLabel})</span>
-            <span className="hidden w-24 text-right sm:block">Total ({bidTotalLabel})</span>
-            <span className="hidden w-16 text-right sm:block">USD</span>
-            <span className="w-8 text-right">Qty</span>
-          </div>
-          {normalized.bids.length === 0 ? (
-            <div className="py-4 text-center text-xs text-gray-600">No bids</div>
-          ) : (
-            <div className="flex flex-col">
-              {normalized.bids.map((lvl, i) => {
-                const pct = maxAmount > 0 ? (lvl.amount / maxAmount) * 100 : 0;
-                const usdVal = amountPriceUsd != null ? lvl.amount * amountPriceUsd : null;
-                const fromTotal = normalized.inverted
-                  ? lvl.amount * lvl.price
-                  : lvl.price > 0
-                    ? lvl.amount / lvl.price
-                    : 0;
-                return (
-                  <div
-                    key={`bid-${i}-${refreshTick}`}
-                    className="relative flex items-center gap-2 px-3 py-1 font-mono text-xs"
-                  >
-                    <div
-                      className="absolute inset-y-0 right-0 bg-emerald-500/10 transition-[width] duration-700 ease-out"
-                      style={{ width: `${Math.min(100, pct)}%` }}
-                    />
-                    <span className="relative z-10 w-24 text-right font-medium text-emerald-400 sm:w-32">
-                      {fmtRate(lvl.price)}
-                    </span>
-                    <span className="relative z-10 flex-1 text-right text-gray-300">{fmtAmount(lvl.amount)}</span>
-                    <span className="relative z-10 hidden w-24 text-right text-gray-500 sm:block">{fmtAmount(fromTotal)}</span>
-                    <span className="relative z-10 hidden w-16 text-right text-[10px] text-gray-600 sm:block">
-                      {usdVal != null ? fmtUsd(usdVal) : '\u2014'}
-                    </span>
-                    <span className="relative z-10 w-8 text-right text-gray-600">{lvl.orderCount}</span>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
-        {/* Asks panel */}
-        <div className="overflow-hidden rounded-xl border border-white/5 bg-[#0d1117]">
-          <div className="flex items-center justify-between border-b border-white/5 px-3 py-2">
-            <div className="flex items-center gap-1.5">
-              <ArrowDown className="h-3.5 w-3.5 text-red-400" />
-              <span className="text-sm font-bold text-white">Asks</span>
-              <span className="text-xs text-gray-600">({normalized.asks.length})</span>
-            </div>
-            <span className="text-[10px] text-red-500/60">Sell orders</span>
-          </div>
-          <div className="flex items-center gap-2 border-b border-white/[0.03] px-3 py-2 text-[10px] uppercase tracking-wider text-gray-600">
-            <span className="w-24 text-right sm:w-32">Price ({priceLabel})</span>
-            <span className="flex-1 text-right">Amount ({askAmtLabel})</span>
-            <span className="hidden w-24 text-right sm:block">Total ({askTotalLabel})</span>
-            <span className="hidden w-16 text-right sm:block">USD</span>
-            <span className="w-8 text-right">Qty</span>
-          </div>
-          {asksReversed.length === 0 ? (
-            <div className="py-4 text-center text-xs text-gray-600">No asks</div>
-          ) : (
-            <div className="flex flex-col">
-              {asksReversed.map((lvl, i) => {
-                const pct = maxAmount > 0 ? (lvl.amount / maxAmount) * 100 : 0;
-                const usdVal = fromPriceUsd != null ? lvl.amount * fromPriceUsd : null;
-                const toTotal = normalized.inverted
-                  ? lvl.price > 0
-                    ? lvl.amount / lvl.price
-                    : 0
-                  : lvl.amount * lvl.price;
-                return (
-                  <div
-                    key={`ask-${i}-${refreshTick}`}
-                    className="relative flex items-center gap-2 px-3 py-1 font-mono text-xs"
-                  >
-                    <div
-                      className="absolute inset-y-0 right-0 bg-red-500/10 transition-[width] duration-700 ease-out"
-                      style={{ width: `${Math.min(100, pct)}%` }}
-                    />
-                    <span className="relative z-10 w-24 text-right font-medium text-red-400 sm:w-32">
-                      {fmtRate(lvl.price)}
-                    </span>
-                    <span className="relative z-10 flex-1 text-right text-gray-300">{fmtAmount(lvl.amount)}</span>
-                    <span className="relative z-10 hidden w-24 text-right text-gray-500 sm:block">{fmtAmount(toTotal)}</span>
-                    <span className="relative z-10 hidden w-16 text-right text-[10px] text-gray-600 sm:block">
-                      {usdVal != null ? fmtUsd(usdVal) : '\u2014'}
-                    </span>
-                    <span className="relative z-10 w-8 text-right text-gray-600">{lvl.orderCount}</span>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Spread bar */}
-      {stats.bestBid != null && stats.bestAsk != null && stats.spreadPct != null && (
-        <div className="rounded-xl border border-white/5 bg-[#0d1117] p-3">
-          <div className="flex items-center justify-center gap-6">
-            <div className="text-center">
-              <div className="text-[10px] text-gray-600">Best Bid</div>
-              <div className="font-mono text-sm font-bold text-emerald-400">{fmtRate(stats.bestBid)}</div>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="h-1 w-12 rounded-full bg-emerald-500" />
-              <div className="text-center">
-                <div className="text-[10px] text-gray-600">Spread</div>
-                <div className={cn('font-mono text-xs font-bold', stats.spreadPct < 0 ? 'text-yellow-400' : 'text-gray-300')}>
-                  {stats.spreadPct < 0 ? 'Crossed' : `${stats.spreadPct.toFixed(2)}%`}
-                </div>
-              </div>
-              <div className="h-1 w-12 rounded-full bg-red-500" />
-            </div>
-            <div className="text-center">
-              <div className="text-[10px] text-gray-600">Best Ask</div>
-              <div className="font-mono text-sm font-bold text-red-400">{fmtRate(stats.bestAsk)}</div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -460,6 +530,7 @@ export function StatsPage({ raceCfg, pairSlug, onPairChange }: StatsPageProps) {
   const [bookLoading, setBookLoading] = useState(false);
   const [bookError, setBookError] = useState<string | null>(null);
   const [pairStats, setPairStats] = useState<ScannerStatsResponse | null>(null);
+  const [realStats24h, setRealStats24h] = useState<RealPairStats24h | null>(null);
   const [tradingPeriods, setTradingPeriods] = useState<TradingPeriodsState | null>(null);
   const [refreshTick, setRefreshTick] = useState(0);
 
@@ -503,11 +574,16 @@ export function StatsPage({ raceCfg, pairSlug, onPairChange }: StatsPageProps) {
 
   const fetchPairStats = useCallback(async () => {
     const { baseVault, quoteVault } = effectivePair;
-    if (!baseVault || !quoteVault) { setPairStats(null); return; }
+    if (!baseVault || !quoteVault) {
+      setPairStats(null);
+      return;
+    }
     try {
       const data = await getOrderScannerStats({ baseVault, quoteVault });
       setPairStats(data);
-    } catch { setPairStats(null); }
+    } catch {
+      setPairStats(null);
+    }
   }, [effectivePair]);
 
   const fetchTradingStats = useCallback(async () => {
@@ -516,8 +592,26 @@ export function StatsPage({ raceCfg, pairSlug, onPairChange }: StatsPageProps) {
         getDexTradingStats(effectivePair.fromSymbol, effectivePair.toSymbol),
         getDexTradingStats(effectivePair.toSymbol, effectivePair.fromSymbol),
       ]);
-      setTradingPeriods({ bid: bidSide.periods, ask: askSide.periods });
-    } catch { setTradingPeriods(null); }
+
+      const bid24h = bidSide.periods.find((p) => p.period === '24h') ?? null;
+      const ask24h = askSide.periods.find((p) => p.period === '24h') ?? null;
+
+      setRealStats24h({
+        bidOrders: bid24h?.total_orders ?? null,
+        askOrders: ask24h?.total_orders ?? null,
+        bidVolume: bid24h?.total_volume ?? null,
+        askVolume: ask24h?.total_volume ?? null,
+        bidVolumeSymbol: effectivePair.fromSymbol,
+        askVolumeSymbol: effectivePair.toSymbol,
+      });
+      setTradingPeriods({
+        bid: bidSide.periods,
+        ask: askSide.periods,
+      });
+    } catch {
+      setRealStats24h(null);
+      setTradingPeriods(null);
+    }
   }, [effectivePair.fromSymbol, effectivePair.toSymbol]);
 
   useEffect(() => {
@@ -538,6 +632,7 @@ export function StatsPage({ raceCfg, pairSlug, onPairChange }: StatsPageProps) {
     return () => clearInterval(id);
   }, [fetchTradingStats]);
 
+  // Fetch token prices
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -554,16 +649,22 @@ export function StatsPage({ raceCfg, pairSlug, onPairChange }: StatsPageProps) {
           }
         }
         if (missingSymbols.length > 0) {
-          const dexResults = await Promise.all(missingSymbols.map((s) => getDexCoinPrice(s)));
+          const dexResults = await Promise.all(
+            missingSymbols.map((s) => getDexCoinPrice(s)),
+          );
           for (let i = 0; i < missingSymbols.length; i++) {
             const p = dexResults[i]?.priceUsd;
             if (p != null && p > 0) map.set(missingSymbols[i], p);
           }
         }
         if (!cancelled) setTokenPrices(map);
-      } catch { /* ignore */ }
+      } catch {
+        // ignore
+      }
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [raceCfg]);
 
   const priceOf = useCallback(
@@ -580,8 +681,15 @@ export function StatsPage({ raceCfg, pairSlug, onPairChange }: StatsPageProps) {
     [tokenPrices],
   );
 
-  const normalized = useMemo(() => (book ? normalizeOpen4DevBook(book) : null), [book]);
-  const stats = useMemo(() => (normalized ? computeBookStats(normalized) : null), [normalized]);
+  const normalized = useMemo(() => {
+    if (!book) return null;
+    return normalizeOpen4DevBook(book);
+  }, [book]);
+
+  const stats = useMemo(() => {
+    if (!normalized) return null;
+    return computeStats(normalized);
+  }, [normalized]);
 
   const fromPriceUsd = priceOf(effectivePair.fromSymbol);
   const rawAmountPrice = priceOf(effectivePair.toSymbol);
@@ -591,10 +699,12 @@ export function StatsPage({ raceCfg, pairSlug, onPairChange }: StatsPageProps) {
 
   const activityVolumeUsd = useMemo<ActivityVolumeUsdByWindow | null>(() => {
     if (!tradingPeriods) return null;
+
     const getPeriod = (periods: DexTradingStatsPeriod[], period: string) =>
       periods.find((p) => p.period === period) ?? null;
     const getMaxPeriod = (periods: DexTradingStatsPeriod[]) =>
       periods.find((p) => p.period === '30d') ?? periods[periods.length - 1] ?? null;
+
     const toUsd = (volume: number | null, price: number | null): number | null => {
       if (volume == null || price == null || price > 1000) return null;
       const usd = volume * price;
@@ -604,25 +714,39 @@ export function StatsPage({ raceCfg, pairSlug, onPairChange }: StatsPageProps) {
       if (a == null && b == null) return null;
       return (a ?? 0) + (b ?? 0);
     };
+
     const bid1h = getPeriod(tradingPeriods.bid, '1h');
     const ask1h = getPeriod(tradingPeriods.ask, '1h');
     const bid24h = getPeriod(tradingPeriods.bid, '24h');
     const ask24h = getPeriod(tradingPeriods.ask, '24h');
     const bidMax = getMaxPeriod(tradingPeriods.bid);
     const askMax = getMaxPeriod(tradingPeriods.ask);
-    const vol1h = sumUsd(toUsd(bid1h?.total_volume ?? null, fromPriceUsd), toUsd(ask1h?.total_volume ?? null, amountPriceUsd));
-    const vol24h = sumUsd(toUsd(bid24h?.total_volume ?? null, fromPriceUsd), toUsd(ask24h?.total_volume ?? null, amountPriceUsd));
-    const volMax = sumUsd(toUsd(bidMax?.total_volume ?? null, fromPriceUsd), toUsd(askMax?.total_volume ?? null, amountPriceUsd));
+
+    const vol1h = sumUsd(
+      toUsd(bid1h?.total_volume ?? null, fromPriceUsd),
+      toUsd(ask1h?.total_volume ?? null, amountPriceUsd),
+    );
+    const vol24h = sumUsd(
+      toUsd(bid24h?.total_volume ?? null, fromPriceUsd),
+      toUsd(ask24h?.total_volume ?? null, amountPriceUsd),
+    );
+    const volMax = sumUsd(
+      toUsd(bidMax?.total_volume ?? null, fromPriceUsd),
+      toUsd(askMax?.total_volume ?? null, amountPriceUsd),
+    );
+
     const scanner1h = pairStats?.windows?.['1h']?.completed_orders ?? 0;
     const scanner24h = pairStats?.windows?.['24h']?.completed_orders ?? 0;
     const scannerMax = pairStats?.windows?.all_time?.completed_orders ?? 0;
+
     const estimateFromMax = (windowCompleted: number, maxVol: number | null): number | null => {
       if (maxVol == null || maxVol <= 0 || scannerMax <= 0 || windowCompleted <= 0) return null;
       return maxVol * (windowCompleted / scannerMax);
     };
+
     return {
-      '1h': (vol1h != null && vol1h > 0) ? vol1h : estimateFromMax(scanner1h, volMax),
-      '24h': (vol24h != null && vol24h > 0) ? vol24h : estimateFromMax(scanner24h, volMax),
+      '1h': vol1h != null && vol1h > 0 ? vol1h : estimateFromMax(scanner1h, volMax),
+      '24h': vol24h != null && vol24h > 0 ? vol24h : estimateFromMax(scanner24h, volMax),
       max: volMax,
     };
   }, [tradingPeriods, fromPriceUsd, amountPriceUsd, pairStats]);
@@ -637,14 +761,9 @@ export function StatsPage({ raceCfg, pairSlug, onPairChange }: StatsPageProps) {
   );
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8 space-y-6">
+    <div className="space-y-4">
       {/* Header */}
-      <motion.div
-        initial={{ opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4 }}
-        className="flex items-center justify-between"
-      >
+      <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#00C389]/10">
             <BarChart3 className="h-5 w-5 text-[#00C389]" />
@@ -653,139 +772,145 @@ export function StatsPage({ raceCfg, pairSlug, onPairChange }: StatsPageProps) {
             <h1 className="text-xl font-semibold tracking-tight text-white">Order Book</h1>
             <div className="flex items-center gap-1.5">
               <span className="relative flex h-2 w-2">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#00C389] opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-[#00C389]" />
               </span>
-              <p className="text-xs text-gray-500">Live from open4dev DEX — refreshes every 10s</p>
+              <p className="text-xs text-gray-400">Live from open4dev DEX</p>
             </div>
           </div>
         </div>
-      </motion.div>
+      </div>
 
       {/* Pair tabs + flip */}
-      <motion.div
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, delay: 0.05 }}
-        className="flex flex-wrap items-center gap-2"
-      >
+      <div className="flex flex-wrap items-center gap-2">
         {pairs.map((p, idx) => {
           const isSelected = selectedPairIdx === idx && !reversed;
           return (
             <button
               key={p.slug}
-              onClick={() => selectPair(idx)}
               type="button"
+              onClick={() => selectPair(idx)}
               className={cn(
-                'rounded-full border px-4 py-1.5 text-sm font-medium transition-all',
+                'rounded-full px-4 py-1.5 text-sm font-medium transition-colors',
                 isSelected
-                  ? 'border-[#00C389]/40 bg-[#00C389]/10 text-[#00C389]'
-                  : 'border-white/10 bg-white/[0.03] text-gray-400 hover:border-white/20 hover:text-white',
+                  ? 'bg-[#00C389] text-black'
+                  : 'text-gray-400 border border-white/10 hover:text-white hover:bg-white/5',
               )}
             >
               {p.label}
+              {p.hot && (
+                <span className="ml-1 text-[9px] px-1 py-0 bg-amber-400/20 text-amber-400 rounded font-semibold uppercase">HOT</span>
+              )}
             </button>
           );
         })}
         <button
-          onClick={() => setReversed((r) => !r)}
           type="button"
+          onClick={() => setReversed((r) => !r)}
+          className="flex items-center gap-1 text-sm text-gray-400 hover:text-white hover:bg-white/5 px-3 py-1.5 rounded-full transition-colors opacity-60 hover:opacity-100"
           title="Reverse pair"
-          className="flex items-center gap-1 rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 text-xs text-gray-500 transition-all hover:border-white/20 hover:text-white"
         >
           <ArrowDownUp className="h-3 w-3" />
           Flip
         </button>
-      </motion.div>
-
-      {/* Activity stats */}
-      <motion.div
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, delay: 0.1 }}
-      >
-        {pairStats ? (
-          <PairActivityRow
-            stats={pairStats}
-            fromSymbol={fromUpper}
-            toSymbol={toUpper}
-            volumeUsdByWindow={activityVolumeUsd}
-          />
-        ) : (
-          <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
-            {['1H', '24H', 'ALL'].map((label) => (
-              <div key={label} className="rounded-lg border border-white/5 bg-white/[0.03] px-3 py-2.5">
-                <div className="mb-2 flex items-center justify-between">
-                  <span className="rounded border border-white/10 px-1.5 py-0.5 text-[10px] font-semibold text-gray-500">
-                    {label}
-                  </span>
-                </div>
-                <div className="grid grid-cols-3 gap-2">
-                  {['Open', 'Filled', 'Volume'].map((col) => (
-                    <div key={col}>
-                      <div className="text-[9px] uppercase tracking-wide text-gray-600">{col}</div>
-                      <div className="mt-1 h-4 w-10 animate-pulse rounded bg-white/5" />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </motion.div>
-
-      {/* Quick spread summary */}
-      <div className="rounded-xl border border-white/5 bg-[#0d1117] px-3 py-2">
-        <div className="flex flex-wrap items-center justify-center gap-4 font-mono text-xs">
-          <span className="text-gray-600">{fromUpper} / {toUpper}</span>
-          {stats ? (
-            <>
-              <span>Bid <span className="font-bold text-emerald-400">{fmtRate(stats.bestBid ?? 0)}</span></span>
-              <span>Ask <span className="font-bold text-red-400">{fmtRate(stats.bestAsk ?? 0)}</span></span>
-              {stats.spreadPct != null && (
-                <span>Spread <span className={cn('font-bold', stats.spreadPct < 0 ? 'text-yellow-400' : 'text-gray-300')}>
-                  {stats.spreadPct < 0 ? 'Crossed' : `${stats.spreadPct.toFixed(2)}%`}
-                </span></span>
-              )}
-            </>
-          ) : (
-            <span className="text-gray-700">Loading...</span>
-          )}
-        </div>
       </div>
 
-      {/* Book table */}
-      <motion.div
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, delay: 0.15 }}
-      >
-        {bookError ? (
-          <div className="rounded-xl border border-white/5 bg-[#0d1117] p-6">
-            <p className="text-sm text-red-400">{bookError}</p>
-          </div>
-        ) : bookLoading && !book ? (
-          <div className="flex justify-center py-16">
+      {/* Activity stats (1H / 24H / MAX) */}
+      {pairStats ? (
+        <PairActivityRow
+          stats={pairStats}
+          fromSymbol={fromUpper}
+          toSymbol={toUpper}
+          volumeUsdByWindow={activityVolumeUsd}
+        />
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+          {['1H', '24H', 'ALL'].map((label) => (
+            <div
+              key={label}
+              className="rounded-lg px-3 py-2.5 border border-white/10 bg-gray-900/50"
+            >
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 border border-white/10 rounded px-1.5 py-0.5">
+                  {label}
+                </span>
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                <div>
+                  <div className="text-[9px] uppercase tracking-wide text-gray-500">Open</div>
+                  <div className="h-4 w-8 bg-white/5 rounded animate-pulse mt-1" />
+                </div>
+                <div>
+                  <div className="text-[9px] uppercase tracking-wide text-gray-500">Filled</div>
+                  <div className="h-4 w-8 bg-white/5 rounded animate-pulse mt-1" />
+                </div>
+                <div>
+                  <div className="text-[9px] uppercase tracking-wide text-gray-500">Volume</div>
+                  <div className="h-4 w-14 bg-white/5 rounded animate-pulse mt-1" />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Inline price summary */}
+      <div className="bg-gray-900/50 border border-white/10 rounded-xl p-2 flex flex-row items-center justify-center gap-4 flex-wrap text-xs font-mono">
+        <span className="text-gray-500">
+          {fromUpper} / {toUpper}
+        </span>
+        {stats ? (
+          <>
+            <span>
+              Bid{' '}
+              <span className="text-[#00C389] font-bold">
+                {fmtRate(stats.bestBid ?? 0)}
+              </span>
+            </span>
+            <span>
+              Ask{' '}
+              <span className="text-red-400 font-bold">
+                {fmtRate(stats.bestAsk ?? 0)}
+              </span>
+            </span>
+            {stats.spreadPct != null && (
+              <span>
+                Spread{' '}
+                <span className="text-amber-400 font-bold">
+                  {stats.spreadPct < 0 ? 'Crossed' : `${stats.spreadPct.toFixed(2)}%`}
+                </span>
+              </span>
+            )}
+          </>
+        ) : (
+          <span className="text-gray-500">Loading...</span>
+        )}
+      </div>
+
+      {/* Order book tables */}
+      {bookError ? (
+        <div className="bg-gray-900/50 border border-white/10 rounded-xl p-4">
+          <div className="text-sm text-red-400">{bookError}</div>
+        </div>
+      ) : bookLoading && !book ? (
+        <div className="bg-gray-900/50 border border-white/10 rounded-xl p-4">
+          <div className="flex justify-center py-10">
             <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#00C389] border-t-transparent" />
           </div>
-        ) : normalized && stats ? (
-          <OrderBookTable
-            normalized={normalized}
-            stats={stats}
-            fromUpper={fromUpper}
-            toUpper={toUpper}
-            fromPriceUsd={fromPriceUsd}
-            amountPriceUsd={amountPriceUsd}
-            refreshTick={refreshTick}
-          />
-        ) : null}
-      </motion.div>
-
-      {(normalized || bookLoading) && (
-        <p className="text-center text-[10px] text-gray-700">
-          open4dev is data provider
-        </p>
-      )}
+        </div>
+      ) : normalized && stats ? (
+        <OrderBookTable
+          normalized={normalized}
+          stats={stats}
+          fromUpper={fromUpper}
+          toUpper={toUpper}
+          fromPriceUsd={fromPriceUsd}
+          amountPriceUsd={amountPriceUsd}
+          refreshTick={refreshTick}
+          sourceLabel="open4dev is data provider"
+          realStats24h={realStats24h}
+        />
+      ) : null}
     </div>
   );
 }
