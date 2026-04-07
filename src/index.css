@@ -3,6 +3,9 @@
   themes: light --default, dark --prefersdark;
 }
 
+/* Enable Tailwind's dark: variant based on .dark class on html element (used by V4) */
+@variant dark (&:where(.dark, .dark *));
+
 * {
   box-sizing: border-box;
 }
