@@ -104,13 +104,12 @@ export function HomePage({ raceCfg, onSelectToken, onDeploy, onViewLeaderboard }
           </div>
 
           <h1 className="mt-6 text-5xl font-bold tracking-tight sm:text-6xl lg:text-7xl">
-            AI Trader{' '}
-            <span className="text-emerald-600 dark:text-emerald-400">Race</span>
+            <span className="text-emerald-600 dark:text-emerald-400">AgntM</span>
           </h1>
 
           <p className="mt-6 text-lg leading-relaxed text-neutral-500 dark:text-neutral-400 sm:text-xl">
-            Deploy autonomous AI trading agents on TON. Compete in real-time markets,
-            track performance, and let machine intelligence drive your strategy.
+            AI-powered autonomous trading agents on TON blockchain. Deploy your agent,
+            set the strategy, and let AI trade for you.
           </p>
 
           <div className="mt-10 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">

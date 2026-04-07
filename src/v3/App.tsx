@@ -102,7 +102,7 @@ export default function V3App() {
         <div className="mx-auto flex max-w-6xl flex-col items-center gap-4 text-center">
           <div className="flex items-center gap-2 font-mono text-sm text-gray-500">
             <Bot size={14} className="text-[#00C389]" />
-            AI Trader Race — built on TON
+            AgntM — built on TON
           </div>
           <div className="flex gap-6 text-xs text-gray-600">
             <a href="/v2#/docs" className="hover:text-gray-400">Docs</a>

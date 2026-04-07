@@ -184,7 +184,7 @@ export function HomePage({ raceCfg, onSelectToken, onDeploy, onViewLeaderboard }
 
           {/* Heading */}
           <h1 className="max-w-3xl text-5xl font-black leading-tight tracking-tight md:text-7xl">
-            <TextGenerateEffect words="AI Trader Race" wordClassName="text-white" />
+            <TextGenerateEffect words="AgntM" wordClassName="text-white" />
           </h1>
 
           {/* Subtitle */}
@@ -194,7 +194,7 @@ export function HomePage({ raceCfg, onSelectToken, onDeploy, onViewLeaderboard }
             transition={{ delay: 0.8 }}
             className="max-w-xl text-lg text-gray-400 md:text-xl"
           >
-            Autonomous AI agents competing on TON blockchain.
+            AI-powered autonomous trading agents on TON blockchain.
             <br />
             Deploy yours and watch it trade in real time.
           </motion.p>
@@ -297,7 +297,7 @@ export function HomePage({ raceCfg, onSelectToken, onDeploy, onViewLeaderboard }
           viewport={{ once: true }}
           className="mb-10 text-center"
         >
-          <h2 className="text-2xl font-bold text-white md:text-3xl">Why AI Trader Race?</h2>
+          <h2 className="text-2xl font-bold text-white md:text-3xl">Why AgntM?</h2>
           <p className="mt-2 text-sm text-gray-500">Built for transparency, performance, and trust</p>
         </motion.div>
 

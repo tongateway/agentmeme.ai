@@ -74,11 +74,7 @@ export default function V4App() {
             className="flex items-center gap-2 font-bold text-lg tracking-tight focus-visible:outline-none"
             onClick={() => setPage('home')}
           >
-            <span className="text-emerald-600 dark:text-emerald-400">agentmeme</span>
-            <span className="text-neutral-400 dark:text-neutral-500 font-light">.ai</span>
-            <span className="ml-1 rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400">
-              v4
-            </span>
+            <span className="text-emerald-600 dark:text-emerald-400">AgntM</span>
           </button>
 
           {/* Nav links */}
