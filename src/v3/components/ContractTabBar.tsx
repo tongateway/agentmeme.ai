@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Plus, Bot } from 'lucide-react';
 import type { ContractListItem } from '@/lib/api';
+import { cn } from '../utils/cn';
 
 export type TabKey = { kind: 'contract'; contractId: string } | { kind: 'deploy' };
 
@@ -78,14 +79,21 @@ export function ContractTabBar({ contracts, activeTab, onTabChange, loading, onR
   return (
     <div
       ref={scrollRef}
-      className="inline-flex max-w-full items-center gap-1 overflow-x-auto rounded-xl border border-white/5 bg-gray-900/80 p-1 backdrop-blur-sm"
+      className={cn(
+        'inline-flex max-w-full items-center gap-0 overflow-x-auto rounded-xl p-1',
+        'bg-gray-900/50 border border-white/10',
+      )}
       style={{ scrollbarWidth: 'none' }}
     >
       {loading && !contracts?.length ? (
-        <div className="flex shrink-0 items-center gap-2 px-3 py-1.5 text-sm text-gray-400">
-          <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-gray-600 border-t-[#00C389]" />
+        <button
+          type="button"
+          disabled
+          className="shrink-0 gap-1.5 inline-flex items-center px-3 py-1.5 text-xs font-medium text-gray-500"
+        >
+          <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
           Loading...
-        </div>
+        </button>
       ) : null}
 
       {contracts?.map((c) => {
@@ -95,14 +103,15 @@ export function ContractTabBar({ contracts, activeTab, onTabChange, loading, onR
         return (
           <motion.button
             key={c.id}
+            type="button"
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
-            className={`flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm transition-colors ${
+            className={cn(
+              'inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium shrink-0 transition-colors relative',
               isActive
-                ? 'bg-white/10 text-white shadow-sm'
-                : 'text-gray-400 hover:bg-white/5 hover:text-gray-200'
-            }`}
-            type="button"
+                ? 'bg-gray-800 text-white shadow-sm'
+                : 'text-gray-400 hover:text-white hover:bg-white/5',
+            )}
             onClick={() => onTabChange({ kind: 'contract', contractId: c.id })}
             onDoubleClick={(e) => {
               if (isActive && onRename) {
@@ -111,11 +120,11 @@ export function ContractTabBar({ contracts, activeTab, onTabChange, loading, onR
               }
             }}
           >
-            <Bot className="h-3.5 w-3.5 shrink-0 opacity-50" />
+            <Bot className="size-3.5 opacity-50 shrink-0" />
             {isEditing ? (
               <input
                 ref={inputRef}
-                className="w-28 rounded border border-white/10 bg-gray-800 px-1.5 py-0.5 font-mono text-xs text-white outline-none focus:border-[#00C389]/50"
+                className="h-6 w-28 text-xs font-mono bg-gray-900 border border-white/10 text-white rounded-md px-2"
                 value={editValue}
                 onChange={(e) => setEditValue(e.target.value)}
                 onBlur={() => void commitRename()}
@@ -128,35 +137,37 @@ export function ContractTabBar({ contracts, activeTab, onTabChange, loading, onR
               <span className="font-mono text-xs">{(c.name && c.name.trim()) || fmtAddrShort(c.address)}</span>
             )}
             <span
-              className={`h-2 w-2 shrink-0 rounded-full ${
-                c.status === 'deploying'
-                  ? 'animate-pulse bg-yellow-400'
-                  : c.status === 'paused'
-                    ? 'bg-gray-500'
-                    : 'bg-[#00C389]'
-              }`}
+              className={cn(
+                'h-2 w-2 rounded-full shrink-0',
+                c.status === 'deploying' ? 'bg-yellow-500 animate-pulse' :
+                c.status === 'paused' ? 'bg-gray-500' :
+                'bg-[#00C389]',
+              )}
               title={(c.status ?? 'active').toUpperCase()}
             />
             {c.trading_pairs && (
-              <span className="text-[10px] opacity-40">{c.trading_pairs}</span>
+              <span className="text-[10px] px-1.5 py-0 rounded bg-white/5 text-gray-400 border border-white/5">
+                {c.trading_pairs}
+              </span>
             )}
           </motion.button>
         );
       })}
 
       <motion.button
+        type="button"
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
-        className={`flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm transition-colors ${
+        className={cn(
+          'inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium shrink-0 transition-colors',
           activeTab.kind === 'deploy'
-            ? 'bg-[#00C389]/20 text-[#00C389]'
-            : 'text-gray-400 hover:bg-white/5 hover:text-gray-200'
-        }`}
-        type="button"
+            ? 'bg-[#00C389]/20 text-[#00C389] shadow-sm'
+            : 'text-gray-400 hover:text-white hover:bg-white/5',
+        )}
         onClick={() => onTabChange({ kind: 'deploy' })}
         aria-label="Deploy new agent"
       >
-        <Plus className="h-4 w-4" />
+        <Plus className="size-4" />
         <span className="text-xs">Deploy new</span>
       </motion.button>
     </div>

@@ -15,6 +15,7 @@ import {
   readCache, writeCache,
   ordersCacheKey, orderStatsCacheKey, coinMapCacheKey,
 } from '@/lib/cache';
+import { cn } from '../utils/cn';
 
 /* ---------- helpers ---------- */
 
@@ -32,15 +33,15 @@ function coinLabel(coinId: number, coinMap: Map<number, string>): string {
 
 function statusColor(status: string): string {
   const map: Record<string, string> = {
-    deployed: 'border-blue-400/50 text-blue-400',
-    created: 'border-blue-400/50 text-blue-400',
-    pending_match: 'border-yellow-400/50 text-yellow-400',
-    completed: 'border-[#00C389]/50 text-[#00C389]',
-    closed: 'border-gray-500/50 text-gray-400',
-    cancelled: 'border-gray-500/50 text-gray-400',
-    failed: 'border-red-400/50 text-red-400',
+    deployed: 'bg-[#00C389]/20 text-[#00C389] border-[#00C389]/30',
+    created: 'bg-[#00C389]/20 text-[#00C389] border-[#00C389]/30',
+    pending_match: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
+    completed: 'bg-[#00C389]/20 text-[#00C389] border-[#00C389]/30',
+    closed: 'bg-gray-500/20 text-gray-400 border-gray-500/30',
+    cancelled: 'bg-gray-500/20 text-gray-500 border-gray-500/30',
+    failed: 'bg-red-500/20 text-red-400 border-red-500/30',
   };
-  return map[status] ?? 'border-gray-500/50 text-gray-400';
+  return map[status] ?? 'bg-gray-500/20 text-gray-400 border-gray-500/30';
 }
 
 function fmtAmount(n: number): string {
@@ -162,161 +163,166 @@ export function OrdersPanel({ contractAddress }: OrdersPanelProps) {
   useEffect(() => { setShowAll(false); }, [tab]);
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3 }}
-      className="rounded-xl border border-white/5 bg-gray-900/60 p-5 backdrop-blur-sm sm:col-span-2"
-    >
+    <div className="sm:col-span-2 bg-gray-900/50 border border-white/10 rounded-xl overflow-hidden">
       {/* Header */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-2">
-          <ArrowRightLeft className="h-5 w-5 text-gray-400" />
-          <h2 className="text-lg font-bold text-white">DEX Orders</h2>
-          {refreshing && (
-            <span className="flex items-center gap-1 text-xs text-gray-500">
-              <RefreshCw className="h-3 w-3 animate-spin" />
-              Updating...
-            </span>
-          )}
-          {stats && (
-            <div className="flex items-center gap-2 text-xs text-gray-500">
-              <span className="rounded-full border border-white/10 px-2 py-0.5">{stats.total} total</span>
-              {stats.open > 0 && (
-                <span className="rounded-full border border-blue-400/30 px-2 py-0.5 text-blue-400">{stats.open} open</span>
+      <div className="px-5 pt-5 pb-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-2">
+            <ArrowRightLeft className="h-5 w-5 text-[#00C389]" />
+            <h3 className="text-white font-semibold text-sm">DEX Orders</h3>
+            {refreshing && (
+              <span className="flex items-center gap-1 text-xs text-gray-500">
+                <RefreshCw className="h-3 w-3 animate-spin" />
+                Updating...
+              </span>
+            )}
+            {stats && (
+              <div className="flex items-center gap-2 text-xs text-gray-500">
+                <span className="px-1.5 py-0.5 rounded border border-white/10 text-[10px] text-gray-400">{stats.total} total</span>
+                {stats.open > 0 && (
+                  <span className="px-1.5 py-0.5 rounded bg-[#00C389]/20 text-[#00C389] text-[10px]">{stats.open} open</span>
+                )}
+                <span className="px-1.5 py-0.5 rounded bg-white/5 text-gray-400 text-[10px]">{stats.closed} closed</span>
+              </div>
+            )}
+          </div>
+
+          {/* Tabs */}
+          <div className="flex rounded-lg bg-black/50 p-0.5 border border-white/5">
+            <button
+              type="button"
+              className={cn(
+                'rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
+                tab === 'active'
+                  ? 'bg-gray-800 text-white shadow-sm'
+                  : 'text-gray-400 hover:text-white',
               )}
-              <span className="rounded-full border border-white/10 px-2 py-0.5">{stats.closed} closed</span>
-            </div>
-          )}
-        </div>
-        {/* Tabs */}
-        <div className="flex gap-1 rounded-lg bg-gray-800/60 p-0.5">
-          <button
-            className={`rounded-md px-3 py-1 text-xs font-medium transition-colors ${
-              tab === 'active' ? 'bg-white/10 text-white' : 'text-gray-400 hover:text-gray-200'
-            }`}
-            onClick={() => setTab('active')}
-            type="button"
-          >
-            Active{stats?.open ? ` (${stats.open})` : ''}
-          </button>
-          <button
-            className={`rounded-md px-3 py-1 text-xs font-medium transition-colors ${
-              tab === 'history' ? 'bg-white/10 text-white' : 'text-gray-400 hover:text-gray-200'
-            }`}
-            onClick={() => setTab('history')}
-            type="button"
-          >
-            History{stats?.closed ? ` (${stats.closed})` : ''}
-          </button>
+              onClick={() => setTab('active')}
+            >
+              Active{stats?.open ? ` (${stats.open})` : ''}
+            </button>
+            <button
+              type="button"
+              className={cn(
+                'rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
+                tab === 'history'
+                  ? 'bg-gray-800 text-white shadow-sm'
+                  : 'text-gray-400 hover:text-white',
+              )}
+              onClick={() => setTab('history')}
+            >
+              History{stats?.closed ? ` (${stats.closed})` : ''}
+            </button>
+          </div>
         </div>
       </div>
 
       {/* Content */}
-      {error ? (
-        <div className="mt-3 text-sm text-red-400">{error}</div>
-      ) : loading ? (
-        <div className="flex justify-center py-6">
-          <div className="h-6 w-6 animate-spin rounded-full border-2 border-gray-600 border-t-[#00C389]" />
-        </div>
-      ) : orders.length === 0 ? (
-        <div className="py-6 text-center text-sm text-gray-500">
-          {tab === 'active' ? 'No active orders.' : 'No order history yet.'}
-        </div>
-      ) : (
-        <div className="-mx-2 mt-3 overflow-x-auto sm:mx-0">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-white/5 text-xs text-gray-500">
-                <th className="pb-2 text-left font-medium">Time</th>
-                <th className="pb-2 text-left font-medium">Pair</th>
-                <th className="pb-2 text-right font-medium">Amount</th>
-                <th className="hidden pb-2 text-right font-medium sm:table-cell">Rate</th>
-                <th className="hidden pb-2 text-right font-medium sm:table-cell">Receive</th>
-                <th className="hidden pb-2 font-medium sm:table-cell">Status</th>
-                <th className="pb-2" />
-              </tr>
-            </thead>
-            <AnimatePresence mode="popLayout">
-              <tbody>
-                {orders.map((o) => {
-                  const fromLabel = coinLabel(o.from_coin_id, coinMap);
-                  const toLabel = coinLabel(o.to_coin_id, coinMap);
-                  const humanAmount = fromNanoToken(o.initial_amount, fromLabel);
-                  const humanRate = o.price_rate / 1e18;
-                  const usdValue =
-                    o.from_coin_id === 0 && tonPrice != null
-                      ? humanAmount * tonPrice
-                      : null;
-                  const receiveAmount =
-                    humanRate > 0 ? humanAmount * humanRate : null;
-                  return (
-                    <motion.tr
-                      key={o.id}
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      className="border-b border-white/[0.03] transition-colors hover:bg-white/[0.02]"
-                    >
-                      <td className="py-2 pr-3 font-mono text-xs text-gray-300 whitespace-nowrap">{fmtTime(o.created_at)}</td>
-                      <td className="py-2 pr-3 whitespace-nowrap">
-                        <span className="text-xs font-medium text-white">{fromLabel}</span>
-                        <span className="mx-1 text-gray-600">&rarr;</span>
-                        <span className="text-xs font-medium text-white">{toLabel}</span>
-                      </td>
-                      <td className="py-2 pr-3 text-right font-mono text-xs text-gray-300 whitespace-nowrap">
-                        <div>{fmtAmount(humanAmount)} {fromLabel}</div>
-                        {usdValue != null && (
-                          <div className="text-[10px] text-gray-600">~${usdValue.toFixed(2)}</div>
-                        )}
-                      </td>
-                      <td className="hidden py-2 pr-3 text-right font-mono text-xs text-gray-400 whitespace-nowrap sm:table-cell">
-                        {humanRate > 0 ? fmtAmount(humanRate) : '\u2014'}
-                      </td>
-                      <td className="hidden py-2 pr-3 text-right font-mono text-xs text-gray-400 whitespace-nowrap sm:table-cell">
-                        {receiveAmount != null ? (
-                          <span>~{fmtAmount(receiveAmount)} {toLabel}</span>
-                        ) : (
-                          '\u2014'
-                        )}
-                      </td>
-                      <td className="hidden py-2 sm:table-cell">
-                        <span className={`inline-block rounded-full border px-2 py-0.5 text-[10px] font-medium ${statusColor(o.status)}`}>
-                          {o.status}
-                        </span>
-                      </td>
-                      <td className="py-2">
-                        {o.raw_address && (
-                          <a
-                            className="inline-flex items-center rounded p-1 text-gray-500 transition-colors hover:text-gray-300"
-                            href={explorerOrderLink(o.raw_address)}
-                            target="_blank"
-                            rel="noreferrer"
-                            title="View on Tonviewer"
-                          >
-                            <ExternalLink className="h-3 w-3" />
-                          </a>
-                        )}
-                      </td>
-                    </motion.tr>
-                  );
-                })}
-              </tbody>
-            </AnimatePresence>
-          </table>
-          {hasMore && (
-            <div className="mt-3 flex justify-center">
-              <button
-                type="button"
-                className="rounded-lg px-4 py-1.5 text-xs text-gray-400 transition-colors hover:bg-white/5 hover:text-white"
-                onClick={() => setShowAll((v) => !v)}
-              >
-                {showAll ? 'Show less' : `Show all ${filteredOrders.length} orders`}
-              </button>
+      <div className="px-5 pb-5">
+        {error ? (
+          <div className="text-sm text-red-400 mt-2">{error}</div>
+        ) : loading ? (
+          <div className="flex justify-center py-6">
+            <span className="inline-block h-5 w-5 animate-spin rounded-full border-2 border-[#00C389] border-t-transparent" />
+          </div>
+        ) : orders.length === 0 ? (
+          <div className="text-sm text-gray-500 py-4 text-center">
+            {tab === 'active' ? 'No active orders.' : 'No order history yet.'}
+          </div>
+        ) : (
+          <>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-white/5">
+                    <th className="text-left text-xs font-medium text-gray-500 pb-2 pr-3">Time</th>
+                    <th className="text-left text-xs font-medium text-gray-500 pb-2 pr-3">Pair</th>
+                    <th className="text-right text-xs font-medium text-gray-500 pb-2 pr-3">Amount</th>
+                    <th className="text-right text-xs font-medium text-gray-500 pb-2 pr-3 hidden sm:table-cell">Rate</th>
+                    <th className="text-right text-xs font-medium text-gray-500 pb-2 pr-3 hidden sm:table-cell">~ Receive</th>
+                    <th className="text-xs font-medium text-gray-500 pb-2 pr-3 hidden sm:table-cell">Status</th>
+                    <th className="w-8 pb-2" />
+                  </tr>
+                </thead>
+                <tbody>
+                  <AnimatePresence>
+                    {orders.map((o) => {
+                      const fromLabel = coinLabel(o.from_coin_id, coinMap);
+                      const toLabel = coinLabel(o.to_coin_id, coinMap);
+                      const humanAmount = fromNanoToken(o.initial_amount, fromLabel);
+                      const humanRate = o.price_rate / 1e18;
+                      const usdValue =
+                        o.from_coin_id === 0 && tonPrice != null
+                          ? humanAmount * tonPrice
+                          : null;
+                      const receiveAmount = humanRate > 0 ? humanAmount * humanRate : null;
+                      return (
+                        <motion.tr
+                          key={o.id}
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                          className="border-b border-white/5 hover:bg-white/[0.02] transition-colors"
+                        >
+                          <td className="font-mono text-xs text-gray-300 whitespace-nowrap py-2.5 pr-3">{fmtTime(o.created_at)}</td>
+                          <td className="whitespace-nowrap py-2.5 pr-3">
+                            <span className="font-medium text-xs text-white">{fromLabel}</span>
+                            <span className="text-gray-500 mx-1">{'\u2192'}</span>
+                            <span className="font-medium text-xs text-white">{toLabel}</span>
+                          </td>
+                          <td className="font-mono text-xs text-right whitespace-nowrap py-2.5 pr-3">
+                            <div className="text-gray-300">{fmtAmount(humanAmount)} {fromLabel}</div>
+                            {usdValue != null && (
+                              <div className="text-gray-600 text-[10px]">~${usdValue.toFixed(2)}</div>
+                            )}
+                          </td>
+                          <td className="font-mono text-xs text-right text-gray-300 whitespace-nowrap py-2.5 pr-3 hidden sm:table-cell">
+                            {humanRate > 0 ? fmtAmount(humanRate) : '\u2014'}
+                          </td>
+                          <td className="font-mono text-xs text-right text-gray-300 whitespace-nowrap py-2.5 pr-3 hidden sm:table-cell">
+                            {receiveAmount != null ? (
+                              <span>~{fmtAmount(receiveAmount)} {toLabel}</span>
+                            ) : '\u2014'}
+                          </td>
+                          <td className="py-2.5 pr-3 hidden sm:table-cell">
+                            <span className={cn('text-[10px] px-1.5 py-0.5 rounded border', statusColor(o.status))}>
+                              {o.status}
+                            </span>
+                          </td>
+                          <td className="py-2.5">
+                            {o.raw_address && (
+                              <a
+                                className="inline-flex items-center justify-center h-7 w-7 rounded-md text-gray-500 hover:text-white hover:bg-white/5 transition-colors"
+                                href={explorerOrderLink(o.raw_address)}
+                                target="_blank"
+                                rel="noreferrer"
+                                title="View on Tonviewer"
+                              >
+                                <ExternalLink className="h-3 w-3" />
+                              </a>
+                            )}
+                          </td>
+                        </motion.tr>
+                      );
+                    })}
+                  </AnimatePresence>
+                </tbody>
+              </table>
             </div>
-          )}
-        </div>
-      )}
-    </motion.div>
+            {hasMore && (
+              <div className="flex justify-center mt-3">
+                <button
+                  type="button"
+                  className="text-gray-400 hover:text-white text-xs font-medium px-3 py-1.5 rounded-lg transition-colors hover:bg-white/5"
+                  onClick={() => setShowAll((v) => !v)}
+                >
+                  {showAll ? 'Show less' : `Show all ${filteredOrders.length} orders`}
+                </button>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </div>
   );
 }
