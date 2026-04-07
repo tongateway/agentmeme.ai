@@ -12,6 +12,8 @@ import { AgentHubPage } from './components/AgentHubPage';
 import { cn } from './lib/utils';
 import { TokenOpinionPage } from './components/TokenOpinionPage';
 import { StatsPage } from './components/StatsPage';
+import { LeaderboardPage } from './components/LeaderboardPage';
+import { DocsPage } from './components/DocsPage';
 
 // Lazy stubs — will be replaced by real components
 function StubPage({ name }: { name: string }) {
