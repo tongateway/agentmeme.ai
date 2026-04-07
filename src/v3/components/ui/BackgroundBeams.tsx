@@ -24,16 +24,16 @@ export function BackgroundBeams({ className }: BackgroundBeamsProps) {
         <defs>
           {beams.map((_, i) => (
             <linearGradient key={i} id={`beam-grad-${i}`} x1="0%" y1="0%" x2="0%" y2="100%">
-              <stop offset="0%" stopColor="#00C389" stopOpacity="0" />
-              <stop offset="50%" stopColor="#00C389" stopOpacity="0.35" />
-              <stop offset="100%" stopColor="#00C389" stopOpacity="0" />
+              <stop offset="0%" stopColor="#6366f1" stopOpacity="0" />
+              <stop offset="50%" stopColor="#6366f1" stopOpacity="0.35" />
+              <stop offset="100%" stopColor="#6366f1" stopOpacity="0" />
             </linearGradient>
           ))}
           {beams.map((_, i) => (
             <linearGradient key={`h-${i}`} id={`beam-h-grad-${i}`} x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="#00C389" stopOpacity="0" />
-              <stop offset="50%" stopColor="#00C389" stopOpacity="0.2" />
-              <stop offset="100%" stopColor="#00C389" stopOpacity="0" />
+              <stop offset="0%" stopColor="#6366f1" stopOpacity="0" />
+              <stop offset="50%" stopColor="#6366f1" stopOpacity="0.2" />
+              <stop offset="100%" stopColor="#6366f1" stopOpacity="0" />
             </linearGradient>
           ))}
         </defs>
@@ -59,7 +59,7 @@ export function BackgroundBeams({ className }: BackgroundBeamsProps) {
       <div
         className="absolute bottom-0 left-1/2 -translate-x-1/2 h-[400px] w-[600px] rounded-full opacity-10"
         style={{
-          background: 'radial-gradient(ellipse at center, #00C389 0%, transparent 70%)',
+          background: 'radial-gradient(ellipse at center, #6366f1 0%, transparent 70%)',
         }}
       />
 

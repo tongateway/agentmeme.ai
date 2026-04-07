@@ -66,7 +66,7 @@ export function MovingBorder({
         >
           <div
             className="h-full w-full rounded-full opacity-80 blur-md"
-            style={{ background: 'radial-gradient(circle, #00C389 0%, transparent 70%)' }}
+            style={{ background: 'radial-gradient(circle, #818cf8 0%, transparent 70%)' }}
           />
         </motion.div>
       </div>
