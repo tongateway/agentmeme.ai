@@ -121,26 +121,39 @@ export function AgentHubPage({ raceCfg, onSelectToken, onDeploy, onViewLeaderboa
 
       {/* 1. Stats Bar */}
       {!loading && tokens.length > 0 && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {[
-            { icon: <Bot className="h-5 w-5 text-primary" />, bg: 'bg-primary/15', label: 'Active Agents', value: String(totalActiveAgents) },
-            { icon: <TrendingUp className="h-5 w-5 text-success" />, bg: 'bg-success/15', label: 'Trades (24h)', value: totalTrades24h.toLocaleString() },
-            { icon: dominantSentiment === 'Bearish' ? <TrendingDown className="h-5 w-5 text-error" /> : <TrendingUp className={`h-5 w-5 ${dominantSentiment === 'Bullish' ? 'text-success' : 'opacity-40'}`} />, bg: dominantSentiment === 'Bearish' ? 'bg-error/15' : dominantSentiment === 'Bullish' ? 'bg-success/15' : 'bg-base-content/10', label: 'Market Sentiment', value: dominantSentiment, subtitle: `${sentimentPct}% of agents` },
-            { icon: <Target className="h-5 w-5 text-warning" />, bg: 'bg-warning/15', label: 'Avg Signal Strength', value: avgSignal.toFixed(1), subtitle: 'out of 10' },
-          ].map((stat) => (
-            <div key={stat.label} className="card bg-base-200 shadow-sm">
-              <div className="card-body p-4 gap-1">
-                <div className="flex items-center gap-2">
-                  <div className={`flex items-center justify-center rounded-full shrink-0 ${stat.bg}`} style={{ width: 40, height: 40 }}>
-                    {stat.icon}
-                  </div>
-                  <span className="text-xs opacity-50">{stat.label}</span>
-                </div>
-                <span className="mono text-2xl font-bold tabular-nums mt-1">{stat.value}</span>
-                {stat.subtitle && <span className="text-[11px] opacity-40">{stat.subtitle}</span>}
-              </div>
+        <div className="stats stats-vertical sm:stats-horizontal shadow w-full">
+          <div className="stat">
+            <div className="stat-figure text-primary">
+              <Bot className="h-6 w-6" />
             </div>
-          ))}
+            <div className="stat-title">Active Agents</div>
+            <div className="stat-value text-primary">{totalActiveAgents}</div>
+            <div className="stat-desc">trading now</div>
+          </div>
+          <div className="stat">
+            <div className="stat-figure text-secondary">
+              <TrendingUp className="h-6 w-6" />
+            </div>
+            <div className="stat-title">Trades (24h)</div>
+            <div className="stat-value text-secondary">{totalTrades24h.toLocaleString()}</div>
+            <div className="stat-desc">on-chain executions</div>
+          </div>
+          <div className="stat">
+            <div className={`stat-figure ${dominantSentiment === 'Bullish' ? 'text-success' : dominantSentiment === 'Bearish' ? 'text-error' : 'opacity-40'}`}>
+              {dominantSentiment === 'Bearish' ? <TrendingDown className="h-6 w-6" /> : <TrendingUp className="h-6 w-6" />}
+            </div>
+            <div className="stat-title">Market Sentiment</div>
+            <div className={`stat-value ${dominantSentiment === 'Bullish' ? 'text-success' : dominantSentiment === 'Bearish' ? 'text-error' : ''}`}>{dominantSentiment}</div>
+            <div className="stat-desc">{sentimentPct}% of agents</div>
+          </div>
+          <div className="stat">
+            <div className="stat-figure text-accent">
+              <Target className="h-6 w-6" />
+            </div>
+            <div className="stat-title">Avg Signal</div>
+            <div className="stat-value text-accent">{avgSignal.toFixed(1)}</div>
+            <div className="stat-desc">out of 10</div>
+          </div>
         </div>
       )}
 
