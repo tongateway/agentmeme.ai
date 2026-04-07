@@ -11,6 +11,7 @@ import { HomePage } from './components/HomePage';
 import { AgentHubPage } from './components/AgentHubPage';
 import { cn } from './lib/utils';
 import { TokenOpinionPage } from './components/TokenOpinionPage';
+import { StatsPage } from './components/StatsPage';
 
 // Lazy stubs — will be replaced by real components
 function StubPage({ name }: { name: string }) {
@@ -174,10 +175,18 @@ export default function V5App() {
               />
             )
         )}
-        {page === 'stats' && <StubPage name="Order Book" />}
+        {page === 'stats' && <StatsPage raceCfg={raceCfg} />}
         {page === 'trader' && <StubPage name="My Agents" />}
-        {page === 'leaderboard' && <StubPage name="Leaderboard" />}
-        {page === 'docs' && <StubPage name="Docs" />}
+        {page === 'leaderboard' && (
+          <LeaderboardPage
+            raceCfg={raceCfg}
+            onSelectAgent={(contractId) => {
+              // Navigate to trader/agent detail when available
+              console.info('open agent', contractId);
+            }}
+          />
+        )}
+        {page === 'docs' && <DocsPage />}
       </main>
 
       {/* Footer */}
