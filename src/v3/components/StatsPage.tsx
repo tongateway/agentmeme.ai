@@ -250,11 +250,11 @@ function OrderBookTable({
         >
           <div className="flex items-center justify-between px-3 py-2 border-b border-white/10">
             <div className="flex items-center gap-1.5">
-              <ArrowUp className="h-3.5 w-3.5 text-[#00C389]" />
+              <ArrowUp className="h-3.5 w-3.5 text-emerald-400" />
               <span className="text-sm font-bold text-white">Bids</span>
               <span className="text-xs text-gray-500">({normalized.bids.length})</span>
             </div>
-            <span className="text-[10px] text-[#00C389] opacity-70">Buy orders</span>
+            <span className="text-[10px] text-emerald-400 opacity-70">Buy orders</span>
           </div>
           <div className="flex items-center gap-2 px-3 py-2 text-[10px] uppercase tracking-wider text-gray-500 border-b border-white/5">
             <span className="w-24 sm:w-32 text-right">Price ({priceLabel})</span>
@@ -282,10 +282,10 @@ function OrderBookTable({
                     style={{ animationDelay: `${i * 30}ms` }}
                   >
                     <div
-                      className="absolute inset-y-0 right-0 bg-[#00C389]/10 transition-[width] duration-700 ease-out"
+                      className="absolute inset-y-0 right-0 bg-emerald-500/10 transition-[width] duration-700 ease-out"
                       style={{ width: `${Math.min(100, pct)}%` }}
                     />
-                    <span className="relative z-10 w-24 sm:w-32 text-right text-[#00C389] font-medium">
+                    <span className="relative z-10 w-24 sm:w-32 text-right text-emerald-400 font-medium">
                       {fmtRate(lvl.price)}
                     </span>
                     <span className="relative z-10 flex-1 text-right text-gray-300">{fmtAmount(lvl.amount)}</span>
@@ -367,12 +367,12 @@ function OrderBookTable({
         <div className="bg-gray-900/50 border border-white/10 rounded-xl p-3 flex flex-row items-center justify-center gap-6">
           <div className="text-center">
             <div className="text-[10px] text-gray-500">Best Bid</div>
-            <div className="font-mono text-sm font-bold text-[#00C389]">
+            <div className="font-mono text-sm font-bold text-emerald-400">
               {fmtRate(stats.bestBid)}
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-12 h-1 rounded-full bg-[#00C389]" />
+            <div className="w-12 h-1 rounded-full bg-emerald-400" />
             <div className="text-center">
               <div className="text-[10px] text-gray-500">Spread</div>
               <div
@@ -431,12 +431,12 @@ function ActivityWindow({
       className={cn(
         'rounded-lg px-3 py-2.5 relative overflow-hidden border',
         highlight
-          ? 'border-[#00C389]/30 bg-[#00C389]/5'
+          ? 'border-emerald-500/30 bg-emerald-500/5'
           : 'border-white/10 bg-gray-900/50',
       )}
     >
       <div
-        className="absolute left-0 bottom-0 h-[2px] bg-[#00C389]/50 transition-all duration-700"
+        className="absolute left-0 bottom-0 h-[2px] bg-emerald-500/50 transition-all duration-700"
         style={{ width: `${completionPct}%` }}
       />
       <div className="flex items-center justify-between mb-2">
@@ -448,7 +448,7 @@ function ActivityWindow({
       <div className="grid grid-cols-3 gap-2">
         <div>
           <div className="text-[9px] uppercase tracking-wide text-gray-500">Open</div>
-          <div className="text-sm font-semibold font-mono text-[#00C389]">
+          <div className="text-sm font-semibold font-mono text-emerald-400">
             {data.open_orders.toLocaleString()}
           </div>
         </div>
@@ -484,12 +484,12 @@ function PairActivityRow({
     <div className="rounded-xl border border-white/10 bg-gray-900/50 p-3">
       <div className="flex items-center justify-between mb-2.5">
         <div className="flex items-center gap-2">
-          <div className="w-1 h-3.5 rounded-full bg-[#00C389]/60" />
+          <div className="w-1 h-3.5 rounded-full bg-emerald-500/60" />
           <span className="text-[11px] font-bold tracking-tight text-gray-400">
             {fromSymbol}/{toSymbol} Order Stats
           </span>
         </div>
-        <div className="h-2 w-2 rounded-full bg-[#00C389]/50 animate-pulse" />
+        <div className="h-2 w-2 rounded-full bg-emerald-400/50 animate-pulse" />
       </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
         <ActivityWindow
@@ -765,15 +765,15 @@ export function StatsPage({ raceCfg, pairSlug, onPairChange }: StatsPageProps) {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#00C389]/10">
-            <BarChart3 className="h-5 w-5 text-[#00C389]" />
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-neutral-800">
+            <BarChart3 className="h-5 w-5 text-neutral-300" />
           </div>
           <div>
             <h1 className="text-xl font-semibold tracking-tight text-white">Order Book</h1>
             <div className="flex items-center gap-1.5">
               <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#00C389] opacity-75" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-[#00C389]" />
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400" />
               </span>
               <p className="text-xs text-gray-400">Live from open4dev DEX</p>
             </div>
@@ -793,8 +793,8 @@ export function StatsPage({ raceCfg, pairSlug, onPairChange }: StatsPageProps) {
               className={cn(
                 'rounded-full px-4 py-1.5 text-sm font-medium transition-colors',
                 isSelected
-                  ? 'bg-[#00C389] text-black'
-                  : 'text-gray-400 border border-white/10 hover:text-white hover:bg-white/5',
+                  ? 'bg-white text-black'
+                  : 'text-neutral-400 border border-neutral-800 hover:text-white hover:bg-white/5',
               )}
             >
               {p.label}
@@ -863,7 +863,7 @@ export function StatsPage({ raceCfg, pairSlug, onPairChange }: StatsPageProps) {
           <>
             <span>
               Bid{' '}
-              <span className="text-[#00C389] font-bold">
+              <span className="text-emerald-400 font-bold">
                 {fmtRate(stats.bestBid ?? 0)}
               </span>
             </span>
@@ -895,7 +895,7 @@ export function StatsPage({ raceCfg, pairSlug, onPairChange }: StatsPageProps) {
       ) : bookLoading && !book ? (
         <div className="bg-gray-900/50 border border-white/10 rounded-xl p-4">
           <div className="flex justify-center py-10">
-            <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#00C389] border-t-transparent" />
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-neutral-400 border-t-transparent" />
           </div>
         </div>
       ) : normalized && stats ? (

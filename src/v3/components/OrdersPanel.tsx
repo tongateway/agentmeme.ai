@@ -33,15 +33,15 @@ function coinLabel(coinId: number, coinMap: Map<number, string>): string {
 
 function statusColor(status: string): string {
   const map: Record<string, string> = {
-    deployed: 'bg-[#00C389]/20 text-[#00C389] border-[#00C389]/30',
-    created: 'bg-[#00C389]/20 text-[#00C389] border-[#00C389]/30',
-    pending_match: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
-    completed: 'bg-[#00C389]/20 text-[#00C389] border-[#00C389]/30',
-    closed: 'bg-gray-500/20 text-gray-400 border-gray-500/30',
-    cancelled: 'bg-gray-500/20 text-gray-500 border-gray-500/30',
+    deployed: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
+    created: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
+    pending_match: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
+    completed: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
+    closed: 'bg-neutral-500/20 text-neutral-400 border-neutral-500/30',
+    cancelled: 'bg-neutral-500/20 text-neutral-500 border-neutral-500/30',
     failed: 'bg-red-500/20 text-red-400 border-red-500/30',
   };
-  return map[status] ?? 'bg-gray-500/20 text-gray-400 border-gray-500/30';
+  return map[status] ?? 'bg-neutral-500/20 text-neutral-400 border-neutral-500/30';
 }
 
 function fmtAmount(n: number): string {
@@ -163,12 +163,12 @@ export function OrdersPanel({ contractAddress }: OrdersPanelProps) {
   useEffect(() => { setShowAll(false); }, [tab]);
 
   return (
-    <div className="sm:col-span-2 bg-gray-900/50 border border-white/10 rounded-xl overflow-hidden">
+    <div className="sm:col-span-2 bg-neutral-900/50 border border-neutral-800/50 rounded-xl overflow-hidden">
       {/* Header */}
       <div className="px-5 pt-5 pb-3">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-2">
-            <ArrowRightLeft className="h-5 w-5 text-[#00C389]" />
+            <ArrowRightLeft className="h-5 w-5 text-neutral-400" />
             <h3 className="text-white font-semibold text-sm">DEX Orders</h3>
             {refreshing && (
               <span className="flex items-center gap-1 text-xs text-gray-500">
@@ -180,7 +180,7 @@ export function OrdersPanel({ contractAddress }: OrdersPanelProps) {
               <div className="flex items-center gap-2 text-xs text-gray-500">
                 <span className="px-1.5 py-0.5 rounded border border-white/10 text-[10px] text-gray-400">{stats.total} total</span>
                 {stats.open > 0 && (
-                  <span className="px-1.5 py-0.5 rounded bg-[#00C389]/20 text-[#00C389] text-[10px]">{stats.open} open</span>
+                  <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 text-[10px]">{stats.open} open</span>
                 )}
                 <span className="px-1.5 py-0.5 rounded bg-white/5 text-gray-400 text-[10px]">{stats.closed} closed</span>
               </div>
@@ -194,8 +194,8 @@ export function OrdersPanel({ contractAddress }: OrdersPanelProps) {
               className={cn(
                 'rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
                 tab === 'active'
-                  ? 'bg-gray-800 text-white shadow-sm'
-                  : 'text-gray-400 hover:text-white',
+                  ? 'bg-white/10 text-white shadow-sm'
+                  : 'text-neutral-500 hover:text-white',
               )}
               onClick={() => setTab('active')}
             >
@@ -206,8 +206,8 @@ export function OrdersPanel({ contractAddress }: OrdersPanelProps) {
               className={cn(
                 'rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
                 tab === 'history'
-                  ? 'bg-gray-800 text-white shadow-sm'
-                  : 'text-gray-400 hover:text-white',
+                  ? 'bg-white/10 text-white shadow-sm'
+                  : 'text-neutral-500 hover:text-white',
               )}
               onClick={() => setTab('history')}
             >
@@ -223,7 +223,7 @@ export function OrdersPanel({ contractAddress }: OrdersPanelProps) {
           <div className="text-sm text-red-400 mt-2">{error}</div>
         ) : loading ? (
           <div className="flex justify-center py-6">
-            <span className="inline-block h-5 w-5 animate-spin rounded-full border-2 border-[#00C389] border-t-transparent" />
+            <span className="inline-block h-5 w-5 animate-spin rounded-full border-2 border-neutral-400 border-t-transparent" />
           </div>
         ) : orders.length === 0 ? (
           <div className="text-sm text-gray-500 py-4 text-center">

@@ -123,7 +123,7 @@ export function TokenOpinionPage({ raceCfg, symbol, onBack }: TokenOpinionPagePr
   if (loading) {
     return (
       <div className="mt-4 flex justify-center py-12">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#00C389] border-t-transparent" />
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-neutral-400 border-t-transparent" />
       </div>
     );
   }
@@ -131,11 +131,11 @@ export function TokenOpinionPage({ raceCfg, symbol, onBack }: TokenOpinionPagePr
   if (error) {
     return (
       <div className="mt-4">
-        <div className="rounded-xl border border-white/10 bg-gray-900/50 p-4 flex flex-col gap-3">
+        <div className="rounded-xl border border-neutral-800/50 bg-neutral-900/50 p-4 flex flex-col gap-3">
           <p className="text-sm text-red-400">{error}</p>
           <button
             onClick={onBack}
-            className="flex items-center gap-1 text-sm text-gray-400 hover:text-white transition-colors self-start"
+            className="flex items-center gap-1 text-sm text-neutral-400 hover:text-white transition-colors self-start"
           >
             <ArrowLeft className="h-4 w-4" /> Back
           </button>
@@ -145,11 +145,11 @@ export function TokenOpinionPage({ raceCfg, symbol, onBack }: TokenOpinionPagePr
   }
 
   const changePositive = (stats?.price_change_24h ?? 0) >= 0;
-  const changeColorClass = changePositive ? 'text-[#00C389]' : 'text-red-400';
+  const changeColorClass = changePositive ? 'text-emerald-400' : 'text-red-400';
 
   const consensusUpper = (stats?.consensus ?? '').toUpperCase();
-  let consensusColor = 'bg-gray-800 text-gray-300';
-  if (consensusUpper === 'BULLISH') consensusColor = 'bg-[#00C389]/10 text-[#00C389]';
+  let consensusColor = 'bg-neutral-800 text-neutral-300';
+  if (consensusUpper === 'BULLISH') consensusColor = 'bg-emerald-500/10 text-emerald-400';
   else if (consensusUpper === 'BEARISH') consensusColor = 'bg-red-500/10 text-red-400';
 
   const bullPct = stats?.bullish_pct ?? 0;
@@ -186,7 +186,7 @@ export function TokenOpinionPage({ raceCfg, symbol, onBack }: TokenOpinionPagePr
           </div>
           <div className="flex flex-col">
             <span className="text-lg font-bold leading-tight text-white">{stats?.token_symbol}</span>
-            <span className="text-xs text-gray-500">{stats?.token_name}</span>
+            <span className="text-xs text-neutral-500">{stats?.token_name}</span>
           </div>
         </motion.div>
 
@@ -222,7 +222,7 @@ export function TokenOpinionPage({ raceCfg, symbol, onBack }: TokenOpinionPagePr
                 initial={{ width: 0 }}
                 animate={{ width: `${bullPct}%` }}
                 transition={{ duration: 0.6, ease: 'easeOut' }}
-                className="bg-[#00C389]"
+                className="bg-emerald-500"
               />
             )}
             {bearPct > 0 && (
@@ -236,7 +236,7 @@ export function TokenOpinionPage({ raceCfg, symbol, onBack }: TokenOpinionPagePr
           </div>
           <div className="flex justify-between text-[10px] text-gray-500">
             <span className="flex items-center gap-1">
-              <TrendingUp className="h-3 w-3 text-[#00C389]" />
+              <TrendingUp className="h-3 w-3 text-emerald-400" />
               {bullPct.toFixed(0)}% Bullish
             </span>
             <span className="flex items-center gap-1">
@@ -255,7 +255,7 @@ export function TokenOpinionPage({ raceCfg, symbol, onBack }: TokenOpinionPagePr
           ].map(({ icon, value, label }) => (
             <div
               key={label}
-              className="rounded-xl border border-white/10 bg-gray-900/50 p-3 flex flex-col items-center gap-1"
+              className="rounded-xl border border-neutral-800/50 bg-neutral-900/50 p-3 flex flex-col items-center gap-1"
             >
               {icon}
               <span className="font-mono text-base font-bold tabular-nums text-white">{value}</span>
@@ -270,7 +270,7 @@ export function TokenOpinionPage({ raceCfg, symbol, onBack }: TokenOpinionPagePr
         {/* Back button */}
         <button
           onClick={onBack}
-          className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-white transition-colors self-start mt-2"
+          className="flex items-center gap-1.5 text-sm text-neutral-400 hover:text-white transition-colors self-start mt-2"
         >
           <ArrowLeft className="h-4 w-4" />
           Back to Hub
@@ -286,8 +286,8 @@ export function TokenOpinionPage({ raceCfg, symbol, onBack }: TokenOpinionPagePr
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-bold text-white">Agent Trading Feed</h2>
           <div className="flex items-center gap-1.5">
-            <span className="h-1.5 w-1.5 rounded-full bg-[#00C389] animate-pulse" />
-            <span className="text-xs text-gray-500">Live updates</span>
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="text-xs text-neutral-500">Live updates</span>
           </div>
         </div>
 
@@ -298,7 +298,7 @@ export function TokenOpinionPage({ raceCfg, symbol, onBack }: TokenOpinionPagePr
               key="empty"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="rounded-xl border border-white/10 bg-gray-900/50 p-4"
+              className="rounded-xl border border-neutral-800/50 bg-neutral-900/50 p-4"
             >
               <span className="text-sm text-gray-400">No trade activity on this token yet.</span>
             </motion.div>
@@ -321,8 +321,8 @@ export function TokenOpinionPage({ raceCfg, symbol, onBack }: TokenOpinionPagePr
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.3, delay: idx * 0.03 }}
                   className={cn(
-                    'rounded-xl border border-white/10 bg-gray-900/50 p-4 flex flex-col gap-3',
-                    isBuy ? 'border-l-4 border-l-[#00C389]' : 'border-l-4 border-l-red-500',
+                    'rounded-xl border border-neutral-800/50 bg-neutral-900/50 p-4 flex flex-col gap-3',
+                    isBuy ? 'border-l-4 border-l-emerald-500/50' : 'border-l-4 border-l-red-500/50',
                   )}
                 >
                   {/* Header: bot icon + name + time + badge */}
@@ -332,7 +332,7 @@ export function TokenOpinionPage({ raceCfg, symbol, onBack }: TokenOpinionPagePr
                         className={cn(
                           'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg',
                           isBuy
-                            ? 'bg-[#00C389]/10 text-[#00C389]'
+                            ? 'bg-emerald-500/10 text-emerald-400'
                             : 'bg-red-500/10 text-red-400',
                         )}
                       >
@@ -352,7 +352,7 @@ export function TokenOpinionPage({ raceCfg, symbol, onBack }: TokenOpinionPagePr
                       className={cn(
                         'shrink-0 text-[11px] font-bold uppercase px-2 py-0.5 rounded-full',
                         isBuy
-                          ? 'bg-[#00C389]/10 text-[#00C389]'
+                          ? 'bg-emerald-500/10 text-emerald-400'
                           : 'bg-red-500/10 text-red-400',
                       )}
                     >
@@ -390,10 +390,10 @@ export function TokenOpinionPage({ raceCfg, symbol, onBack }: TokenOpinionPagePr
           <button
             onClick={handleLoadMore}
             disabled={loadingMore}
-            className="self-center px-4 py-2 text-sm text-gray-400 hover:text-white border border-white/10 rounded-lg bg-gray-900/50 hover:bg-gray-800/50 transition-all disabled:opacity-50"
+            className="self-center px-4 py-2 text-sm text-neutral-400 hover:text-white border border-neutral-800 rounded-lg bg-neutral-900/50 hover:bg-neutral-800/50 transition-all disabled:opacity-50"
           >
             {loadingMore ? (
-              <div className="h-4 w-4 animate-spin rounded-full border-2 border-[#00C389] border-t-transparent" />
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-neutral-400 border-t-transparent" />
             ) : (
               'Load more'
             )}

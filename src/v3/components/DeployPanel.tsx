@@ -562,8 +562,8 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
         {/* Header */}
         <div className="border-b border-white/5 px-6 py-5">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#00C389]/10">
-              <Zap className="h-5 w-5 text-[#00C389]" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-neutral-800">
+              <Zap className="h-5 w-5 text-neutral-300" />
             </div>
             <div>
               <h2 className="text-xl font-bold tracking-tight text-white">Deploy New Agent</h2>
@@ -576,9 +576,9 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
           {/* Section 1: Choose AI Model */}
           <div>
             <div className="flex items-center gap-2 mb-3">
-              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[#00C389]/10 text-[11px] font-bold text-[#00C389]">1</div>
+              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-neutral-800 text-[11px] font-bold text-neutral-300">1</div>
               <span className="text-base font-bold text-white">Choose AI Model</span>
-              {modelsLoading && <span className="ml-1 inline-block h-3 w-3 animate-spin rounded-full border-2 border-[#00C389] border-t-transparent" />}
+              {modelsLoading && <span className="ml-1 inline-block h-3 w-3 animate-spin rounded-full border-2 border-neutral-400 border-t-transparent" />}
             </div>
 
             {/* Collapsed: show selected model */}
@@ -586,8 +586,8 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
               <button
                 type="button"
                 className={cn(
-                  'flex items-center w-full text-left cursor-pointer rounded-lg border-2 border-[#00C389] p-2.5',
-                  'bg-[#00C389]/5',
+                  'flex items-center w-full text-left cursor-pointer rounded-lg border border-white/20 p-2.5',
+                  'bg-white/5',
                 )}
                 onClick={() => setModelListOpen(true)}
               >
@@ -603,10 +603,10 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
                   className={cn(
                     'ml-2 text-[10px] font-medium px-2 py-0.5 rounded-full',
                     selectedModelOption.isThinking
-                      ? 'bg-[#00C389]/10 text-[#00C389]'
+                      ? 'bg-neutral-800 text-neutral-300'
                       : selectedModelOption.isThinking === false
                         ? 'bg-amber-500/10 text-amber-400'
-                        : 'bg-[#00C389]/10 text-[#00C389]',
+                        : 'bg-neutral-800 text-neutral-300',
                   )}
                 >
                   {selectedModelOption.isThinking ? 'Thinking' : selectedModelOption.isThinking === false ? 'Fast' : 'Balanced'}
@@ -639,8 +639,8 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
                         className={cn(
                           'flex items-center text-left cursor-pointer rounded-lg p-2.5 border transition-colors',
                           isSelected
-                            ? 'border-[#00C389] bg-[#00C389]/5'
-                            : 'border-white/10 hover:border-[#00C389]/50',
+                            ? 'border-white/20 bg-white/5'
+                            : 'border-neutral-800 hover:border-neutral-700',
                         )}
                         onClick={() => {
                           setPersisted((p) => ({
@@ -665,7 +665,7 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
                             className={cn(
                               'ml-2 text-[10px] font-medium px-2 py-0.5 rounded-full',
                               m.isThinking
-                                ? 'bg-[#00C389]/10 text-[#00C389]'
+                                ? 'bg-neutral-800 text-neutral-300'
                                 : 'bg-amber-500/10 text-amber-400',
                             )}
                           >
@@ -678,7 +678,7 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
                           </span>
                         )}
                         {isSelected && (
-                          <div className="flex-shrink-0 ml-2 h-4 w-4 rounded-full bg-[#00C389] flex items-center justify-center">
+                          <div className="flex-shrink-0 ml-2 h-4 w-4 rounded-full bg-white flex items-center justify-center">
                             <Check className="h-2.5 w-2.5 text-black" />
                           </div>
                         )}
@@ -696,7 +696,7 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
           {/* Section 2: Trading Pair */}
           <div>
             <div className="flex items-center gap-2 mb-2">
-              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[#00C389]/10 text-[11px] font-bold text-[#00C389]">2</div>
+              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-neutral-800 text-[11px] font-bold text-neutral-300">2</div>
               <span className="text-base font-bold text-white">Trading Pair</span>
               <span className="text-[10px] text-gray-500 ml-1">(1 pair per agent)</span>
             </div>
@@ -709,8 +709,8 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
                   className={cn(
                     'inline-flex items-center gap-1.5 rounded-full pl-3 pr-2.5 py-1.5 text-sm font-bold transition-all cursor-pointer border',
                     pickingSide === 'base'
-                      ? 'ring-2 ring-[#00C389] border-[#00C389]'
-                      : 'border-white/10 hover:ring-2 hover:ring-[#00C389]/50',
+                      ? 'ring-1 ring-neutral-700 border-neutral-700'
+                      : 'border-white/10 hover:ring-1 hover:ring-neutral-700',
                     'bg-gray-900 text-white',
                   )}
                   onClick={() => setPickingSide(pickingSide === 'base' ? null : 'base')}
@@ -741,7 +741,7 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
                         >
                           <span className="h-2.5 w-2.5 rounded-full" style={{ background: TOKEN_COLORS[token] ?? '#888' }} />
                           {token}
-                          {isSel && <Check className="h-3.5 w-3.5 ml-auto text-[#00C389]" />}
+                          {isSel && <Check className="h-3.5 w-3.5 ml-auto text-white" />}
                         </button>
                       );
                     })}
@@ -759,8 +759,8 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
                     className={cn(
                       'inline-flex items-center gap-1.5 rounded-full pl-3 pr-2.5 py-1.5 text-sm font-bold transition-all cursor-pointer border',
                       pickingSide === 'quote'
-                        ? 'ring-2 ring-[#00C389] border-[#00C389]'
-                        : 'border-white/10 hover:ring-2 hover:ring-[#00C389]/50',
+                        ? 'ring-1 ring-neutral-700 border-neutral-700'
+                        : 'border-white/10 hover:ring-1 hover:ring-neutral-700',
                       'bg-gray-900 text-white',
                     )}
                     onClick={() => setPickingSide(pickingSide === 'quote' ? null : 'quote')}
@@ -772,7 +772,7 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
                 ) : (
                   <button
                     type="button"
-                    className="inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-sm font-semibold bg-[#00C389] text-black hover:bg-[#00C389]/90 transition-colors"
+                    className="inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-sm font-semibold bg-white text-black hover:bg-neutral-200 transition-colors"
                     onClick={() => setPickingSide('quote')}
                   >
                     pick <ArrowRight className="h-3 w-3" />
@@ -797,7 +797,7 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
                         >
                           <span className="h-2.5 w-2.5 rounded-full" style={{ background: TOKEN_COLORS[token] ?? '#888' }} />
                           {token}
-                          {isSel && <Check className="h-3.5 w-3.5 ml-auto text-[#00C389]" />}
+                          {isSel && <Check className="h-3.5 w-3.5 ml-auto text-white" />}
                         </button>
                       );
                     })}
@@ -813,7 +813,7 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
           {/* Section 3: Trading Strategy */}
           <div>
             <div className="flex items-center gap-2 mb-3">
-              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[#00C389]/10 text-[11px] font-bold text-[#00C389]">3</div>
+              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-neutral-800 text-[11px] font-bold text-neutral-300">3</div>
               <span className="text-base font-bold text-white">Trading Strategy</span>
             </div>
             <div className="flex items-center justify-end gap-1.5 mb-1.5">
@@ -883,7 +883,7 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
               ref={promptRef}
               id="prompt"
               className={cn(
-                'w-full text-sm leading-relaxed rounded-lg bg-gray-900 border border-white/10 text-white placeholder-gray-500 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#00C389]/50 focus:border-[#00C389] resize-y',
+                'w-full text-sm leading-relaxed rounded-lg bg-neutral-900 border border-neutral-800 text-white placeholder:text-neutral-500 px-3 py-2 focus:outline-none focus:ring-1 focus:ring-neutral-700 focus:border-neutral-700 resize-y',
                 persisted.prompt.length > 5000 && 'border-red-500',
               )}
               value={persisted.prompt}
@@ -927,8 +927,8 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
                           className={cn(
                             'inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-mono transition-colors',
                             inPrompt
-                              ? 'border-[#00C389] bg-[#00C389]/10 text-[#00C389]'
-                              : 'border-white/10 hover:border-[#00C389] hover:bg-[#00C389]/5 text-[#00C389]/70',
+                              ? 'border-white/20 bg-white/5 text-white'
+                              : 'border-neutral-800 hover:border-neutral-700 hover:bg-white/5 text-neutral-400',
                           )}
                           onClick={() => insertPromptVar(v)}
                         >
@@ -945,7 +945,7 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
                   })}
                 </div>
                 <div className="mt-1.5 text-[10px] text-gray-500 flex items-center gap-1.5">
-                  <span className="h-1.5 w-1.5 rounded-full bg-[#00C389] animate-pulse shrink-0" />
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
                   Variables are replaced with live data before each AI decision
                 </div>
               </div>
@@ -958,14 +958,14 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
           {/* Section 4: Name & Fund */}
           <div className="space-y-3">
             <div className="flex items-center gap-2 mb-3">
-              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[#00C389]/10 text-[11px] font-bold text-[#00C389]">4</div>
+              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-neutral-800 text-[11px] font-bold text-neutral-300">4</div>
               <span className="text-base font-bold text-white">Name & Fund</span>
             </div>
 
             <input
               id="agentName"
               type="text"
-              className="w-full rounded-lg bg-gray-900 border border-white/10 text-white placeholder-gray-500 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#00C389]/50 focus:border-[#00C389]"
+              className="w-full rounded-lg bg-neutral-900 border border-neutral-800 text-white placeholder:text-neutral-500 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-neutral-700 focus:border-neutral-700"
               value={persisted.agentName ?? ''}
               onChange={(e) => setPersisted((p) => ({ ...p, agentName: e.target.value }))}
               placeholder="Agent name, e.g. Moon Hunter"
@@ -993,7 +993,7 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
                     <Minus className="h-3 w-3" />
                   </button>
                   <input
-                    className="h-7 w-16 text-center font-mono font-semibold text-xs rounded-md bg-gray-900 border border-white/10 text-white focus:outline-none focus:ring-1 focus:ring-[#00C389]/50"
+                    className="h-7 w-16 text-center font-mono font-semibold text-xs rounded-md bg-gray-900 border border-white/10 text-white focus:outline-none focus:ring-1 focus:ring-neutral-700"
                     value={persisted.deployAmountTon}
                     onChange={(e) => setPersisted((p) => ({ ...p, deployAmountTon: e.target.value }))}
                     inputMode="decimal"
@@ -1030,7 +1030,7 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
                     <Minus className="h-3 w-3" />
                   </button>
                   <input
-                    className="h-7 w-16 text-center font-mono font-semibold text-xs rounded-md bg-gray-900 border border-white/10 text-white focus:outline-none focus:ring-1 focus:ring-[#00C389]/50"
+                    className="h-7 w-16 text-center font-mono font-semibold text-xs rounded-md bg-gray-900 border border-white/10 text-white focus:outline-none focus:ring-1 focus:ring-neutral-700"
                     value={persisted.agntTopup ?? '0'}
                     onChange={(e) => setPersisted((p) => ({ ...p, agntTopup: e.target.value }))}
                     inputMode="decimal"
@@ -1068,7 +1068,7 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
                       <Minus className="h-3 w-3" />
                     </button>
                     <input
-                      className="h-7 w-16 text-center font-mono font-semibold text-xs rounded-md bg-gray-900 border border-white/10 text-white focus:outline-none focus:ring-1 focus:ring-[#00C389]/50"
+                      className="h-7 w-16 text-center font-mono font-semibold text-xs rounded-md bg-gray-900 border border-white/10 text-white focus:outline-none focus:ring-1 focus:ring-neutral-700"
                       value={persisted.quoteTopup ?? '0'}
                       onChange={(e) => setPersisted((p) => ({ ...p, quoteTopup: e.target.value }))}
                       inputMode="decimal"
@@ -1092,7 +1092,7 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
                 <div className="text-[10px] uppercase tracking-wider font-semibold text-gray-500">Where your TON goes</div>
                 <div className="flex items-center justify-between text-xs">
                   <div className="flex items-center gap-1.5">
-                    <span className="h-1.5 w-1.5 rounded-full bg-[#00C389]" />
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
                     <span className="text-gray-400">AI service provider</span>
                     {selectedModelOption && (
                       <span className="text-gray-500">({shortModelName(selectedModelOption.name)})</span>
@@ -1149,8 +1149,8 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
               className={cn(
                 'w-full flex items-center justify-center gap-2 text-base font-semibold rounded-lg py-3 px-4 transition-colors shadow-md',
                 busy
-                  ? 'bg-[#00C389]/50 text-black/50 cursor-not-allowed'
-                  : 'bg-[#00C389] text-black hover:bg-[#00C389]/90 cursor-pointer',
+                  ? 'bg-neutral-600 text-neutral-400 cursor-not-allowed'
+                  : 'bg-white text-black hover:bg-neutral-200 cursor-pointer',
               )}
               disabled={!!busy}
               onClick={() => void deployAndRegister()}
@@ -1183,7 +1183,7 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
             <div className="flex items-center justify-between gap-3 rounded-lg bg-gray-950/50 border border-white/5 px-3.5 py-2.5">
               <span className="text-xs text-gray-500">Contract</span>
               <a
-                className="font-mono text-xs text-[#00C389] hover:underline inline-flex items-center gap-1"
+                className="font-mono text-xs text-neutral-300 hover:text-white hover:underline inline-flex items-center gap-1"
                 href={explorerLink(persisted.contractAddress)}
                 target="_blank"
                 rel="noreferrer"
@@ -1216,7 +1216,7 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
                     <input
                       id="topupAmount"
                       type="text"
-                      className="flex-1 h-8 rounded-lg bg-gray-900 border border-white/10 text-white placeholder-gray-500 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#00C389]/50 focus:border-[#00C389]"
+                      className="flex-1 h-8 rounded-lg bg-neutral-900 border border-neutral-800 text-white placeholder:text-neutral-500 px-3 text-sm focus:outline-none focus:ring-1 focus:ring-neutral-700 focus:border-neutral-700"
                       value={persisted.topupAmountTon}
                       onChange={(e) => setPersisted((p) => ({ ...p, topupAmountTon: e.target.value }))}
                       inputMode="decimal"
@@ -1298,7 +1298,7 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
                             type="button"
                             className={cn(
                               'font-mono text-sm font-bold',
-                              inPrompt ? 'text-[#00C389]' : 'text-[#00C389]/70 hover:text-[#00C389]',
+                              inPrompt ? 'text-white' : 'text-neutral-400 hover:text-white',
                             )}
                             onClick={() => { insertPromptVar(v); setVarsHelpOpen(false); }}
                           >

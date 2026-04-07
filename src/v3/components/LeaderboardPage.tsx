@@ -170,8 +170,8 @@ export function LeaderboardPage({ raceCfg, onSelectAgent }: LeaderboardPageProps
                   className={cn(
                     'px-3 py-1.5 rounded-lg text-sm font-medium transition-colors',
                     tab === t.key
-                      ? 'bg-[#00C389] text-black'
-                      : 'text-gray-400 hover:text-white hover:bg-white/5',
+                      ? 'bg-white text-black'
+                      : 'text-neutral-400 hover:text-white hover:bg-white/5',
                   )}
                 >
                   {t.label}
@@ -224,7 +224,7 @@ export function LeaderboardPage({ raceCfg, onSelectAgent }: LeaderboardPageProps
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-2">
                             {e.is_active && (
-                              <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#00C389] shrink-0" />
+                              <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
                             )}
                             <a
                               className="font-mono text-xs text-gray-300 hover:text-white underline-offset-4 hover:underline transition-colors"
@@ -276,7 +276,7 @@ export function LeaderboardPage({ raceCfg, onSelectAgent }: LeaderboardPageProps
                             {totalOrd > 0 && (
                               <div className="w-12 h-1 rounded-full bg-white/5 overflow-hidden">
                                 <div
-                                  className="h-full rounded-full bg-[#00C389]"
+                                  className="h-full rounded-full bg-emerald-500"
                                   style={{ width: `${ordPct}%` }}
                                 />
                               </div>
@@ -341,7 +341,7 @@ export function LeaderboardPage({ raceCfg, onSelectAgent }: LeaderboardPageProps
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-2">
                             {e.status === 'active' && (
-                              <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#00C389] shrink-0" />
+                              <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
                             )}
                             <span className="font-mono text-xs text-gray-300">
                               {e.name || fmtAddr(e.address)}
@@ -367,7 +367,7 @@ export function LeaderboardPage({ raceCfg, onSelectAgent }: LeaderboardPageProps
                             {totalOrd > 0 && (
                               <div className="w-12 h-1 rounded-full bg-white/5 overflow-hidden">
                                 <div
-                                  className="h-full rounded-full bg-[#00C389]"
+                                  className="h-full rounded-full bg-emerald-500"
                                   style={{ width: `${ordPct}%` }}
                                 />
                               </div>

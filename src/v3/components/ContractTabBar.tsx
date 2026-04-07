@@ -81,7 +81,7 @@ export function ContractTabBar({ contracts, activeTab, onTabChange, loading, onR
       ref={scrollRef}
       className={cn(
         'inline-flex max-w-full items-center gap-0 overflow-x-auto rounded-xl p-1',
-        'bg-gray-900/50 border border-white/10',
+        'bg-neutral-900/50 border border-neutral-800/50',
       )}
       style={{ scrollbarWidth: 'none' }}
     >
@@ -109,8 +109,8 @@ export function ContractTabBar({ contracts, activeTab, onTabChange, loading, onR
             className={cn(
               'inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium shrink-0 transition-colors relative',
               isActive
-                ? 'bg-gray-800 text-white shadow-sm'
-                : 'text-gray-400 hover:text-white hover:bg-white/5',
+                ? 'bg-white/10 text-white shadow-sm'
+                : 'text-neutral-500 hover:text-white hover:bg-white/5',
             )}
             onClick={() => onTabChange({ kind: 'contract', contractId: c.id })}
             onDoubleClick={(e) => {
@@ -124,7 +124,7 @@ export function ContractTabBar({ contracts, activeTab, onTabChange, loading, onR
             {isEditing ? (
               <input
                 ref={inputRef}
-                className="h-6 w-28 text-xs font-mono bg-gray-900 border border-white/10 text-white rounded-md px-2"
+                className="h-6 w-28 text-xs font-mono bg-neutral-900 border border-neutral-800 text-white rounded-md px-2"
                 value={editValue}
                 onChange={(e) => setEditValue(e.target.value)}
                 onBlur={() => void commitRename()}
@@ -139,14 +139,14 @@ export function ContractTabBar({ contracts, activeTab, onTabChange, loading, onR
             <span
               className={cn(
                 'h-2 w-2 rounded-full shrink-0',
-                c.status === 'deploying' ? 'bg-yellow-500 animate-pulse' :
-                c.status === 'paused' ? 'bg-gray-500' :
-                'bg-[#00C389]',
+                c.status === 'deploying' ? 'bg-amber-400 animate-pulse' :
+                c.status === 'paused' ? 'bg-neutral-500' :
+                'bg-emerald-400',
               )}
               title={(c.status ?? 'active').toUpperCase()}
             />
             {c.trading_pairs && (
-              <span className="text-[10px] px-1.5 py-0 rounded bg-white/5 text-gray-400 border border-white/5">
+              <span className="text-[10px] px-1.5 py-0 rounded bg-neutral-800 text-neutral-300 border border-neutral-800/50">
                 {c.trading_pairs}
               </span>
             )}
@@ -161,8 +161,8 @@ export function ContractTabBar({ contracts, activeTab, onTabChange, loading, onR
         className={cn(
           'inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium shrink-0 transition-colors',
           activeTab.kind === 'deploy'
-            ? 'bg-[#00C389]/20 text-[#00C389] shadow-sm'
-            : 'text-gray-400 hover:text-white hover:bg-white/5',
+            ? 'bg-white/10 text-white shadow-sm'
+            : 'text-neutral-500 hover:text-white hover:bg-white/5',
         )}
         onClick={() => onTabChange({ kind: 'deploy' })}
         aria-label="Deploy new agent"
