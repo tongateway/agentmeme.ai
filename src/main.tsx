@@ -1,4 +1,4 @@
-import { StrictMode } from 'react';
+import { StrictMode, lazy, Suspense } from 'react';
 import { createRoot } from 'react-dom/client';
 import { TonConnectUIProvider } from '@tonconnect/ui-react';
 import { Buffer } from 'buffer';
@@ -17,10 +17,21 @@ const manifestUrl =
   import.meta.env.VITE_TONCONNECT_MANIFEST_URL ||
   `${window.location.origin}/tc-manifest.json`;
 
+// Lazy-load V2 app so it doesn't bloat the v1 bundle
+const V2App = lazy(() => import('./v2/App.tsx'));
+
+const isV2 = window.location.pathname.startsWith('/v2');
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <TonConnectUIProvider manifestUrl={manifestUrl}>
-      <App />
+      {isV2 ? (
+        <Suspense fallback={null}>
+          <V2App />
+        </Suspense>
+      ) : (
+        <App />
+      )}
     </TonConnectUIProvider>
   </StrictMode>,
 );
