@@ -66,7 +66,7 @@ function actionLabel(action: string): string {
 }
 
 function actionColor(action: string): string {
-  if (action === 'create_order') return 'bg-[#00C389]/20 text-[#00C389]';
+  if (action === 'create_order') return 'bg-emerald-500/20 text-emerald-400';
   if (action === 'close_order') return 'bg-amber-500/20 text-amber-400';
   return 'bg-white/10 text-gray-400';
 }
@@ -76,7 +76,7 @@ function ConsensusBadge({ consensus, pct }: { consensus: string; pct: number }) 
   const upper = consensus.toUpperCase();
   if (upper === 'BULLISH') {
     return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-[#00C389]/20 text-[#00C389] px-2 py-0.5 text-[10px] font-semibold">
+      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/20 text-emerald-400 px-2 py-0.5 text-[10px] font-semibold">
         <TrendingUp className="h-3 w-3" />
         BULLISH {pct.toFixed(0)}%
       </span>
@@ -185,8 +185,8 @@ export function HomePage({ raceCfg, onSelectToken, onDeploy, onViewLeaderboard }
         transition={{ duration: 0.5 }}
         className="flex flex-col items-center text-center pt-12 sm:pt-20 gap-5"
       >
-        <div className="inline-flex items-center gap-2 rounded-full border border-[#00C389]/20 bg-[#00C389]/10 px-3 py-1 text-xs font-medium text-[#00C389]">
-          <span className="h-1.5 w-1.5 rounded-full bg-[#00C389] animate-pulse" />
+        <div className="inline-flex items-center gap-2 rounded-full border border-neutral-700 bg-neutral-800/60 px-3 py-1 text-xs font-medium text-neutral-300">
+          <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
           Live AI agents trading on TON
         </div>
         <h1 className="text-5xl sm:text-6xl font-bold tracking-tight text-white">
@@ -198,7 +198,7 @@ export function HomePage({ raceCfg, onSelectToken, onDeploy, onViewLeaderboard }
         <div className="flex flex-wrap items-center justify-center gap-3 mt-1">
           <button
             type="button"
-            className="inline-flex items-center gap-2 rounded-lg bg-[#00C389] text-black font-semibold px-5 py-2.5 hover:bg-[#00C389]/90 transition-colors"
+            className="inline-flex items-center gap-2 rounded-lg bg-white text-black font-semibold px-5 py-2.5 hover:bg-neutral-200 transition-colors"
             onClick={onDeploy}
           >
             <Rocket className="h-4 w-4" />
@@ -225,25 +225,25 @@ export function HomePage({ raceCfg, onSelectToken, onDeploy, onViewLeaderboard }
         >
           {[
             {
-              icon: <Bot className="h-5 w-5 text-[#00C389]" />,
-              iconBg: 'bg-[#00C389]/10',
+              icon: <Bot className="h-5 w-5 text-neutral-400" />,
+              iconBg: 'bg-neutral-800',
               label: 'Active Agents',
               value: String(totalActiveAgents),
             },
             {
-              icon: <TrendingUp className="h-5 w-5 text-[#00C389]" />,
-              iconBg: 'bg-[#00C389]/10',
+              icon: <TrendingUp className="h-5 w-5 text-neutral-400" />,
+              iconBg: 'bg-neutral-800',
               label: 'Trades 24h',
               value: (totalTrades24h || 0).toLocaleString(),
             },
             {
               icon: dominantSentiment === 'Bearish'
                 ? <TrendingDown className="h-5 w-5 text-red-400" />
-                : <TrendingUp className={cn('h-5 w-5', dominantSentiment === 'Bullish' ? 'text-[#00C389]' : 'text-gray-500')} />,
+                : <TrendingUp className={cn('h-5 w-5', dominantSentiment === 'Bullish' ? 'text-emerald-400' : 'text-neutral-500')} />,
               iconBg: dominantSentiment === 'Bearish'
                 ? 'bg-red-500/10'
                 : dominantSentiment === 'Bullish'
-                  ? 'bg-[#00C389]/10'
+                  ? 'bg-emerald-500/10'
                   : 'bg-white/5',
               label: 'Market Sentiment',
               value: dominantSentiment,
@@ -298,7 +298,7 @@ export function HomePage({ raceCfg, onSelectToken, onDeploy, onViewLeaderboard }
 
             return (
               <motion.div key={entry.address} variants={itemVariants}>
-                <div className="rounded-xl border border-white/10 bg-gray-900/50 backdrop-blur p-4 hover:border-[#00C389]/20 transition-colors cursor-pointer">
+                <div className="rounded-xl border border-neutral-800/50 bg-neutral-900/50 backdrop-blur p-4 hover:border-neutral-700 transition-colors cursor-pointer">
                   <div className="flex items-center gap-3 mb-3">
                     <span className={cn('flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold', rankColor)}>
                       {rankLabel}
@@ -311,7 +311,7 @@ export function HomePage({ raceCfg, onSelectToken, onDeploy, onViewLeaderboard }
                     </div>
                     <Trophy className={cn('h-4 w-4 shrink-0', idx === 0 ? 'text-amber-400' : 'text-gray-700')} />
                   </div>
-                  <span className={cn('text-2xl font-bold tabular-nums', isPositive ? 'text-[#00C389]' : 'text-red-400')}>
+                  <span className={cn('text-2xl font-bold tabular-nums', isPositive ? 'text-emerald-400' : 'text-red-400')}>
                     {isPositive ? '+' : ''}{profitPct.toFixed(1)}%
                   </span>
                   <p className="text-[11px] text-gray-500 mt-1">{entry.completed_orders ?? 0} trades completed</p>
@@ -329,8 +329,8 @@ export function HomePage({ raceCfg, onSelectToken, onDeploy, onViewLeaderboard }
             <div className="flex items-center gap-2">
               <TrendingUp className="h-4 w-4 text-gray-500" />
               <h2 className="font-semibold text-base text-white">AI Activity Feed</h2>
-              <span className="inline-flex items-center gap-1 rounded-full bg-[#00C389]/20 text-[#00C389] px-2 py-0.5 text-[10px] font-semibold">
-                <span className="h-1.5 w-1.5 rounded-full bg-[#00C389] animate-pulse" />
+              <span className="inline-flex items-center gap-1 rounded-full bg-neutral-800 text-neutral-300 px-2 py-0.5 text-[10px] font-semibold">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
                 Live
               </span>
             </div>
@@ -363,7 +363,7 @@ export function HomePage({ raceCfg, onSelectToken, onDeploy, onViewLeaderboard }
                 <motion.div
                   key={r.id}
                   variants={itemVariants}
-                  className="rounded-xl border border-white/10 bg-gray-900/50 backdrop-blur p-4 border-l-4 border-l-[#00C389]/60 flex flex-col gap-2"
+                  className="rounded-xl border border-neutral-800/50 bg-neutral-900/50 backdrop-blur p-4 border-l-4 border-l-neutral-600 flex flex-col gap-2"
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex items-center gap-3">
@@ -403,10 +403,10 @@ export function HomePage({ raceCfg, onSelectToken, onDeploy, onViewLeaderboard }
       <section className="flex flex-col gap-4">
         <h2 className="text-2xl font-bold text-white">Agent Coin Hub</h2>
 
-        <div className="rounded-xl border border-white/10 bg-gray-900/50 backdrop-blur overflow-hidden">
+        <div className="rounded-xl border border-neutral-800/50 bg-neutral-900/50 backdrop-blur overflow-hidden">
           {loading ? (
             <div className="flex justify-center py-12">
-              <div className="h-8 w-8 rounded-full border-2 border-[#00C389] border-t-transparent animate-spin" />
+              <div className="h-8 w-8 rounded-full border-2 border-neutral-600 border-t-transparent animate-spin" />
             </div>
           ) : tokens.length === 0 ? (
             <div className="py-10 text-center text-sm text-gray-500">
@@ -457,7 +457,7 @@ export function HomePage({ raceCfg, onSelectToken, onDeploy, onViewLeaderboard }
                         <span className="font-medium tabular-nums text-xs text-gray-300">{fmtPrice(priceUsd)}</span>
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <span className={cn('font-bold tabular-nums text-xs', changePositive ? 'text-[#00C389]' : 'text-red-400')}>
+                        <span className={cn('font-bold tabular-nums text-xs', changePositive ? 'text-emerald-400' : 'text-red-400')}>
                           {changePositive ? '+' : ''}{change24h.toFixed(1)}%
                         </span>
                       </td>
@@ -465,7 +465,7 @@ export function HomePage({ raceCfg, onSelectToken, onDeploy, onViewLeaderboard }
                         <ConsensusBadge consensus={consensusUpper} pct={pct} />
                       </td>
                       <td className="hidden sm:table-cell px-4 py-3 text-right">
-                        <span className={cn('font-bold tabular-nums text-xs', signal >= 7 ? 'text-[#00C389]' : signal >= 4 ? 'text-amber-400' : 'text-gray-600')}>
+                        <span className={cn('font-bold tabular-nums text-xs', signal >= 7 ? 'text-emerald-400' : signal >= 4 ? 'text-amber-400' : 'text-gray-600')}>
                           {signal.toFixed(1)}
                         </span>
                       </td>
@@ -499,24 +499,24 @@ export function HomePage({ raceCfg, onSelectToken, onDeploy, onViewLeaderboard }
         >
           {[
             {
-              icon: <Code className="h-6 w-6 text-[#00C389]" />,
+              icon: <Code className="h-6 w-6 text-neutral-300" />,
               title: 'Open Source',
               desc: 'All code is fully open-source and available on GitHub for anyone to review, audit, and verify.',
             },
             {
-              icon: <FileCheck className="h-6 w-6 text-[#00C389]" />,
+              icon: <FileCheck className="h-6 w-6 text-neutral-300" />,
               title: 'Audited Contracts',
               desc: 'Smart contracts are audited and verifiable on-chain. Every transaction is transparent and traceable.',
             },
             {
-              icon: <ShieldCheck className="h-6 w-6 text-[#00C389]" />,
+              icon: <ShieldCheck className="h-6 w-6 text-neutral-300" />,
               title: 'Transparent Decisions',
               desc: 'Every AI trade decision is recorded with full reasoning, so you can review agent logic at any time.',
             },
           ].map((card) => (
             <motion.div key={card.title} variants={itemVariants}>
-              <div className="rounded-xl border border-white/10 bg-gray-900/50 backdrop-blur flex flex-col items-center text-center gap-3 py-8 px-5">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#00C389]/10">
+              <div className="rounded-xl border border-neutral-800/50 bg-neutral-900/50 backdrop-blur flex flex-col items-center text-center gap-3 py-8 px-5">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-neutral-800">
                   {card.icon}
                 </div>
                 <div>

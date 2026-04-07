@@ -45,7 +45,7 @@ function ConsensusBadge({ consensus, pct }: { consensus: string; pct: number }) 
   const upper = consensus.toUpperCase();
   if (upper === 'BULLISH') {
     return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-[#00C389]/20 text-[#00C389] px-2 py-0.5 text-[10px] font-semibold">
+      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/20 text-emerald-400 px-2 py-0.5 text-[10px] font-semibold">
         <TrendingUp className="h-3 w-3" />
         BULLISH {pct.toFixed(0)}%
       </span>
@@ -141,25 +141,25 @@ export function AgentHubPage({ raceCfg, onSelectToken, onDeploy, onViewLeaderboa
         >
           {[
             {
-              icon: <Bot className="h-5 w-5 text-[#00C389]" />,
-              iconBg: 'bg-[#00C389]/10',
+              icon: <Bot className="h-5 w-5 text-neutral-400" />,
+              iconBg: 'bg-neutral-800',
               label: 'Active Agents',
               value: String(totalActiveAgents),
             },
             {
-              icon: <TrendingUp className="h-5 w-5 text-[#00C389]" />,
-              iconBg: 'bg-[#00C389]/10',
+              icon: <TrendingUp className="h-5 w-5 text-neutral-400" />,
+              iconBg: 'bg-neutral-800',
               label: 'Trades (24h)',
               value: (totalTrades24h || 0).toLocaleString(),
             },
             {
               icon: dominantSentiment === 'Bearish'
                 ? <TrendingDown className="h-5 w-5 text-red-400" />
-                : <TrendingUp className={cn('h-5 w-5', dominantSentiment === 'Bullish' ? 'text-[#00C389]' : 'text-gray-500')} />,
+                : <TrendingUp className={cn('h-5 w-5', dominantSentiment === 'Bullish' ? 'text-emerald-400' : 'text-neutral-500')} />,
               iconBg: dominantSentiment === 'Bearish'
                 ? 'bg-red-500/10'
                 : dominantSentiment === 'Bullish'
-                  ? 'bg-[#00C389]/10'
+                  ? 'bg-emerald-500/10'
                   : 'bg-white/5',
               label: 'Market Sentiment',
               value: dominantSentiment,
@@ -230,7 +230,7 @@ export function AgentHubPage({ raceCfg, onSelectToken, onDeploy, onViewLeaderboa
 
               return (
                 <motion.div key={entry.address} variants={itemVariants}>
-                  <div className="rounded-xl border border-white/10 bg-gray-900/50 backdrop-blur p-4 hover:border-[#00C389]/20 transition-colors">
+                  <div className="rounded-xl border border-neutral-800/50 bg-neutral-900/50 backdrop-blur p-4 hover:border-neutral-700 transition-colors">
                     <div className="flex items-center gap-3 mb-3">
                       <span className={cn('flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold', rankColor)}>
                         {rankLabel}
@@ -242,7 +242,7 @@ export function AgentHubPage({ raceCfg, onSelectToken, onDeploy, onViewLeaderboa
                         <span className="text-[11px] text-gray-500 truncate">{shortModel}</span>
                       </div>
                     </div>
-                    <span className={cn('text-2xl font-bold tabular-nums', isPositive ? 'text-[#00C389]' : 'text-red-400')}>
+                    <span className={cn('text-2xl font-bold tabular-nums', isPositive ? 'text-emerald-400' : 'text-red-400')}>
                       {isPositive ? '+' : ''}{profitPct.toFixed(1)}%
                     </span>
                     <p className="text-[11px] text-gray-500 mt-1">{entry.completed_orders ?? 0} trades completed</p>
@@ -260,7 +260,7 @@ export function AgentHubPage({ raceCfg, onSelectToken, onDeploy, onViewLeaderboa
         {onDeploy && (
           <button
             type="button"
-            className="inline-flex items-center gap-2 rounded-lg bg-[#00C389] text-black font-semibold px-4 py-2 hover:bg-[#00C389]/90 transition-colors shrink-0"
+            className="inline-flex items-center gap-2 rounded-lg bg-white text-black font-semibold px-4 py-2 hover:bg-neutral-200 transition-colors shrink-0"
             onClick={onDeploy}
           >
             <Rocket className="h-4 w-4" />
@@ -270,12 +270,12 @@ export function AgentHubPage({ raceCfg, onSelectToken, onDeploy, onViewLeaderboa
       </div>
 
       {/* 4. Token Table */}
-      <div className="rounded-xl border border-white/10 bg-gray-900/50 backdrop-blur overflow-hidden">
+      <div className="rounded-xl border border-neutral-800/50 bg-neutral-900/50 backdrop-blur overflow-hidden">
         {error ? (
           <div className="py-6 px-4 text-sm text-red-400">{error}</div>
         ) : loading ? (
           <div className="flex justify-center py-12">
-            <div className="h-8 w-8 rounded-full border-2 border-[#00C389] border-t-transparent animate-spin" />
+            <div className="h-8 w-8 rounded-full border-2 border-neutral-600 border-t-transparent animate-spin" />
           </div>
         ) : tokens.length === 0 ? (
           <div className="py-10 text-center text-sm text-gray-500">
@@ -326,7 +326,7 @@ export function AgentHubPage({ raceCfg, onSelectToken, onDeploy, onViewLeaderboa
                       <span className="font-medium tabular-nums text-xs text-gray-300">{fmtPrice(priceUsd)}</span>
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <span className={cn('font-bold tabular-nums text-xs', changePositive ? 'text-[#00C389]' : 'text-red-400')}>
+                      <span className={cn('font-bold tabular-nums text-xs', changePositive ? 'text-emerald-400' : 'text-red-400')}>
                         {changePositive ? '+' : ''}{change24h.toFixed(1)}%
                       </span>
                     </td>
@@ -334,7 +334,7 @@ export function AgentHubPage({ raceCfg, onSelectToken, onDeploy, onViewLeaderboa
                       <ConsensusBadge consensus={consensusUpper} pct={pct} />
                     </td>
                     <td className="hidden sm:table-cell px-4 py-3 text-right">
-                      <span className={cn('font-bold tabular-nums text-xs', signal >= 7 ? 'text-[#00C389]' : signal >= 4 ? 'text-amber-400' : 'text-gray-600')}>
+                      <span className={cn('font-bold tabular-nums text-xs', signal >= 7 ? 'text-emerald-400' : signal >= 4 ? 'text-amber-400' : 'text-gray-600')}>
                         {signal.toFixed(1)}
                       </span>
                     </td>

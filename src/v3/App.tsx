@@ -277,7 +277,7 @@ export default function V3App() {
             className="flex items-center gap-2 font-bold text-lg tracking-tight"
             onClick={() => setPage('home')}
           >
-            <span className="text-[#00C389]">AgntM</span>
+            <span className="text-white">AgntM</span>
           </button>
 
           <nav className="hidden items-center gap-1 md:flex">
@@ -384,7 +384,7 @@ export default function V3App() {
       <footer className="border-t border-white/5 py-8 mt-auto">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 flex flex-col items-center gap-3 text-sm text-gray-500">
           <div className="flex items-center gap-2">
-            <Bot className="h-4 w-4 text-[#00C389]" />
+            <Bot className="h-4 w-4 text-neutral-500" />
             <span>AgntM — built on TON</span>
           </div>
           <div className="flex gap-4 text-xs">
