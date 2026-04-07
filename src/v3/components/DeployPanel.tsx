@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { useTonAddress, useTonConnectUI, useTonWallet } from '@tonconnect/ui-react';
 import { Address, beginCell } from '@ton/core';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Rocket, Wallet, ChevronDown, ChevronUp, ExternalLink,
-  Minus, Plus, FileText, Zap, Check, ArrowRight, Info,
+  Rocket, Wallet, ChevronDown, ChevronUp, ExternalLink, Minus, Plus,
+  FileText, Zap, Check, ArrowRight, Info, X,
 } from 'lucide-react';
 import { nanoFromTon } from '@/lib/ton/agentWalletV5';
 import {
@@ -13,8 +13,10 @@ import {
   type AiModelOption, type AiModelsByProvider, type PromptVariable,
   type PublicApiConfig, type RaceToken,
 } from '@/lib/api';
+import { cn } from '../utils/cn';
 
-/** Build a jetton transfer body cell (op 0xf8a7ea5). */
+/* ---------- Jetton transfer ---------- */
+
 function buildJettonTransferBody(opts: {
   queryId?: number;
   amount: bigint;
@@ -35,16 +37,17 @@ function buildJettonTransferBody(opts: {
   return cell.toBoc().toString('base64');
 }
 
-/** Resolve the user's jetton wallet address for a given jetton master. */
 async function resolveJettonWallet(ownerAddress: string, jettonMaster: string): Promise<string> {
   const res = await fetch(
     `https://toncenter.com/api/v3/jetton/wallets?owner_address=${encodeURIComponent(ownerAddress)}&jetton_address=${encodeURIComponent(jettonMaster)}&limit=1`,
   );
   const data = (await res.json()) as { jetton_wallets?: { address: string }[] };
   const addr = data.jetton_wallets?.[0]?.address;
-  if (!addr) throw new Error('Jetton wallet not found — do you hold this token?');
+  if (!addr) throw new Error('Jetton wallet not found \u2014 do you hold this token?');
   return addr;
 }
+
+/* ---------- Helpers ---------- */
 
 function fmtAddr(addr: string): string {
   if (addr.length <= 16) return addr;
@@ -93,9 +96,11 @@ const FALLBACK_AI_MODELS: AiModelOption[] = [
 ];
 
 function shortModelName(name: string): string {
-  const sep = name.indexOf(' — ');
+  const sep = name.indexOf(' \u2014 ');
   return sep > 0 ? name.slice(0, sep).trim() : name;
 }
+
+/* ---------- Strategy templates ---------- */
 
 type StrategyTemplate = { name: string; prompt: string };
 
@@ -180,7 +185,7 @@ IMPORTANT: Each round-trip costs ~0.03 TON. Only trade when expected gain > gas 
   },
   {
     name: 'Scalper',
-    prompt: `You are a high-frequency scalper on TON. Use live data: {market_prices}, {wallet_balances}, {open_orders}, {order_book}, {price_changes}. Target small 1-3% gains per trade. Open and close positions quickly. Use the full portfolio but split across 2-3 simultaneous orders max. Prefer high-volume tokens with tight spreads. Use low slippage (1-2%). Close orders as soon as they reach target profit OR if they go 2% against you. Never hold positions longer than necessary. Check open orders before opening new ones — close stale ones first.
+    prompt: `You are a high-frequency scalper on TON. Use live data: {market_prices}, {wallet_balances}, {open_orders}, {order_book}, {price_changes}. Target small 1-3% gains per trade. Open and close positions quickly. Use the full portfolio but split across 2-3 simultaneous orders max. Prefer high-volume tokens with tight spreads. Use low slippage (1-2%). Close orders as soon as they reach target profit OR if they go 2% against you. Never hold positions longer than necessary. Check open orders before opening new ones \u2014 close stale ones first.
 
 === GAS INFO ===
 Create order(from=ton): 0.022 TON | Close Order(): 0.006 TON
@@ -194,7 +199,7 @@ CRITICAL: Each round-trip costs ~0.03 TON. With 1-3% targets, minimum trade size
   },
 ];
 
-/* ---------- exported types ---------- */
+/* ---------- Exported types ---------- */
 
 export type PendingDeploy = {
   mint_keeper_address: string;
@@ -230,7 +235,7 @@ type DeployPanelProps = {
   onContractRegistered?: (contractId: string) => void;
 };
 
-/* ---------- component ---------- */
+/* ---------- Component ---------- */
 
 export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegistered }: DeployPanelProps) {
   const wallet = useTonWallet();
@@ -251,7 +256,7 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
 
   const isConnected = !!wallet && !!tonAddress;
 
-  // Auto-fill first template when prompt is empty
+  // Auto-fill first template
   useEffect(() => {
     if (!persisted.prompt) {
       setPersisted((p) => ({ ...p, prompt: STRATEGY_TEMPLATES[0].prompt }));
@@ -279,9 +284,7 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
       setModelsLoading(true);
       try {
         const grouped = await getRaceAiModels(raceCfg);
-        if (!cancelled && grouped.length > 0) {
-          setAiModelGroups(grouped);
-        }
+        if (!cancelled && grouped.length > 0) setAiModelGroups(grouped);
       } finally {
         if (!cancelled) setModelsLoading(false);
       }
@@ -348,10 +351,10 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
     const currentModel = persisted.aiModel?.trim();
     const currentProvider = persisted.aiProvider?.trim().toLowerCase();
     if (currentModel) {
-      const exact = aiModels.find((m) => (
+      const exact = aiModels.find((m) =>
         m.id === currentModel &&
-        (m.provider ?? '').trim().toLowerCase() === (currentProvider ?? '')
-      ));
+        (m.provider ?? '').trim().toLowerCase() === (currentProvider ?? ''),
+      );
       if (exact) return exact;
       const byModel = aiModels.find((m) => m.id === currentModel);
       if (byModel) return byModel;
@@ -372,7 +375,7 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
     }
   }, [persisted.aiModel, persisted.aiProvider, selectedModel, selectedProvider, setPersisted]);
 
-  /* ---------- register only ---------- */
+  /* ---- registerOnly ---- */
   const registerOnly = useCallback(async () => {
     setErr(null);
     if (!isConnected || !tonAddress || !ownerAddressRaw) {
@@ -406,7 +409,7 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
     }
   }, [isConnected, tonAddress, ownerAddressRaw, persisted.prompt, persisted.agentName, persisted.baseToken, persisted.quoteToken, raceCfg, selectedModelOption, selectedProvider, setPersisted, onContractRegistered]);
 
-  /* ---------- top up existing ---------- */
+  /* ---- topUpExistingContract ---- */
   const topUpExistingContract = useCallback(async () => {
     setErr(null);
     if (!persisted.contractAddress) { setErr('Contract address is missing.'); return; }
@@ -428,7 +431,7 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
     }
   }, [persisted.contractAddress, persisted.topupAmountTon, isConnected, tonConnectUI]);
 
-  /* ---------- deploy and register ---------- */
+  /* ---- deployAndRegister ---- */
   const deployAndRegister = useCallback(async () => {
     setErr(null);
     if (!ownerAddressRaw) { setErr('Connect a TON wallet first.'); return; }
@@ -439,7 +442,6 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
 
     try {
       setBusy('deploy');
-
       let deployData: PendingDeploy;
       let contractId: string;
 
@@ -459,7 +461,6 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
           ...(persisted.agentName?.trim() ? { name: persisted.agentName.trim() } : {}),
           trading_pairs: tradingPairs2,
         });
-
         contractId = created.id;
         deployData = {
           mint_keeper_address: created.mint_keeper_address,
@@ -467,7 +468,6 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
           body_boc_hex: created.body_boc_hex,
           value_nanoton: created.value_nanoton,
         };
-
         setPersisted((p) => ({
           ...p,
           contractAddress: created.address,
@@ -552,153 +552,153 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
   const hasStrategy = !!(persisted.prompt?.trim());
 
   return (
-    <div className="mx-auto mt-6 max-w-2xl">
+    <div className="mt-4 mx-auto max-w-2xl">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4 }}
-        className="overflow-hidden rounded-xl border border-white/5 bg-gray-900/80 backdrop-blur-sm"
+        transition={{ duration: 0.4, ease: 'easeOut' }}
+        className="rounded-2xl border border-white/10 bg-gray-900/50 backdrop-blur-sm overflow-hidden"
       >
         {/* Header */}
         <div className="border-b border-white/5 px-6 py-5">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#00C389]/20">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#00C389]/10">
               <Zap className="h-5 w-5 text-[#00C389]" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-white">Deploy New Agent</h2>
-              <p className="mt-0.5 text-xs text-gray-500">Configure, deploy on-chain, and enter the Trading Race</p>
+              <h2 className="text-xl font-bold tracking-tight text-white">Deploy New Agent</h2>
+              <p className="text-xs text-gray-400 mt-0.5">Configure, deploy on-chain, and enter the Trading Race</p>
             </div>
           </div>
         </div>
 
-        <div className="space-y-6 px-6 py-6">
+        <div className="px-6 pt-6 pb-6 space-y-6">
           {/* Section 1: Choose AI Model */}
           <div>
-            <div className="mb-3 flex items-center gap-2">
-              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[#00C389]/20 text-[11px] font-bold text-[#00C389]">1</div>
+            <div className="flex items-center gap-2 mb-3">
+              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[#00C389]/10 text-[11px] font-bold text-[#00C389]">1</div>
               <span className="text-base font-bold text-white">Choose AI Model</span>
-              {modelsLoading && (
-                <div className="ml-1 h-3 w-3 animate-spin rounded-full border border-gray-600 border-t-[#00C389]" />
-              )}
+              {modelsLoading && <span className="ml-1 inline-block h-3 w-3 animate-spin rounded-full border-2 border-[#00C389] border-t-transparent" />}
             </div>
 
-            {/* Collapsed */}
+            {/* Collapsed: show selected model */}
             {!modelListOpen && selectedModelOption && (
               <button
                 type="button"
-                className="flex w-full cursor-pointer items-center rounded-lg border-2 border-[#00C389]/50 bg-[#00C389]/5 px-3 py-2.5 text-left transition-colors hover:bg-[#00C389]/10"
+                className={cn(
+                  'flex items-center w-full text-left cursor-pointer rounded-lg border-2 border-[#00C389] p-2.5',
+                  'bg-[#00C389]/5',
+                )}
                 onClick={() => setModelListOpen(true)}
               >
-                <div className="flex min-w-0 flex-1 flex-col">
-                  <span className="truncate text-[10px] font-medium capitalize text-gray-500">
+                <div className="flex flex-col min-w-0 flex-1">
+                  <span className="text-[10px] font-medium leading-tight text-gray-500 capitalize truncate">
                     {selectedModelOption.provider?.trim() || 'Unknown'}
                   </span>
-                  <span className="truncate text-xs font-bold text-white">
+                  <span className="text-xs font-bold leading-tight truncate text-white">
                     {shortModelName(selectedModelOption.name)}
                   </span>
                 </div>
                 <span
-                  className="ml-2 flex-shrink-0 rounded-full px-2.5 py-0.5 text-[10px] font-semibold"
-                  style={
+                  className={cn(
+                    'ml-2 text-[10px] font-medium px-2 py-0.5 rounded-full',
                     selectedModelOption.isThinking
-                      ? { background: 'rgba(24,95,165,0.15)', color: '#5BA7E8' }
+                      ? 'bg-[#00C389]/10 text-[#00C389]'
                       : selectedModelOption.isThinking === false
-                        ? { background: 'rgba(133,79,11,0.15)', color: '#D4A04E' }
-                        : { background: 'rgba(0,195,137,0.15)', color: '#00C389' }
-                  }
+                        ? 'bg-amber-500/10 text-amber-400'
+                        : 'bg-[#00C389]/10 text-[#00C389]',
+                  )}
                 >
                   {selectedModelOption.isThinking ? 'Thinking' : selectedModelOption.isThinking === false ? 'Fast' : 'Balanced'}
                 </span>
                 {selectedModelOption.pricing?.[0] && (
-                  <span className="ml-2 flex-shrink-0 font-mono text-[11px] text-gray-500">
+                  <span className="flex-shrink-0 text-[11px] text-gray-500 ml-2 font-mono">
                     {selectedModelOption.pricing[0].price} {selectedModelOption.pricing[0].currency}/{selectedModelOption.pricing[0].cntDecisions} dec
                   </span>
                 )}
-                <ChevronDown className="ml-2 h-3.5 w-3.5 flex-shrink-0 text-gray-500" />
+                <ChevronDown className="flex-shrink-0 ml-2 h-3.5 w-3.5 text-gray-500" />
               </button>
             )}
 
-            {/* Expanded grid */}
-            <AnimatePresence>
-              {modelListOpen && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="grid grid-cols-1 gap-1.5 sm:grid-cols-2"
-                >
-                  {displayGroups.flatMap((group) =>
-                    group.models.map((m) => {
-                      const modelProvider = m.provider?.trim() ?? '';
-                      const isSelected =
-                        selectedModel === m.id &&
-                        (selectedProvider ?? '') === modelProvider;
-                      const lowestTier = m.pricing?.[0];
-                      return (
-                        <button
-                          key={`${modelProvider || 'p'}:${m.id}`}
-                          type="button"
-                          className={`flex items-center rounded-lg border px-3 py-2.5 text-left transition-all ${
-                            isSelected
-                              ? 'border-[#00C389]/50 bg-[#00C389]/5'
-                              : 'border-white/5 bg-transparent hover:border-white/10 hover:bg-white/[0.02]'
-                          }`}
-                          onClick={() => {
-                            setPersisted((p) => ({
-                              ...p,
-                              aiModel: m.id,
-                              aiProvider: m.provider?.trim() || undefined,
-                            }));
-                            setModelListOpen(false);
-                          }}
-                          title={m.description ?? undefined}
-                        >
-                          <div className="flex min-w-0 flex-1 flex-col">
-                            <span className="truncate text-[10px] font-medium capitalize text-gray-500">
-                              {modelProvider || 'Unknown'}
-                            </span>
-                            <span className="truncate text-xs font-bold text-white">
-                              {shortModelName(m.name)}
-                            </span>
+            {/* Expanded: show all models */}
+            {modelListOpen && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                {displayGroups.flatMap((group) =>
+                  group.models.map((m) => {
+                    const modelProvider = m.provider?.trim() ?? '';
+                    const isSelected =
+                      selectedModel === m.id &&
+                      (selectedProvider ?? '') === modelProvider;
+                    const lowestTier = m.pricing?.[0];
+                    return (
+                      <motion.button
+                        key={`${modelProvider || 'p'}:${m.id}`}
+                        type="button"
+                        whileHover={{ scale: 1.01 }}
+                        whileTap={{ scale: 0.99 }}
+                        className={cn(
+                          'flex items-center text-left cursor-pointer rounded-lg p-2.5 border transition-colors',
+                          isSelected
+                            ? 'border-[#00C389] bg-[#00C389]/5'
+                            : 'border-white/10 hover:border-[#00C389]/50',
+                        )}
+                        onClick={() => {
+                          setPersisted((p) => ({
+                            ...p,
+                            aiModel: m.id,
+                            aiProvider: m.provider?.trim() || undefined,
+                          }));
+                          setModelListOpen(false);
+                        }}
+                        title={m.description ?? undefined}
+                      >
+                        <div className="flex flex-col min-w-0 flex-1">
+                          <span className="text-[10px] font-medium leading-tight text-gray-500 capitalize truncate">
+                            {modelProvider || 'Unknown'}
+                          </span>
+                          <span className="text-xs font-bold leading-tight truncate text-white">
+                            {shortModelName(m.name)}
+                          </span>
+                        </div>
+                        {m.isThinking != null && (
+                          <span
+                            className={cn(
+                              'ml-2 text-[10px] font-medium px-2 py-0.5 rounded-full',
+                              m.isThinking
+                                ? 'bg-[#00C389]/10 text-[#00C389]'
+                                : 'bg-amber-500/10 text-amber-400',
+                            )}
+                          >
+                            {m.isThinking ? 'Thinking' : 'Fast'}
+                          </span>
+                        )}
+                        {lowestTier && (
+                          <span className="flex-shrink-0 text-[10px] text-gray-500 ml-2 font-mono">
+                            {lowestTier.price} {lowestTier.currency}/{lowestTier.cntDecisions}
+                          </span>
+                        )}
+                        {isSelected && (
+                          <div className="flex-shrink-0 ml-2 h-4 w-4 rounded-full bg-[#00C389] flex items-center justify-center">
+                            <Check className="h-2.5 w-2.5 text-black" />
                           </div>
-                          {m.isThinking != null && (
-                            <span
-                              className="ml-2 flex-shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold"
-                              style={
-                                m.isThinking
-                                  ? { background: 'rgba(24,95,165,0.15)', color: '#5BA7E8' }
-                                  : { background: 'rgba(133,79,11,0.15)', color: '#D4A04E' }
-                              }
-                            >
-                              {m.isThinking ? 'Thinking' : 'Fast'}
-                            </span>
-                          )}
-                          {lowestTier && (
-                            <span className="ml-2 flex-shrink-0 font-mono text-[10px] text-gray-600">
-                              {lowestTier.price} {lowestTier.currency}/{lowestTier.cntDecisions}
-                            </span>
-                          )}
-                          {isSelected && (
-                            <div className="ml-2 flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full bg-[#00C389]">
-                              <Check className="h-2.5 w-2.5 text-black" />
-                            </div>
-                          )}
-                        </button>
-                      );
-                    })
-                  )}
-                </motion.div>
-              )}
-            </AnimatePresence>
+                        )}
+                      </motion.button>
+                    );
+                  }),
+                )}
+              </div>
+            )}
           </div>
+
+          {/* Separator */}
+          <div className="h-px bg-white/5" />
 
           {/* Section 2: Trading Pair */}
           <div>
-            <div className="mb-2 flex items-center gap-2">
-              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[#00C389]/20 text-[11px] font-bold text-[#00C389]">2</div>
+            <div className="flex items-center gap-2 mb-2">
+              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[#00C389]/10 text-[11px] font-bold text-[#00C389]">2</div>
               <span className="text-base font-bold text-white">Trading Pair</span>
-              <span className="ml-1 text-[10px] text-gray-600">(1 pair per agent)</span>
+              <span className="text-[10px] text-gray-500 ml-1">(1 pair per agent)</span>
             </div>
 
             <div className="flex items-center gap-2">
@@ -706,9 +706,13 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
               <div className="relative">
                 <button
                   type="button"
-                  className={`inline-flex cursor-pointer items-center gap-1.5 rounded-full border py-1.5 pl-3 pr-2.5 text-sm font-bold text-white transition-all ${
-                    pickingSide === 'base' ? 'border-[#00C389]/50 bg-[#00C389]/10' : 'border-white/10 bg-white/5 hover:border-white/20'
-                  }`}
+                  className={cn(
+                    'inline-flex items-center gap-1.5 rounded-full pl-3 pr-2.5 py-1.5 text-sm font-bold transition-all cursor-pointer border',
+                    pickingSide === 'base'
+                      ? 'ring-2 ring-[#00C389] border-[#00C389]'
+                      : 'border-white/10 hover:ring-2 hover:ring-[#00C389]/50',
+                    'bg-gray-900 text-white',
+                  )}
                   onClick={() => setPickingSide(pickingSide === 'base' ? null : 'base')}
                 >
                   <span className="h-2.5 w-2.5 rounded-full" style={{ background: TOKEN_COLORS[persisted.baseToken ?? 'AGNT'] }} />
@@ -716,14 +720,17 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
                   <ChevronDown className="h-3 w-3 text-gray-500" />
                 </button>
                 {pickingSide === 'base' && (
-                  <div className="absolute left-0 top-full z-20 mt-1 min-w-[120px] rounded-lg border border-white/10 bg-gray-900 py-1 shadow-xl">
+                  <div className="absolute top-full left-0 mt-1 z-20 rounded-lg bg-gray-950 border border-white/10 shadow-lg py-1 min-w-[120px]">
                     {BASE_TOKENS.map((token) => {
-                      const isSelected = token === (persisted.baseToken ?? 'AGNT');
+                      const isSel = token === (persisted.baseToken ?? 'AGNT');
                       return (
                         <button
                           key={token}
                           type="button"
-                          className={`flex w-full items-center gap-2 px-3 py-2 text-sm transition-colors hover:bg-white/5 ${isSelected ? 'font-bold text-white' : 'text-gray-300'}`}
+                          className={cn(
+                            'flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-300 hover:bg-white/5 transition-colors',
+                            isSel && 'font-bold text-white',
+                          )}
                           onClick={() => {
                             const curQuote = persisted.quoteToken;
                             const newQuotes = quotesForBase(token);
@@ -734,7 +741,7 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
                         >
                           <span className="h-2.5 w-2.5 rounded-full" style={{ background: TOKEN_COLORS[token] ?? '#888' }} />
                           {token}
-                          {isSelected && <Check className="ml-auto h-3.5 w-3.5 text-[#00C389]" />}
+                          {isSel && <Check className="h-3.5 w-3.5 ml-auto text-[#00C389]" />}
                         </button>
                       );
                     })}
@@ -742,16 +749,20 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
                 )}
               </div>
 
-              <span className="text-sm font-bold text-gray-600">/</span>
+              <span className="text-gray-500 text-sm font-bold">/</span>
 
               {/* Quote token dropdown */}
               <div className="relative">
                 {persisted.quoteToken ? (
                   <button
                     type="button"
-                    className={`inline-flex cursor-pointer items-center gap-1.5 rounded-full border py-1.5 pl-3 pr-2.5 text-sm font-bold text-white transition-all ${
-                      pickingSide === 'quote' ? 'border-[#00C389]/50 bg-[#00C389]/10' : 'border-white/10 bg-white/5 hover:border-white/20'
-                    }`}
+                    className={cn(
+                      'inline-flex items-center gap-1.5 rounded-full pl-3 pr-2.5 py-1.5 text-sm font-bold transition-all cursor-pointer border',
+                      pickingSide === 'quote'
+                        ? 'ring-2 ring-[#00C389] border-[#00C389]'
+                        : 'border-white/10 hover:ring-2 hover:ring-[#00C389]/50',
+                      'bg-gray-900 text-white',
+                    )}
                     onClick={() => setPickingSide(pickingSide === 'quote' ? null : 'quote')}
                   >
                     <span className="h-2.5 w-2.5 rounded-full" style={{ background: TOKEN_COLORS[persisted.quoteToken] ?? '#888' }} />
@@ -761,21 +772,24 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
                 ) : (
                   <button
                     type="button"
-                    className="inline-flex items-center gap-1 rounded-full bg-[#00C389] px-3 py-1.5 text-sm font-bold text-black"
+                    className="inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-sm font-semibold bg-[#00C389] text-black hover:bg-[#00C389]/90 transition-colors"
                     onClick={() => setPickingSide('quote')}
                   >
                     pick <ArrowRight className="h-3 w-3" />
                   </button>
                 )}
                 {pickingSide === 'quote' && (
-                  <div className="absolute left-0 top-full z-20 mt-1 min-w-[120px] rounded-lg border border-white/10 bg-gray-900 py-1 shadow-xl">
+                  <div className="absolute top-full left-0 mt-1 z-20 rounded-lg bg-gray-950 border border-white/10 shadow-lg py-1 min-w-[120px]">
                     {quotesForBase(persisted.baseToken ?? 'AGNT').map((token) => {
-                      const isSelected = token === persisted.quoteToken;
+                      const isSel = token === persisted.quoteToken;
                       return (
                         <button
                           key={token}
                           type="button"
-                          className={`flex w-full items-center gap-2 px-3 py-2 text-sm transition-colors hover:bg-white/5 ${isSelected ? 'font-bold text-white' : 'text-gray-300'}`}
+                          className={cn(
+                            'flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-300 hover:bg-white/5 transition-colors',
+                            isSel && 'font-bold text-white',
+                          )}
                           onClick={() => {
                             setPersisted((p) => ({ ...p, quoteToken: token }));
                             setPickingSide(null);
@@ -783,7 +797,7 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
                         >
                           <span className="h-2.5 w-2.5 rounded-full" style={{ background: TOKEN_COLORS[token] ?? '#888' }} />
                           {token}
-                          {isSelected && <Check className="ml-auto h-3.5 w-3.5 text-[#00C389]" />}
+                          {isSel && <Check className="h-3.5 w-3.5 ml-auto text-[#00C389]" />}
                         </button>
                       );
                     })}
@@ -793,18 +807,21 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
             </div>
           </div>
 
+          {/* Separator */}
+          <div className="h-px bg-white/5" />
+
           {/* Section 3: Trading Strategy */}
           <div>
-            <div className="mb-3 flex items-center gap-2">
-              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[#00C389]/20 text-[11px] font-bold text-[#00C389]">3</div>
+            <div className="flex items-center gap-2 mb-3">
+              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[#00C389]/10 text-[11px] font-bold text-[#00C389]">3</div>
               <span className="text-base font-bold text-white">Trading Strategy</span>
             </div>
-            <div className="mb-1.5 flex items-center justify-end gap-1.5">
+            <div className="flex items-center justify-end gap-1.5 mb-1.5">
               {isConnected && (
                 <button
                   type="button"
-                  className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs text-gray-400 transition-colors hover:bg-white/5 hover:text-white disabled:opacity-40"
                   disabled={generating}
+                  className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs text-gray-400 hover:text-white transition-colors rounded-md hover:bg-white/5 disabled:opacity-50"
                   onClick={async () => {
                     if (!ownerAddressRaw) return;
                     setGenerating(true);
@@ -828,30 +845,32 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
                   }}
                 >
                   {generating ? (
-                    <div className="h-3 w-3 animate-spin rounded-full border border-gray-600 border-t-[#00C389]" />
+                    <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
                   ) : (
                     <Rocket className="h-3 w-3" />
                   )}
                   {generating ? 'Analyzing wallet...' : 'Auto-generate from wallet'}
                 </button>
               )}
-              <div className="group relative">
+              {/* Template picker */}
+              <div className="relative group">
                 <button
                   type="button"
-                  className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs text-gray-400 transition-colors hover:bg-white/5 hover:text-white"
+                  className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs text-gray-400 hover:text-white transition-colors rounded-md hover:bg-white/5"
                 >
                   <FileText className="h-3 w-3" />
                   Use template
                   <ChevronDown className="h-3 w-3" />
                 </button>
-                <div className="invisible absolute right-0 top-full z-10 mt-1 min-w-[200px] rounded-lg border border-white/10 bg-gray-900 py-1 shadow-xl group-hover:visible">
+                <div className="hidden group-focus-within:block absolute top-full right-0 mt-1 z-20 rounded-lg bg-gray-950 border border-white/10 shadow-lg py-1 min-w-[220px]">
                   {STRATEGY_TEMPLATES.map((t) => (
                     <button
                       key={t.name}
                       type="button"
-                      className="flex w-full px-3 py-2 text-left text-xs text-gray-300 transition-colors hover:bg-white/5 hover:text-white"
+                      className="block w-full px-3 py-2 text-left text-xs text-gray-300 hover:bg-white/5 transition-colors"
                       onClick={() => {
                         setPersisted((p) => ({ ...p, prompt: t.prompt }));
+                        (document.activeElement as HTMLElement)?.blur();
                       }}
                     >
                       {t.name}
@@ -863,62 +882,61 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
             <textarea
               ref={promptRef}
               id="prompt"
-              className={`w-full rounded-lg border bg-gray-950 px-4 py-3 text-sm leading-relaxed text-gray-200 placeholder-gray-600 outline-none transition-colors focus:border-[#00C389]/50 ${
-                persisted.prompt.length > 5000 ? 'border-red-500/50' : 'border-white/10'
-              }`}
+              className={cn(
+                'w-full text-sm leading-relaxed rounded-lg bg-gray-900 border border-white/10 text-white placeholder-gray-500 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#00C389]/50 focus:border-[#00C389] resize-y',
+                persisted.prompt.length > 5000 && 'border-red-500',
+              )}
               value={persisted.prompt}
               onChange={(e) => setPersisted((p) => ({ ...p, prompt: e.target.value }))}
               placeholder="Describe your trading strategy..."
               rows={6}
               maxLength={5000}
             />
-            <div className="mt-1 flex justify-end">
-              <span className={`font-mono text-[10px] ${
-                persisted.prompt.length > 4800
-                  ? persisted.prompt.length > 5000
-                    ? 'text-red-400'
-                    : 'text-yellow-400'
-                  : 'text-gray-600'
-              }`}>
+            <div className="flex justify-end mt-1">
+              <span className={cn(
+                'font-mono text-[10px]',
+                persisted.prompt.length > 5000 ? 'text-red-500' : persisted.prompt.length > 4800 ? 'text-amber-500' : 'text-gray-500',
+              )}>
                 {persisted.prompt.length} / 5000
               </span>
             </div>
 
             {/* Prompt Variables */}
             {promptVars.length > 0 && (
-              <div className="mt-2 rounded-lg border border-white/5 bg-gray-950/50 px-3 py-2.5">
-                <div className="mb-2 flex items-center justify-between">
-                  <div className="text-[10px] uppercase tracking-wider text-gray-600">
-                    Available variables <span className="normal-case text-gray-500">(click to insert)</span>
+              <div className="mt-2 rounded-lg bg-gray-950/50 border border-white/5 px-3 py-2.5">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="text-[10px] uppercase tracking-wider text-gray-500">
+                    Available variables <span className="normal-case opacity-70">(click to insert)</span>
                   </div>
                   <button
                     type="button"
-                    className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] text-gray-500 transition-colors hover:bg-white/5 hover:text-gray-300"
+                    className="inline-flex items-center gap-1 h-6 px-2 text-gray-500 hover:text-white transition-colors rounded hover:bg-white/5"
                     onClick={() => setVarsHelpOpen(true)}
                   >
                     <Info className="h-3 w-3" />
-                    Help
+                    <span className="text-[10px]">Help</span>
                   </button>
                 </div>
                 <div className="flex flex-wrap gap-1.5">
                   {promptVars.map((v) => {
                     const inPrompt = persisted.prompt.includes(`{${v.key}}`);
                     return (
-                      <div key={v.key} className="group relative">
+                      <div key={v.key} className="group/var relative">
                         <button
                           type="button"
-                          className={`inline-flex items-center gap-1 rounded-md border px-2 py-1 font-mono text-xs transition-colors ${
+                          className={cn(
+                            'inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-mono transition-colors',
                             inPrompt
-                              ? 'border-[#00C389]/40 bg-[#00C389]/10 text-[#00C389]'
-                              : 'border-white/10 text-gray-400 hover:border-[#00C389]/30 hover:bg-[#00C389]/5 hover:text-[#00C389]'
-                          }`}
+                              ? 'border-[#00C389] bg-[#00C389]/10 text-[#00C389]'
+                              : 'border-white/10 hover:border-[#00C389] hover:bg-[#00C389]/5 text-[#00C389]/70',
+                          )}
                           onClick={() => insertPromptVar(v)}
                         >
                           <span>{`{${v.key}}`}</span>
                           {inPrompt && <Check className="h-3 w-3" />}
                         </button>
                         {v.description && (
-                          <div className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-1.5 hidden -translate-x-1/2 whitespace-nowrap rounded border border-white/10 bg-gray-900 px-2 py-1 text-[10px] text-gray-300 opacity-0 shadow-lg transition-opacity group-hover:block group-hover:opacity-100">
+                          <div className="pointer-events-none absolute left-1/2 -translate-x-1/2 bottom-full mb-1.5 hidden group-hover/var:block z-20 whitespace-nowrap rounded-md bg-gray-950 text-white px-2 py-1 text-[10px] shadow-md border border-white/10">
                             {v.description}
                           </div>
                         )}
@@ -926,26 +944,28 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
                     );
                   })}
                 </div>
-                <div className="mt-1.5 flex items-center gap-1.5 text-[10px] text-gray-600">
-                  <span className="h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-[#00C389]" />
+                <div className="mt-1.5 text-[10px] text-gray-500 flex items-center gap-1.5">
+                  <span className="h-1.5 w-1.5 rounded-full bg-[#00C389] animate-pulse shrink-0" />
                   Variables are replaced with live data before each AI decision
                 </div>
               </div>
             )}
           </div>
 
+          {/* Separator */}
+          <div className="h-px bg-white/5" />
+
           {/* Section 4: Name & Fund */}
           <div className="space-y-3">
-            <div className="mb-3 flex items-center gap-2">
-              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[#00C389]/20 text-[11px] font-bold text-[#00C389]">4</div>
+            <div className="flex items-center gap-2 mb-3">
+              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[#00C389]/10 text-[11px] font-bold text-[#00C389]">4</div>
               <span className="text-base font-bold text-white">Name & Fund</span>
             </div>
 
-            {/* Agent Name */}
             <input
               id="agentName"
               type="text"
-              className="w-full rounded-lg border border-white/10 bg-gray-950 px-4 py-2.5 text-sm text-white placeholder-gray-600 outline-none transition-colors focus:border-[#00C389]/50"
+              className="w-full rounded-lg bg-gray-900 border border-white/10 text-white placeholder-gray-500 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#00C389]/50 focus:border-[#00C389]"
               value={persisted.agentName ?? ''}
               onChange={(e) => setPersisted((p) => ({ ...p, agentName: e.target.value }))}
               placeholder="Agent name, e.g. Moon Hunter"
@@ -953,81 +973,132 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
             />
 
             {/* Fund rows */}
-            <div className="overflow-hidden rounded-lg border border-white/10">
+            <div className="rounded-lg border border-white/10 overflow-hidden">
               {/* Extra TON */}
               <div className="flex items-center justify-between px-4 py-3">
                 <div className="flex items-center gap-2">
                   <span className="h-2.5 w-2.5 rounded-full" style={{ background: TOKEN_COLORS.TON }} />
                   <span className="text-sm font-semibold text-white">Extra TON</span>
-                  <span className="text-[10px] text-gray-600">gas & fees</span>
+                  <span className="text-[10px] text-gray-500">gas & fees</span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <button className="rounded p-1 text-gray-500 transition-colors hover:bg-white/5 hover:text-white" type="button" onClick={() => {
-                    const cur = parseFloat(persisted.deployAmountTon || '0');
-                    if (cur > 0) setPersisted((p) => ({ ...p, deployAmountTon: String(Math.max(0, cur - 1)) }));
-                  }}><Minus className="h-3 w-3" /></button>
-                  <input type="text" className="w-16 rounded border border-white/10 bg-gray-950 py-1 text-center font-mono text-sm font-semibold text-white outline-none focus:border-[#00C389]/50" value={persisted.deployAmountTon} onChange={(e) => setPersisted((p) => ({ ...p, deployAmountTon: e.target.value }))} inputMode="decimal" />
-                  <button className="rounded p-1 text-gray-500 transition-colors hover:bg-white/5 hover:text-white" type="button" onClick={() => {
-                    const cur = parseFloat(persisted.deployAmountTon || '0');
-                    setPersisted((p) => ({ ...p, deployAmountTon: String(cur + 1) }));
-                  }}><Plus className="h-3 w-3" /></button>
+                  <button
+                    type="button"
+                    className="h-7 w-7 inline-flex items-center justify-center rounded-md text-gray-400 hover:text-white hover:bg-white/5 transition-colors"
+                    onClick={() => {
+                      const cur = parseFloat(persisted.deployAmountTon || '0');
+                      if (cur > 0) setPersisted((p) => ({ ...p, deployAmountTon: String(Math.max(0, cur - 1)) }));
+                    }}
+                  >
+                    <Minus className="h-3 w-3" />
+                  </button>
+                  <input
+                    className="h-7 w-16 text-center font-mono font-semibold text-xs rounded-md bg-gray-900 border border-white/10 text-white focus:outline-none focus:ring-1 focus:ring-[#00C389]/50"
+                    value={persisted.deployAmountTon}
+                    onChange={(e) => setPersisted((p) => ({ ...p, deployAmountTon: e.target.value }))}
+                    inputMode="decimal"
+                  />
+                  <button
+                    type="button"
+                    className="h-7 w-7 inline-flex items-center justify-center rounded-md text-gray-400 hover:text-white hover:bg-white/5 transition-colors"
+                    onClick={() => {
+                      const cur = parseFloat(persisted.deployAmountTon || '0');
+                      setPersisted((p) => ({ ...p, deployAmountTon: String(cur + 1) }));
+                    }}
+                  >
+                    <Plus className="h-3 w-3" />
+                  </button>
                 </div>
               </div>
 
               {/* AGNT topup */}
-              <div className="flex items-center justify-between border-t border-white/5 px-4 py-3">
+              <div className="flex items-center justify-between px-4 py-3 border-t border-white/5">
                 <div className="flex items-center gap-2">
                   <span className="h-2.5 w-2.5 rounded-full" style={{ background: TOKEN_COLORS.AGNT }} />
                   <span className="text-sm font-semibold text-white">AGNT topup</span>
-                  <span className="text-[10px] text-gray-600">base capital</span>
+                  <span className="text-[10px] text-gray-500">base capital</span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <button className="rounded p-1 text-gray-500 transition-colors hover:bg-white/5 hover:text-white" type="button" onClick={() => {
-                    const cur = parseFloat(persisted.agntTopup || '0');
-                    if (cur > 0) setPersisted((p) => ({ ...p, agntTopup: String(Math.max(0, cur - 1)) }));
-                  }}><Minus className="h-3 w-3" /></button>
-                  <input type="text" className="w-16 rounded border border-white/10 bg-gray-950 py-1 text-center font-mono text-sm font-semibold text-white outline-none focus:border-[#00C389]/50" value={persisted.agntTopup ?? '0'} onChange={(e) => setPersisted((p) => ({ ...p, agntTopup: e.target.value }))} inputMode="decimal" />
-                  <button className="rounded p-1 text-gray-500 transition-colors hover:bg-white/5 hover:text-white" type="button" onClick={() => {
-                    const cur = parseFloat(persisted.agntTopup || '0');
-                    setPersisted((p) => ({ ...p, agntTopup: String(cur + 1) }));
-                  }}><Plus className="h-3 w-3" /></button>
+                  <button
+                    type="button"
+                    className="h-7 w-7 inline-flex items-center justify-center rounded-md text-gray-400 hover:text-white hover:bg-white/5 transition-colors"
+                    onClick={() => {
+                      const cur = parseFloat(persisted.agntTopup || '0');
+                      if (cur > 0) setPersisted((p) => ({ ...p, agntTopup: String(Math.max(0, cur - 1)) }));
+                    }}
+                  >
+                    <Minus className="h-3 w-3" />
+                  </button>
+                  <input
+                    className="h-7 w-16 text-center font-mono font-semibold text-xs rounded-md bg-gray-900 border border-white/10 text-white focus:outline-none focus:ring-1 focus:ring-[#00C389]/50"
+                    value={persisted.agntTopup ?? '0'}
+                    onChange={(e) => setPersisted((p) => ({ ...p, agntTopup: e.target.value }))}
+                    inputMode="decimal"
+                  />
+                  <button
+                    type="button"
+                    className="h-7 w-7 inline-flex items-center justify-center rounded-md text-gray-400 hover:text-white hover:bg-white/5 transition-colors"
+                    onClick={() => {
+                      const cur = parseFloat(persisted.agntTopup || '0');
+                      setPersisted((p) => ({ ...p, agntTopup: String(cur + 1) }));
+                    }}
+                  >
+                    <Plus className="h-3 w-3" />
+                  </button>
                 </div>
               </div>
 
               {/* Quote token topup */}
               {persisted.quoteToken && persisted.quoteToken !== 'AGNT' && (
-                <div className="flex items-center justify-between border-t border-white/5 px-4 py-3">
+                <div className="flex items-center justify-between px-4 py-3 border-t border-white/5">
                   <div className="flex items-center gap-2">
                     <span className="h-2.5 w-2.5 rounded-full" style={{ background: TOKEN_COLORS[persisted.quoteToken] ?? '#888' }} />
                     <span className="text-sm font-semibold text-white">{persisted.quoteToken} topup</span>
-                    <span className="text-[10px] text-gray-600">quote capital</span>
+                    <span className="text-[10px] text-gray-500">quote capital</span>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <button className="rounded p-1 text-gray-500 transition-colors hover:bg-white/5 hover:text-white" type="button" onClick={() => {
-                      const cur = parseFloat(persisted.quoteTopup || '0');
-                      if (cur > 0) setPersisted((p) => ({ ...p, quoteTopup: String(Math.max(0, cur - 1)) }));
-                    }}><Minus className="h-3 w-3" /></button>
-                    <input type="text" className="w-16 rounded border border-white/10 bg-gray-950 py-1 text-center font-mono text-sm font-semibold text-white outline-none focus:border-[#00C389]/50" value={persisted.quoteTopup ?? '0'} onChange={(e) => setPersisted((p) => ({ ...p, quoteTopup: e.target.value }))} inputMode="decimal" />
-                    <button className="rounded p-1 text-gray-500 transition-colors hover:bg-white/5 hover:text-white" type="button" onClick={() => {
-                      const cur = parseFloat(persisted.quoteTopup || '0');
-                      setPersisted((p) => ({ ...p, quoteTopup: String(cur + 1) }));
-                    }}><Plus className="h-3 w-3" /></button>
+                    <button
+                      type="button"
+                      className="h-7 w-7 inline-flex items-center justify-center rounded-md text-gray-400 hover:text-white hover:bg-white/5 transition-colors"
+                      onClick={() => {
+                        const cur = parseFloat(persisted.quoteTopup || '0');
+                        if (cur > 0) setPersisted((p) => ({ ...p, quoteTopup: String(Math.max(0, cur - 1)) }));
+                      }}
+                    >
+                      <Minus className="h-3 w-3" />
+                    </button>
+                    <input
+                      className="h-7 w-16 text-center font-mono font-semibold text-xs rounded-md bg-gray-900 border border-white/10 text-white focus:outline-none focus:ring-1 focus:ring-[#00C389]/50"
+                      value={persisted.quoteTopup ?? '0'}
+                      onChange={(e) => setPersisted((p) => ({ ...p, quoteTopup: e.target.value }))}
+                      inputMode="decimal"
+                    />
+                    <button
+                      type="button"
+                      className="h-7 w-7 inline-flex items-center justify-center rounded-md text-gray-400 hover:text-white hover:bg-white/5 transition-colors"
+                      onClick={() => {
+                        const cur = parseFloat(persisted.quoteTopup || '0');
+                        setPersisted((p) => ({ ...p, quoteTopup: String(cur + 1) }));
+                      }}
+                    >
+                      <Plus className="h-3 w-3" />
+                    </button>
                   </div>
                 </div>
               )}
 
-              {/* Where your TON goes */}
-              <div className="space-y-1.5 border-t border-white/10 px-4 py-3">
-                <div className="text-[10px] font-semibold uppercase tracking-wider text-gray-600">Where your TON goes</div>
+              {/* WHERE YOUR TON GOES */}
+              <div className="border-t border-white/5 px-4 py-3 space-y-1.5">
+                <div className="text-[10px] uppercase tracking-wider font-semibold text-gray-500">Where your TON goes</div>
                 <div className="flex items-center justify-between text-xs">
                   <div className="flex items-center gap-1.5">
-                    <span className="h-1.5 w-1.5 rounded-full bg-purple-400" />
+                    <span className="h-1.5 w-1.5 rounded-full bg-[#00C389]" />
                     <span className="text-gray-400">AI service provider</span>
                     {selectedModelOption && (
-                      <span className="text-gray-600">({shortModelName(selectedModelOption.name)})</span>
+                      <span className="text-gray-500">({shortModelName(selectedModelOption.name)})</span>
                     )}
                   </div>
-                  <span className="font-mono text-gray-500">
+                  <span className="font-mono text-gray-400">
                     {selectedModelOption?.pricing?.[0]
                       ? `${selectedModelOption.pricing[0].price} ${selectedModelOption.pricing[0].currency}/${selectedModelOption.pricing[0].cntDecisions} dec`
                       : '\u2014'}
@@ -1038,53 +1109,54 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
                     <span className="h-1.5 w-1.5 rounded-full bg-orange-400" />
                     <span className="text-gray-400">Service fee for deploying agent</span>
                   </div>
-                  <span className="font-mono text-gray-500">~0.6 TON</span>
+                  <span className="font-mono text-gray-400">~0.6 TON</span>
                 </div>
                 <div className="flex items-center justify-between text-xs">
                   <div className="flex items-center gap-1.5">
                     <span className="h-1.5 w-1.5 rounded-full bg-blue-400" />
                     <span className="text-gray-400">Gas</span>
-                    <span className="text-gray-600">(stays on agent wallet for orders)</span>
+                    <span className="text-gray-500">(stays on agent wallet for orders)</span>
                   </div>
-                  <span className="font-mono text-gray-500">{persisted.deployAmountTon || '0'} TON</span>
+                  <span className="font-mono text-gray-400">{persisted.deployAmountTon || '0'} TON</span>
                 </div>
               </div>
 
               {/* Total */}
-              <div className="flex items-center justify-between border-t border-white/10 px-4 py-2.5">
+              <div className="border-t border-white/5 px-4 py-2.5 flex items-center justify-between">
                 <span className="text-xs text-gray-500">Deploy ~0.6 TON + {persisted.deployAmountTon || '0'} TON gas</span>
-                <span className="font-mono text-sm font-bold text-white">Total: {totalDeployTon} TON</span>
+                <span className="text-sm font-bold font-mono text-white">Total: {totalDeployTon} TON</span>
               </div>
             </div>
 
             {/* Footer note */}
-            <div className="flex items-center gap-1.5 text-[10px] text-gray-600">
+            <div className="flex items-center gap-1.5 text-[10px] text-gray-500">
               <Info className="h-3 w-3 shrink-0" />
-              Tokens transferred to agent&apos;s on-chain wallet for <strong className="text-gray-400">{persisted.baseToken ?? 'AGNT'}/{persisted.quoteToken ?? '...'}</strong>. Signed via TonConnect.
+              Tokens transferred to agent&apos;s on-chain wallet for <strong className="text-gray-300">{persisted.baseToken ?? 'AGNT'}/{persisted.quoteToken ?? '...'}</strong>. Signed via TonConnect.
             </div>
 
             {/* Validation checklist */}
             <div className="flex items-center gap-3 text-xs">
-              <span className={hasName ? 'text-gray-300' : 'text-gray-700'}>&middot; Name</span>
-              <span className={hasPair ? 'text-gray-300' : 'text-gray-700'}>&middot; Pair</span>
-              <span className={hasStrategy ? 'text-gray-300' : 'text-gray-700'}>&middot; Strategy</span>
+              <span className={hasName ? 'text-gray-300' : 'text-gray-600'}>&middot; Name</span>
+              <span className={hasPair ? 'text-gray-300' : 'text-gray-600'}>&middot; Pair</span>
+              <span className={hasStrategy ? 'text-gray-300' : 'text-gray-600'}>&middot; Strategy</span>
             </div>
 
             {/* Deploy button */}
             <motion.button
-              whileHover={{ scale: 1.01 }}
-              whileTap={{ scale: 0.99 }}
-              className={`flex w-full items-center justify-center gap-2 rounded-lg py-3 text-base font-semibold shadow-lg transition-colors ${
-                busy
-                  ? 'cursor-not-allowed bg-[#00C389]/50 text-black/50'
-                  : 'bg-[#00C389] text-black hover:bg-[#00C389]/90'
-              }`}
-              onClick={() => void deployAndRegister()}
               type="button"
+              whileHover={{ scale: 1.01 }}
+              whileTap={{ scale: 0.98 }}
+              className={cn(
+                'w-full flex items-center justify-center gap-2 text-base font-semibold rounded-lg py-3 px-4 transition-colors shadow-md',
+                busy
+                  ? 'bg-[#00C389]/50 text-black/50 cursor-not-allowed'
+                  : 'bg-[#00C389] text-black hover:bg-[#00C389]/90 cursor-pointer',
+              )}
               disabled={!!busy}
+              onClick={() => void deployAndRegister()}
             >
               {busy ? (
-                <div className="h-4 w-4 animate-spin rounded-full border-2 border-black/30 border-t-black" />
+                <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
               ) : (
                 <Rocket className="h-4.5 w-4.5" />
               )}
@@ -1093,26 +1165,25 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
 
             {canRetryRegisterOnly && (
               <button
-                className={`w-full rounded-lg py-2 text-sm text-gray-400 transition-colors hover:bg-white/5 hover:text-white ${busy ? 'pointer-events-none opacity-40' : ''}`}
-                onClick={() => void registerOnly()}
                 type="button"
+                className="w-full text-center text-sm py-2 text-gray-500 hover:text-white transition-colors rounded-md hover:bg-white/5 disabled:opacity-50"
+                disabled={!!busy}
+                onClick={() => void registerOnly()}
               >
-                {busy === 'register' && (
-                  <span className="mr-1.5 inline-block h-3 w-3 animate-spin rounded-full border border-gray-600 border-t-[#00C389]" />
-                )}
+                {busy === 'register' && <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent mr-1" />}
                 Retry registration only
               </button>
             )}
 
-            <p className="text-center text-xs text-gray-600">Agent starts trading immediately</p>
+            <p className="text-center text-xs text-gray-500">Agent starts trading immediately</p>
           </div>
 
           {/* Contract Address (shown after deploy) */}
           {persisted.contractAddress && (
-            <div className="flex items-center justify-between gap-3 rounded-lg border border-white/5 bg-gray-950/50 px-3.5 py-2.5">
+            <div className="flex items-center justify-between gap-3 rounded-lg bg-gray-950/50 border border-white/5 px-3.5 py-2.5">
               <span className="text-xs text-gray-500">Contract</span>
               <a
-                className="inline-flex items-center gap-1 font-mono text-xs text-[#00C389] transition-colors hover:text-[#00C389]/80"
+                className="font-mono text-xs text-[#00C389] hover:underline inline-flex items-center gap-1"
                 href={explorerLink(persisted.contractAddress)}
                 target="_blank"
                 rel="noreferrer"
@@ -1126,12 +1197,12 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
           {/* Top-up (collapsible, only after deploy) */}
           {persisted.contractAddress && (
             <>
-              <div className="border-t border-white/5" />
+              <div className="h-px bg-white/5" />
               <div>
                 <button
-                  className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-sm text-gray-400 transition-colors hover:bg-white/5"
-                  onClick={() => setShowAdvanced(!showAdvanced)}
                   type="button"
+                  className="w-full flex items-center justify-between text-sm py-2 px-1 text-gray-500 hover:text-white transition-colors rounded-md"
+                  onClick={() => setShowAdvanced(!showAdvanced)}
                 >
                   <span className="inline-flex items-center gap-2">
                     <Wallet className="h-3.5 w-3.5" />
@@ -1140,33 +1211,31 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
                   {showAdvanced ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
                 </button>
 
-                <AnimatePresence>
-                  {showAdvanced && (
-                    <motion.div
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: 'auto' }}
-                      exit={{ opacity: 0, height: 0 }}
-                      className="mt-3 flex gap-2"
+                {showAdvanced && (
+                  <div className="mt-3 flex gap-2">
+                    <input
+                      id="topupAmount"
+                      type="text"
+                      className="flex-1 h-8 rounded-lg bg-gray-900 border border-white/10 text-white placeholder-gray-500 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#00C389]/50 focus:border-[#00C389]"
+                      value={persisted.topupAmountTon}
+                      onChange={(e) => setPersisted((p) => ({ ...p, topupAmountTon: e.target.value }))}
+                      inputMode="decimal"
+                      placeholder="Amount in TON"
+                    />
+                    <button
+                      type="button"
+                      className="px-3 h-8 text-sm font-medium rounded-lg border border-white/10 text-gray-300 hover:bg-white/5 transition-colors disabled:opacity-50"
+                      disabled={!!busy}
+                      onClick={() => void topUpExistingContract()}
                     >
-                      <input
-                        id="topupAmount"
-                        type="text"
-                        className="flex-1 rounded-lg border border-white/10 bg-gray-950 px-3 py-1.5 text-sm text-white outline-none focus:border-[#00C389]/50"
-                        value={persisted.topupAmountTon}
-                        onChange={(e) => setPersisted((p) => ({ ...p, topupAmountTon: e.target.value }))}
-                        inputMode="decimal"
-                        placeholder="Amount in TON"
-                      />
-                      <button
-                        className={`rounded-lg border border-white/10 px-4 py-1.5 text-sm text-white transition-colors hover:bg-white/5 ${busy ? 'pointer-events-none opacity-40' : ''}`}
-                        onClick={() => void topUpExistingContract()}
-                        type="button"
-                      >
-                        {busy === 'topup' ? 'Sending...' : 'Send TON'}
-                      </button>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+                      {busy === 'topup' ? (
+                        <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                      ) : (
+                        'Send TON'
+                      )}
+                    </button>
+                  </div>
+                )}
               </div>
             </>
           )}
@@ -1174,66 +1243,85 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
 
         {/* Error bar */}
         {err && (
-          <div className="border-t border-red-500/20 bg-red-500/10 px-6 py-3">
+          <div className="border-t border-red-500/20 bg-red-500/5 px-6 py-3">
             <p className="font-mono text-xs text-red-400">{err}</p>
           </div>
         )}
 
         {/* Wallet warning */}
         {!isConnected && (
-          <div className="border-t border-yellow-500/20 bg-yellow-500/10 px-6 py-3">
-            <p className="text-xs font-medium text-yellow-400">Connect a TON wallet to deploy your agent.</p>
+          <div className="border-t border-amber-500/20 bg-amber-500/5 px-6 py-3">
+            <p className="text-xs text-amber-400 font-medium">Connect a TON wallet to deploy your agent.</p>
           </div>
         )}
       </motion.div>
 
       {/* Variables Help Modal */}
-      {varsHelpOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm" onClick={() => setVarsHelpOpen(false)}>
+      <AnimatePresence>
+        {varsHelpOpen && (
           <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="mx-4 max-h-[80vh] max-w-2xl overflow-y-auto rounded-xl border border-white/10 bg-gray-900 p-6 shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm"
+            onClick={() => setVarsHelpOpen(false)}
           >
-            <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-lg font-bold text-white">Variable Reference</h3>
-              <button type="button" className="rounded p-1 text-gray-400 transition-colors hover:bg-white/5 hover:text-white" onClick={() => setVarsHelpOpen(false)}>
-                &times;
-              </button>
-            </div>
-            <p className="mb-4 text-xs text-gray-500">
-              Variables are placeholders replaced with live data before each AI decision. Click a variable name to insert it into your strategy.
-            </p>
-            <div className="space-y-3">
-              {promptVars.map((v) => {
-                const inPrompt = persisted.prompt.includes(`{${v.key}}`);
-                return (
-                  <div key={v.key} className="rounded-lg border border-white/5 bg-gray-950/50 p-3">
-                    <div className="mb-1 flex items-center justify-between">
-                      <button
-                        type="button"
-                        className={`font-mono text-sm font-bold ${inPrompt ? 'text-[#00C389]' : 'text-[#00C389]/70 hover:text-[#00C389]'}`}
-                        onClick={() => { insertPromptVar(v); setVarsHelpOpen(false); }}
-                      >
-                        {`{${v.key}}`}
-                        {inPrompt && <Check className="ml-1 inline h-3.5 w-3.5 text-[#00C389]" />}
-                      </button>
-                      {v.prompt_section && (
-                        <span className="rounded border border-white/5 px-1.5 py-0.5 text-[10px] text-gray-600">{v.prompt_section}</span>
-                      )}
-                    </div>
-                    {v.name && v.name !== v.key && (
-                      <div className="mb-0.5 text-xs font-semibold text-gray-400">{v.name}</div>
-                    )}
-                    <div className="text-xs leading-relaxed text-gray-500">{v.description}</div>
-                  </div>
-                );
-              })}
-            </div>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              transition={{ duration: 0.2, ease: 'easeOut' }}
+              className="bg-gray-950 rounded-xl border border-white/10 shadow-xl max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between p-6 pb-0 mb-4">
+                <h3 className="text-lg font-bold text-white">Variable Reference</h3>
+                <button
+                  type="button"
+                  className="h-8 w-8 inline-flex items-center justify-center rounded-md text-gray-400 hover:text-white hover:bg-white/5 transition-colors"
+                  onClick={() => setVarsHelpOpen(false)}
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <div className="px-6 pb-6">
+                <p className="text-xs text-gray-500 mb-4">
+                  Variables are placeholders replaced with live data before each AI decision. Click a variable name to insert it into your strategy.
+                </p>
+                <div className="space-y-3">
+                  {promptVars.map((v) => {
+                    const inPrompt = persisted.prompt.includes(`{${v.key}}`);
+                    return (
+                      <div key={v.key} className="rounded-lg border border-white/10 p-3">
+                        <div className="flex items-center justify-between mb-1">
+                          <button
+                            type="button"
+                            className={cn(
+                              'font-mono text-sm font-bold',
+                              inPrompt ? 'text-[#00C389]' : 'text-[#00C389]/70 hover:text-[#00C389]',
+                            )}
+                            onClick={() => { insertPromptVar(v); setVarsHelpOpen(false); }}
+                          >
+                            {`{${v.key}}`}
+                            {inPrompt && <Check className="inline h-3.5 w-3.5 ml-1 text-[#00C389]" />}
+                          </button>
+                          {v.prompt_section && (
+                            <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-white/5 text-gray-400">{v.prompt_section}</span>
+                          )}
+                        </div>
+                        {v.name && v.name !== v.key && (
+                          <div className="text-xs font-semibold text-gray-300 mb-0.5">{v.name}</div>
+                        )}
+                        <div className="text-xs text-gray-500 leading-relaxed">{v.description}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </motion.div>
           </motion.div>
-        </div>
-      )}
+        )}
+      </AnimatePresence>
     </div>
   );
 }
