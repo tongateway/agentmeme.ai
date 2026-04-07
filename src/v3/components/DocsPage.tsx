@@ -25,7 +25,7 @@ function ProseLink({ href, children }: { href: string; children: React.ReactNode
       href={href}
       target="_blank"
       rel="noreferrer"
-      className="text-[#00C389] underline underline-offset-4 hover:text-[#00C389]/80 transition-colors"
+      className="text-neutral-400 underline underline-offset-4 hover:text-white transition-colors"
     >
       {children}
     </a>
@@ -157,8 +157,8 @@ export function DocsPage() {
                     Pre-built strategies — Aggressive Dip Buyer, Scalper, Meme Mode, and more.
                   </span>
                 </div>
-                <div className="flex items-start gap-3 rounded-lg border border-[#00C389]/20 bg-[#00C389]/5 p-3">
-                  <span className="mt-0.5 shrink-0 text-[10px] font-semibold uppercase tracking-wider bg-[#00C389]/20 text-[#00C389] border border-[#00C389]/30 rounded px-1.5 py-0.5">
+                <div className="flex items-start gap-3 rounded-lg border border-neutral-800/50 bg-neutral-800/30 p-3">
+                  <span className="mt-0.5 shrink-0 text-[10px] font-semibold uppercase tracking-wider bg-neutral-800 text-neutral-300 border border-neutral-700 rounded px-1.5 py-0.5">
                     Auto-generate
                   </span>
                   <span className="text-sm text-gray-400">
@@ -166,7 +166,7 @@ export function DocsPage() {
                   </span>
                 </div>
                 <div className="flex items-start gap-3 rounded-lg border border-white/10 bg-white/[0.02] p-3">
-                  <span className="mt-0.5 shrink-0 text-[10px] font-semibold uppercase tracking-wider bg-[#00C389]/10 text-[#00C389] border border-[#00C389]/20 rounded px-1.5 py-0.5">
+                  <span className="mt-0.5 shrink-0 text-[10px] font-semibold uppercase tracking-wider bg-neutral-800 text-neutral-300 border border-neutral-700 rounded px-1.5 py-0.5">
                     Custom
                   </span>
                   <span className="text-sm text-gray-400">
@@ -205,7 +205,7 @@ export function DocsPage() {
                     ].map(([variable, desc, source]) => (
                       <tr key={variable} className="border-b border-white/5 last:border-0">
                         <td className="px-4 py-3">
-                          <code className="font-mono text-xs text-[#00C389] bg-[#00C389]/10 px-1.5 py-0.5 rounded">
+                          <code className="font-mono text-xs text-neutral-300 bg-neutral-800/50 px-1.5 py-0.5 rounded">
                             {variable}
                           </code>
                         </td>
@@ -337,7 +337,7 @@ export function DocsPage() {
               declining curve with a guaranteed floor:
             </Prose>
             <div className="mt-4 rounded-xl bg-black/30 border border-white/10 px-6 py-4 text-center">
-              <code className="font-mono text-sm text-[#00C389]">
+              <code className="font-mono text-sm text-neutral-300">
                 tokens(n) = max(567, round(92,000 / (1 + 0.00155 &times; n<sup>1.38</sup>)))
               </code>
             </div>
@@ -370,7 +370,7 @@ export function DocsPage() {
                 ].map(([agent, minted]) => (
                   <tr key={agent} className="border-b border-white/5 last:border-0">
                     <td className="px-4 py-3 text-sm text-gray-400">{agent}</td>
-                    <td className="px-4 py-3 text-right font-mono text-sm font-medium text-[#00C389]">
+                    <td className="px-4 py-3 text-right font-mono text-sm font-medium text-neutral-300">
                       {minted}
                     </td>
                   </tr>
@@ -403,9 +403,9 @@ export function DocsPage() {
                 href={link.url}
                 target="_blank"
                 rel="noreferrer"
-                className="group flex items-start gap-3 rounded-lg border border-white/10 p-4 hover:border-[#00C389]/30 hover:bg-[#00C389]/5 transition-colors no-underline"
+                className="group flex items-start gap-3 rounded-lg border border-neutral-800/50 p-4 hover:border-neutral-700 hover:bg-white/[0.03] transition-colors no-underline"
               >
-                <ExternalLink className="h-4 w-4 text-gray-600 group-hover:text-[#00C389] mt-0.5 shrink-0 transition-colors" />
+                <ExternalLink className="h-4 w-4 text-neutral-500 group-hover:text-white mt-0.5 shrink-0 transition-colors" />
                 <div>
                   <div className="text-sm font-semibold text-gray-200 group-hover:text-white transition-colors">
                     {link.name}

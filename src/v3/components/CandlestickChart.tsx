@@ -87,11 +87,11 @@ export function CandlestickChart({ raceCfg, fromSymbol, toSymbol }: CandlestickC
         }
 
         const candleSeries = chart.addSeries(CandlestickSeries, {
-          upColor: '#00C389',
+          upColor: '#34d399',
           downColor: '#ef4444',
-          borderUpColor: '#00C389',
+          borderUpColor: '#34d399',
           borderDownColor: '#ef4444',
-          wickUpColor: '#00C389',
+          wickUpColor: '#34d399',
           wickDownColor: '#ef4444',
         });
 
@@ -106,7 +106,7 @@ export function CandlestickChart({ raceCfg, fromSymbol, toSymbol }: CandlestickC
         );
 
         const volumeSeries = chart.addSeries(HistogramSeries, {
-          color: '#00C38940',
+          color: '#34d39940',
           priceFormat: { type: 'volume' },
           priceScaleId: '',
         });
@@ -119,7 +119,7 @@ export function CandlestickChart({ raceCfg, fromSymbol, toSymbol }: CandlestickC
           candles.map((c) => ({
             time: c.t as UTCTimestamp,
             value: c.v,
-            color: c.c >= c.o ? '#00C38940' : '#ef444440',
+            color: c.c >= c.o ? '#34d39940' : '#ef444440',
           })),
         );
 
@@ -164,8 +164,8 @@ export function CandlestickChart({ raceCfg, fromSymbol, toSymbol }: CandlestickC
                 className={cn(
                   'h-6 px-2 text-xs rounded-md font-medium transition-all',
                   interval === i
-                    ? 'bg-[#00C389] text-black shadow-sm'
-                    : 'text-gray-400 hover:text-white',
+                    ? 'bg-white text-black shadow-sm'
+                    : 'text-neutral-500 hover:text-white',
                 )}
               >
                 {i}
@@ -187,7 +187,7 @@ export function CandlestickChart({ raceCfg, fromSymbol, toSymbol }: CandlestickC
                 justifyContent: 'center',
               }}
             >
-              <div className="h-6 w-6 animate-spin rounded-full border-2 border-[#00C389] border-t-transparent" />
+              <div className="h-6 w-6 animate-spin rounded-full border-2 border-neutral-400 border-t-transparent" />
             </div>
           )}
           {!loading && error && (

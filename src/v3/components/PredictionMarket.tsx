@@ -42,8 +42,8 @@ export function PredictionMarket({ raceCfg, stats }: PredictionMarketProps) {
   let accuracyBg = 'bg-gray-800';
   if (accuracy) {
     if (accuracy.accuracy_pct > 60) {
-      accuracyColor = 'text-[#00C389]';
-      accuracyBg = 'bg-[#00C389]/10';
+      accuracyColor = 'text-emerald-400';
+      accuracyBg = 'bg-emerald-500/10';
     } else if (accuracy.accuracy_pct >= 40) {
       accuracyColor = 'text-amber-400';
       accuracyBg = 'bg-amber-500/10';
@@ -64,7 +64,7 @@ export function PredictionMarket({ raceCfg, stats }: PredictionMarketProps) {
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
-        className="rounded-xl border border-white/10 bg-gray-900/50 p-3 flex flex-col gap-2"
+        className="rounded-xl border border-neutral-800/50 bg-neutral-900/50 p-3 flex flex-col gap-2"
       >
         {direction ? (
           <>
@@ -76,7 +76,7 @@ export function PredictionMarket({ raceCfg, stats }: PredictionMarketProps) {
               <span
                 className={
                   direction === 'UP'
-                    ? 'text-xs text-[#00C389]'
+                    ? 'text-xs text-emerald-400'
                     : 'text-xs text-red-400'
                 }
               >
@@ -85,7 +85,7 @@ export function PredictionMarket({ raceCfg, stats }: PredictionMarketProps) {
               <span
                 className={
                   direction === 'UP'
-                    ? 'font-mono text-sm font-bold tabular-nums text-[#00C389]'
+                    ? 'font-mono text-sm font-bold tabular-nums text-emerald-400'
                     : 'font-mono text-sm font-bold tabular-nums text-red-400'
                 }
               >
@@ -100,7 +100,7 @@ export function PredictionMarket({ raceCfg, stats }: PredictionMarketProps) {
                 transition={{ duration: 0.6, ease: 'easeOut' }}
                 className={
                   direction === 'UP'
-                    ? 'bg-[#00C389] rounded-full'
+                    ? 'bg-emerald-500 rounded-full'
                     : 'bg-red-500 rounded-full'
                 }
               />
@@ -117,7 +117,7 @@ export function PredictionMarket({ raceCfg, stats }: PredictionMarketProps) {
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.1 }}
-          className="rounded-xl border border-white/10 bg-gray-900/50 p-3 flex flex-col gap-1"
+          className="rounded-xl border border-neutral-800/50 bg-neutral-900/50 p-3 flex flex-col gap-1"
         >
           <div className="flex items-center justify-between">
             <span className="text-[11px] uppercase tracking-wider text-gray-500">Accuracy</span>

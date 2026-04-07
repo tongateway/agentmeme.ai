@@ -50,7 +50,7 @@ function RankBadge({ rank }: { rank: number }) {
   }
   if (rank === 2) {
     return (
-      <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-gray-400/20 text-gray-300 text-xs font-bold tabular-nums">
+      <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-neutral-400/20 text-neutral-400 text-xs font-bold tabular-nums">
         2
       </span>
     );
@@ -148,9 +148,9 @@ export function LeaderboardPage({ raceCfg, onSelectAgent }: LeaderboardPageProps
       transition={{ duration: 0.3 }}
       className="space-y-6 py-2"
     >
-      <div className="bg-gray-900/50 border border-white/10 rounded-xl overflow-hidden">
+      <div className="bg-neutral-900/50 border border-neutral-800/50 rounded-xl overflow-hidden">
         {/* Header */}
-        <div className="px-6 py-4 border-b border-white/10">
+        <div className="px-6 py-4 border-b border-neutral-800/50">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-2 text-xl font-semibold text-white">
               {/* Trophy icon */}
@@ -287,7 +287,7 @@ export function LeaderboardPage({ raceCfg, onSelectAgent }: LeaderboardPageProps
                           {onSelectAgent && (
                             <button
                               type="button"
-                              className="h-7 text-xs px-2 border border-white/10 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition-colors"
+                              className="h-7 text-xs px-2 border border-neutral-800 rounded-lg text-neutral-400 hover:text-white hover:bg-white/5 transition-colors"
                               onClick={() => onSelectAgent(e.smart_contract_id)}
                             >
                               Open
@@ -384,7 +384,7 @@ export function LeaderboardPage({ raceCfg, onSelectAgent }: LeaderboardPageProps
                           {onSelectAgent && (
                             <button
                               type="button"
-                              className="h-7 text-xs px-2 border border-white/10 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition-colors"
+                              className="h-7 text-xs px-2 border border-neutral-800 rounded-lg text-neutral-400 hover:text-white hover:bg-white/5 transition-colors"
                               onClick={() => onSelectAgent(e.smart_contract_id)}
                             >
                               Open
