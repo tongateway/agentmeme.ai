@@ -830,15 +830,23 @@ export function ContractDetailPanel({ contract, raceCfg, theme, onDeleted, onSta
         </div>
       </div>
 
-      {/* Stop reason banner */}
-      {stopReason && (
+      {/* Stop reason banner — only show when agent is not active */}
+      {stopReason && !isActive && (
         <div className="card bg-error/10 border border-error/20 shadow-sm">
           <div className="card-body p-3 flex-row items-start gap-2">
             <AlertTriangle className="h-4 w-4 text-error mt-0.5 shrink-0" />
-            <div>
+            <div className="flex-1">
               <div className="text-xs font-semibold text-error">Agent Stopped</div>
               <div className="text-xs opacity-70 mt-0.5">{stopReason}</div>
             </div>
+            <button
+              type="button"
+              className="btn btn-xs btn-ghost gap-1 shrink-0"
+              onClick={() => { setPromptOpen(true); setDetailTab('overview'); }}
+            >
+              <FileText className="h-3 w-3" />
+              Edit Prompt
+            </button>
           </div>
         </div>
       )}
