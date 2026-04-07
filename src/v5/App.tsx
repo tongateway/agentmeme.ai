@@ -1,11 +1,19 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { TonConnectButton, useTonWallet } from '@tonconnect/ui-react';
+import { TonConnectButton, useTonAddress, useTonWallet } from '@tonconnect/ui-react';
+import { Address } from '@ton/core';
 import { Sun, Moon, Bot } from 'lucide-react';
-import { listContractsFromLeaderboard, listRaceContracts, primeKnownPrices, type ContractListItem } from '../lib/api';
-import type { PublicApiConfig } from '../lib/api';
+import {
+  listContractsFromLeaderboard,
+  listRaceContracts,
+  primeKnownPrices,
+  getRaceContractDetail,
+  updateRaceContract,
+  type ContractListItem,
+  type PublicApiConfig,
+} from '../lib/api';
 import { useLocalStorageState } from '../lib/storage';
 import { useAuth } from '../lib/useAuth';
-// generateAgentKeypair imported when DeployPanel is ready
+import { generateAgentKeypair } from '../lib/crypto';
 import { Button } from './components/ui/button';
 import { HomePage } from './components/HomePage';
 import { AgentHubPage } from './components/AgentHubPage';
@@ -14,25 +22,23 @@ import { TokenOpinionPage } from './components/TokenOpinionPage';
 import { StatsPage } from './components/StatsPage';
 import { LeaderboardPage } from './components/LeaderboardPage';
 import { DocsPage } from './components/DocsPage';
-
-// Lazy stubs — will be replaced by real components
-function StubPage({ name }: { name: string }) {
-  return (
-    <div className="flex items-center justify-center py-20">
-      <div className="text-center">
-        <h2 className="text-2xl font-bold">{name}</h2>
-        <p className="mt-2 text-neutral-500">Coming soon...</p>
-      </div>
-    </div>
-  );
-}
+import { ContractTabBar, type TabKey } from './components/ContractTabBar';
+import { ContractDetailPanel } from './components/ContractDetailPanel';
+import { DeployPanel, type Persisted } from './components/DeployPanel';
 
 const THEME_KEY = 'ai-trader-race:theme';
+const LS_KEY = 'ai-trader-race:v5';
+const MY_CONTRACTS_KEY = 'ai-trader-race:v5:my-contracts';
+
+function normalizeTonAddress(addr: string): string {
+  try {
+    return Address.parse(addr).toRawString();
+  } catch {
+    return addr.toLowerCase();
+  }
+}
 
 type Page = 'home' | 'leaderboard' | 'stats' | 'trader' | 'docs' | 'agent-hub';
-
-// TabKey will be used when ContractTabBar is added
-// type TabKey = { kind: 'contract'; contractId: string } | { kind: 'deploy' };
 
 function pageFromHash(): { page: Page; sub?: string } {
   const hash = window.location.hash.replace(/^#\/?/, '');
@@ -55,13 +61,87 @@ export default function V5App() {
   const raceCfg = useMemo<PublicApiConfig>(() => ({ baseUrl: raceApiUrl, jwtToken }), [raceApiUrl, jwtToken]);
 
   useTonWallet(); // keep provider active
+  const tonAddress = useTonAddress();
+  const walletStorageScope = tonAddress ? normalizeTonAddress(tonAddress) : 'disconnected';
+  const persistedStorageKey = `${LS_KEY}:${walletStorageScope}`;
+  const myContractsStorageKey = `${MY_CONTRACTS_KEY}:${walletStorageScope}`;
 
   const [theme, setTheme] = useLocalStorageState<'light' | 'dark'>(THEME_KEY, 'dark');
   const [page, setPageState] = useState<Page>(pageFromHash().page);
   const [tokenDetail, setTokenDetail] = useState<string | null>(null);
 
-  // Contracts — used by My Agents page (will be wired up)
-  const [, setAllContracts] = useState<ContractListItem[] | null>(null);
+  // Contract management state
+  const [tab, setTab] = useState<TabKey>({ kind: 'deploy' });
+
+  const createInitialPersisted = useCallback((): Persisted => {
+    const kp = generateAgentKeypair();
+    return {
+      prompt: '',
+      deployAmountTon: '1',
+      topupAmountTon: '5',
+      walletId: 0,
+      agentPublicKeyHex: kp.publicKeyHex,
+      agentSecretKeyHex: kp.secretKeyHex,
+      contractAddress: null,
+      raceContractId: null,
+    };
+  }, []);
+
+  const [persisted, setPersisted] = useLocalStorageState<Persisted>(persistedStorageKey, createInitialPersisted);
+  const [myContractIds, setMyContractIds] = useLocalStorageState<string[]>(myContractsStorageKey, []);
+  const [allContracts, setAllContracts] = useState<ContractListItem[] | null>(null);
+  const [contractsBusy, setContractsBusy] = useState(false);
+
+  const walletRawAddress = useMemo(
+    () => (tonAddress ? normalizeTonAddress(tonAddress) : null),
+    [tonAddress],
+  );
+
+  // Filter to user's contracts
+  const contracts = useMemo(() => {
+    if (!allContracts) return null;
+    const idSet = new Set(myContractIds);
+    return allContracts.filter((c) => {
+      if (idSet.has(c.id)) return true;
+      if (walletRawAddress && c.owner_address) {
+        return normalizeTonAddress(c.owner_address) === walletRawAddress;
+      }
+      return false;
+    });
+  }, [allContracts, myContractIds, walletRawAddress]);
+
+  const activeContract = useMemo(
+    () => (tab.kind === 'contract' ? allContracts?.find((c) => c.id === tab.contractId) : null),
+    [allContracts, tab],
+  );
+
+  // If contract not in local list, fetch it
+  useEffect(() => {
+    if (tab.kind !== 'contract') return;
+    if (activeContract) return;
+    if (allContracts == null) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const detail = await getRaceContractDetail(raceCfg, tab.contractId);
+        if (cancelled) return;
+        const item: ContractListItem = {
+          id: detail.id,
+          address: detail.address,
+          name: detail.name,
+          owner_address: detail.owner_address,
+          is_active: detail.is_active,
+          status: detail.status,
+          ai_model: detail.ai_model,
+          ai_provider: detail.ai_provider,
+          created_at: detail.created_at,
+          updated_at: detail.updated_at,
+        };
+        setAllContracts((prev) => (prev ? [...prev, item] : [item]));
+      } catch { /* not found */ }
+    })();
+    return () => { cancelled = true; };
+  }, [tab, activeContract, allContracts, raceCfg]);
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark');
@@ -96,16 +176,82 @@ export default function V5App() {
   }, []);
 
   // Fetch contracts
-  useEffect(() => {
-    (async () => {
-      try {
-        let all = await listRaceContracts(raceCfg, 'active,paused,deploying');
-        if (all.length === 0) all = await listContractsFromLeaderboard(raceCfg);
-        all.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-        setAllContracts(all);
-      } catch { /* ignore */ }
-    })();
+  const refreshContracts = useCallback(async () => {
+    try {
+      setContractsBusy(true);
+      let all = await listRaceContracts(raceCfg, 'active,paused,deploying');
+      if (all.length === 0) all = await listContractsFromLeaderboard(raceCfg);
+      all.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      setAllContracts(all);
+    } catch { /* ignore */ }
+    finally { setContractsBusy(false); }
   }, [raceCfg]);
+
+  useEffect(() => {
+    void refreshContracts();
+  }, [refreshContracts]);
+
+  // Tab change: reset persisted when switching to deploy
+  const handleTabChange = useCallback(
+    (newTab: TabKey) => {
+      if (newTab.kind === 'deploy') {
+        setPersisted((prev) => {
+          if (prev.raceContractId) {
+            const kp = generateAgentKeypair();
+            return {
+              ...prev,
+              agentPublicKeyHex: kp.publicKeyHex,
+              agentSecretKeyHex: kp.secretKeyHex,
+              contractAddress: null,
+              raceContractId: null,
+              pendingDeploy: null,
+              agentName: '',
+            };
+          }
+          return prev;
+        });
+      }
+      setTab(newTab);
+    },
+    [setPersisted],
+  );
+
+  const handleContractRegistered = useCallback(
+    async (contractId: string) => {
+      setMyContractIds((prev) => (prev.includes(contractId) ? prev : [...prev, contractId]));
+      await refreshContracts();
+      setTab({ kind: 'contract', contractId });
+    },
+    [refreshContracts, setMyContractIds],
+  );
+
+  const handleContractDeleted = useCallback(
+    async (contractId: string) => {
+      setMyContractIds((prev) => prev.filter((id) => id !== contractId));
+      await refreshContracts();
+      setTab({ kind: 'deploy' });
+    },
+    [refreshContracts, setMyContractIds],
+  );
+
+  const handleContractStatusChanged = useCallback(
+    (contractId: string, newIsActive: boolean) => {
+      setAllContracts((prev) =>
+        prev?.map((c) => (c.id === contractId ? { ...c, is_active: newIsActive, status: newIsActive ? 'active' : 'paused' } : c)) ?? null,
+      );
+    },
+    [],
+  );
+
+  const handleRenameContract = useCallback(
+    async (contractId: string, newName: string) => {
+      await updateRaceContract(raceCfg, contractId, { name: newName });
+      setAllContracts((prev) =>
+        prev ? prev.map((c) => (c.id === contractId ? { ...c, name: newName } : c)) : prev,
+      );
+    },
+    [raceCfg],
+  );
 
   return (
     <div id="v5-root" className={cn('min-h-screen bg-white text-neutral-900 dark:bg-neutral-950 dark:text-neutral-50')}>
@@ -178,13 +324,40 @@ export default function V5App() {
             )
         )}
         {page === 'stats' && <StatsPage raceCfg={raceCfg} />}
-        {page === 'trader' && <StubPage name="My Agents" />}
+        {page === 'trader' && (
+          <div className="flex flex-col gap-4">
+            <ContractTabBar
+              contracts={contracts}
+              activeTab={tab}
+              onTabChange={handleTabChange}
+              loading={contractsBusy}
+              onRename={handleRenameContract}
+            />
+            {tab.kind === 'deploy' && (
+              <DeployPanel
+                persisted={persisted}
+                setPersisted={setPersisted}
+                raceCfg={raceCfg}
+                onContractRegistered={(id) => void handleContractRegistered(id)}
+              />
+            )}
+            {tab.kind === 'contract' && activeContract && (
+              <ContractDetailPanel
+                contract={activeContract}
+                raceCfg={raceCfg}
+                onDeleted={(id) => void handleContractDeleted(id)}
+                onStatusChanged={handleContractStatusChanged}
+              />
+            )}
+          </div>
+        )}
         {page === 'leaderboard' && (
           <LeaderboardPage
             raceCfg={raceCfg}
             onSelectAgent={(contractId) => {
-              // Navigate to trader/agent detail when available
-              console.info('open agent', contractId);
+              setPageState('trader');
+              setTab({ kind: 'contract', contractId });
+              window.location.hash = 'trader';
             }}
           />
         )}
