@@ -67,7 +67,8 @@
 
 /* V3/V4 DaisyUI reset — undo component styles within these containers */
 #v3-root *,
-#v4-root * {
+#v4-root *,
+#v5-root * {
   /* Reset DaisyUI component class overrides */
   --tw-ring-color: initial;
   --tw-ring-offset-color: initial;
@@ -75,14 +76,19 @@
 
 #v3-root .btn,
 #v4-root .btn,
+#v5-root .btn,
 #v3-root .card,
 #v4-root .card,
+#v5-root .card,
 #v3-root .badge,
 #v4-root .badge,
+#v5-root .badge,
 #v3-root .table,
 #v4-root .table,
+#v5-root .table,
 #v3-root .input,
-#v4-root .input {
+#v4-root .input,
+#v5-root .input {
   all: revert;
   box-sizing: border-box;
 }

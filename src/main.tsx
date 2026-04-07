@@ -25,16 +25,22 @@ const V3App = lazy(() => import('./v3/App.tsx'));
 
 // Lazy-load V4 app (shadcn/ui-style clean homepage)
 const V4App = lazy(() => import('./v4/App.tsx'));
+const V5App = lazy(() => import('./v5/App.tsx'));
 
 const pathname = window.location.pathname;
 const isV2 = pathname.startsWith('/v2');
 const isV3 = pathname.startsWith('/v3');
 const isV4 = pathname.startsWith('/v4');
+const isV5 = pathname.startsWith('/v5');
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <TonConnectUIProvider manifestUrl={manifestUrl}>
-      {isV4 ? (
+      {isV5 ? (
+        <Suspense fallback={null}>
+          <V5App />
+        </Suspense>
+      ) : isV4 ? (
         <Suspense fallback={null}>
           <V4App />
         </Suspense>
