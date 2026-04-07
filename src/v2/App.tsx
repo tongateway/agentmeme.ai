@@ -4,6 +4,7 @@ import { Box, Heading, Text } from '@chakra-ui/react';
 import { system } from './theme';
 import { Layout } from './components/Layout';
 import { HomePage } from './components/HomePage';
+import { AgentHubPage } from './components/AgentHubPage';
 import { primeKnownPrices, type PublicApiConfig } from '../lib/api';
 import { useLocalStorageState } from '../lib/storage';
 import { useAuth } from '../lib/useAuth';
@@ -108,7 +109,16 @@ function V2AppInner() {
           />
         );
       case 'agent-hub':
-        return <StubPage title="Agent Hub" />;
+        return (
+          <AgentHubPage
+            raceCfg={raceCfg}
+            onSelectToken={(symbol) => {
+              console.info('select token:', symbol);
+            }}
+            onDeploy={() => setPage('trader')}
+            onViewLeaderboard={() => setPage('leaderboard')}
+          />
+        );
       case 'stats':
         return <StubPage title="Order Book" />;
       case 'trader':
