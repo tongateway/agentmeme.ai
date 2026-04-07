@@ -4,6 +4,9 @@ import { Bot, BarChart3, ExternalLink } from 'lucide-react';
 import { HomePage } from './HomePage';
 import { AgentHubPage } from './components/AgentHubPage';
 import { TokenOpinionPage } from './components/TokenOpinionPage';
+import { StatsPage } from './components/StatsPage';
+import { LeaderboardPage } from './components/LeaderboardPage';
+import { DocsPage } from './components/DocsPage';
 import { type PublicApiConfig } from '../lib/api';
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
@@ -12,11 +15,14 @@ const raceCfg: PublicApiConfig = {
   baseUrl: BASE_URL,
 };
 
-type Page = 'home' | 'agent-hub' | 'token';
+type Page = 'home' | 'agent-hub' | 'token' | 'stats' | 'leaderboard' | 'docs';
 
 function getInitialPage(): { page: Page; token: string | null } {
   const hash = window.location.hash.replace(/^#\/?/, '');
   if (hash === 'agent-hub') return { page: 'agent-hub', token: null };
+  if (hash === 'stats') return { page: 'stats', token: null };
+  if (hash === 'leaderboard') return { page: 'leaderboard', token: null };
+  if (hash === 'docs') return { page: 'docs', token: null };
   const tokenMatch = hash.match(/^token\/(.+)$/);
   if (tokenMatch) return { page: 'token', token: decodeURIComponent(tokenMatch[1]) };
   return { page: 'home', token: null };
@@ -55,6 +61,12 @@ export default function V3App() {
       window.location.hash = '';
     } else if (newPage === 'agent-hub') {
       window.location.hash = 'agent-hub';
+    } else if (newPage === 'stats') {
+      window.location.hash = 'stats';
+    } else if (newPage === 'leaderboard') {
+      window.location.hash = 'leaderboard';
+    } else if (newPage === 'docs') {
+      window.location.hash = 'docs';
     } else if (newPage === 'token' && token) {
       window.location.hash = `token/${encodeURIComponent(token)}`;
     }
@@ -121,10 +133,10 @@ export default function V3App() {
             >
               Agent Hub
             </button>
-            <NavLink href="/v2#/leaderboard">Leaderboard</NavLink>
+            <NavLink href="#leaderboard">Leaderboard</NavLink>
             <NavLink href="/v2#/trader">Tokens</NavLink>
-            <NavLink href="/v2#/stats">Stats</NavLink>
-            <NavLink href="/v2#/docs">Docs</NavLink>
+            <NavLink href="#stats">Stats</NavLink>
+            <NavLink href="#docs">Docs</NavLink>
           </div>
 
           {/* CTA */}
@@ -149,31 +161,47 @@ export default function V3App() {
 
       {/* Page content — padded for navbar */}
       <div className="pt-14">
-        <div className="mx-auto max-w-6xl px-4">
-          {page === 'home' && (
-            <HomePage
-              raceCfg={raceCfg}
-              onSelectToken={handleSelectToken}
-              onDeploy={handleDeploy}
-              onViewLeaderboard={handleViewLeaderboard}
-            />
-          )}
-          {page === 'agent-hub' && (
-            <AgentHubPage
-              raceCfg={raceCfg}
-              onSelectToken={handleSelectToken}
-              onDeploy={handleDeploy}
-              onViewLeaderboard={handleViewLeaderboard}
-            />
-          )}
-          {page === 'token' && selectedToken && (
-            <TokenOpinionPage
-              raceCfg={raceCfg}
-              symbol={selectedToken}
-              onBack={handleBackToHub}
-            />
-          )}
-        </div>
+        {(page === 'home' || page === 'agent-hub' || page === 'token') && (
+          <div className="mx-auto max-w-6xl px-4">
+            {page === 'home' && (
+              <HomePage
+                raceCfg={raceCfg}
+                onSelectToken={handleSelectToken}
+                onDeploy={handleDeploy}
+                onViewLeaderboard={handleViewLeaderboard}
+              />
+            )}
+            {page === 'agent-hub' && (
+              <AgentHubPage
+                raceCfg={raceCfg}
+                onSelectToken={handleSelectToken}
+                onDeploy={handleDeploy}
+                onViewLeaderboard={handleViewLeaderboard}
+              />
+            )}
+            {page === 'token' && selectedToken && (
+              <TokenOpinionPage
+                raceCfg={raceCfg}
+                symbol={selectedToken}
+                onBack={handleBackToHub}
+              />
+            )}
+          </div>
+        )}
+        {page === 'stats' && (
+          <StatsPage raceCfg={raceCfg} />
+        )}
+        {page === 'leaderboard' && (
+          <LeaderboardPage
+            raceCfg={raceCfg}
+            onOpenContract={(contractId) => {
+              window.location.href = `/v2#/agent/${contractId}`;
+            }}
+          />
+        )}
+        {page === 'docs' && (
+          <DocsPage />
+        )}
       </div>
 
       {/* ── Footer ──────────────────────────────────────────────── */}
@@ -184,7 +212,7 @@ export default function V3App() {
             AgntM — built on TON
           </div>
           <div className="flex gap-6 text-xs text-gray-600">
-            <a href="/v2#/docs" className="hover:text-gray-400">Docs</a>
+            <a href="#docs" className="hover:text-gray-400">Docs</a>
             <a href="https://github.com" className="hover:text-gray-400" target="_blank" rel="noopener noreferrer">GitHub</a>
             <a href="/v2" className="hover:text-gray-400">Classic UI (v2)</a>
           </div>
