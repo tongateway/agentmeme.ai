@@ -557,7 +557,7 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, ease: 'easeOut' }}
-        className="rounded-2xl border border-white/10 bg-gray-900/50 backdrop-blur-sm overflow-hidden"
+        className="rounded-2xl border border-neutral-800/50 bg-neutral-900/50 backdrop-blur-sm overflow-hidden"
       >
         {/* Header */}
         <div className="border-b border-white/5 px-6 py-5">
@@ -1303,7 +1303,7 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
                             onClick={() => { insertPromptVar(v); setVarsHelpOpen(false); }}
                           >
                             {`{${v.key}}`}
-                            {inPrompt && <Check className="inline h-3.5 w-3.5 ml-1 text-[#00C389]" />}
+                            {inPrompt && <Check className="inline h-3.5 w-3.5 ml-1 text-white" />}
                           </button>
                           {v.prompt_section && (
                             <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-white/5 text-gray-400">{v.prompt_section}</span>

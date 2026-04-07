@@ -114,7 +114,7 @@ async function fetchTonBalance(address: string): Promise<string> {
 
 type ChartPoint = { time: number; value: number };
 
-const CHART_GREEN = '#00C389';
+const CHART_GREEN = '#a3a3a3'; // neutral-400
 
 type TimeRange = '1h' | '6h' | '24h' | '7d';
 const TIME_RANGES: { key: TimeRange; label: string; ms: number }[] = [
@@ -156,7 +156,7 @@ function BalanceChart({ points }: { points: ChartPoint[] }) {
             </span>
             <span className={cn(
               'text-sm font-bold font-mono tabular-nums',
-              changePositive ? 'text-[#00C389]' : 'text-red-400',
+              changePositive ? 'text-emerald-400' : 'text-red-400',
             )}>
               {changePositive ? '+' : ''}{changePct.toFixed(2)}%
             </span>
@@ -170,8 +170,8 @@ function BalanceChart({ points }: { points: ChartPoint[] }) {
               className={cn(
                 'rounded-md px-3 py-1 text-xs font-medium transition-colors',
                 range === r.key
-                  ? 'bg-gray-800 text-white shadow-sm'
-                  : 'text-gray-500 hover:text-gray-300',
+                  ? 'bg-white/10 text-white shadow-sm'
+                  : 'text-neutral-500 hover:text-neutral-300',
               )}
               onClick={() => setRange(r.key)}
             >
@@ -689,12 +689,12 @@ export function ContractDetailPanel({ contract, raceCfg, onDeleted, onStatusChan
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-gray-900/50 border border-white/10 rounded-xl"
+        className="bg-neutral-900/50 border border-neutral-800/50 rounded-xl"
       >
         <div className="py-4 px-5">
           <div className="flex items-center gap-4 flex-wrap">
-            <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-[#00C389]/10 shrink-0">
-              <Bot className="h-5 w-5 text-[#00C389]" />
+            <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-neutral-800 shrink-0">
+              <Bot className="h-5 w-5 text-neutral-300" />
             </div>
             <div className="flex flex-col min-w-0">
               <div className="flex items-center gap-2">
@@ -707,8 +707,8 @@ export function ContractDetailPanel({ contract, raceCfg, onDeleted, onStatusChan
                   <span className={cn(
                     'text-[10px] px-1.5 py-0.5 rounded border',
                     isActive
-                      ? 'bg-[#00C389]/20 text-[#00C389] border-[#00C389]/30'
-                      : 'bg-gray-500/20 text-gray-400 border-gray-500/30',
+                      ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+                      : 'bg-neutral-500/20 text-neutral-400 border-neutral-500/30',
                   )}>
                     {isActive ? 'Active' : 'Paused'}
                   </span>
@@ -719,7 +719,7 @@ export function ContractDetailPanel({ contract, raceCfg, onDeleted, onStatusChan
                 <button
                   className={cn(
                     'inline-flex items-center justify-center h-6 w-6 rounded-md transition-colors',
-                    addrCopied ? 'text-[#00C389]' : 'text-gray-500 hover:text-white',
+                    addrCopied ? 'text-emerald-400' : 'text-gray-500 hover:text-white',
                   )}
                   onClick={() => {
                     void navigator.clipboard.writeText(contract.address);
@@ -745,7 +745,7 @@ export function ContractDetailPanel({ contract, raceCfg, onDeleted, onStatusChan
                   'inline-flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-lg border transition-colors',
                   isActive
                     ? 'border-white/10 text-gray-300 hover:text-white hover:bg-white/5'
-                    : 'bg-[#00C389] text-black border-[#00C389] hover:bg-[#00C389]/90',
+                    : 'bg-white text-black border-white hover:bg-neutral-200',
                 )}
                 onClick={() => void handleTogglePause()}
                 disabled={pauseBusy}
@@ -838,7 +838,7 @@ export function ContractDetailPanel({ contract, raceCfg, onDeleted, onStatusChan
             sub: modelProvider,
           },
           {
-            icon: <Wallet className="h-3.5 w-3.5 text-[#00C389]" />,
+            icon: <Wallet className="h-3.5 w-3.5 text-neutral-400" />,
             label: 'Balance',
             value: totalUsdBalance > 0 ? `$${totalUsdBalance.toFixed(2)}` : '$0.00',
             sub: 'USD equiv.',
@@ -850,7 +850,7 @@ export function ContractDetailPanel({ contract, raceCfg, onDeleted, onStatusChan
             sub: maxDec > 0 ? `${decPct}% used` : 'Unlimited',
           },
           {
-            icon: <ArrowUpRight className="h-3.5 w-3.5 text-[#00C389]" />,
+            icon: <ArrowUpRight className="h-3.5 w-3.5 text-neutral-400" />,
             label: 'Open Orders',
             value: String(openOrders),
             sub: `${closedOrders} closed`,
@@ -867,7 +867,7 @@ export function ContractDetailPanel({ contract, raceCfg, onDeleted, onStatusChan
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.05 }}
-            className="bg-gray-900/50 border border-white/10 rounded-xl py-3 px-4 space-y-1"
+            className="bg-neutral-900/50 border border-neutral-800/50 rounded-xl py-3 px-4 space-y-1"
           >
             <div className="flex items-center gap-1.5">
               {card.icon}
@@ -895,7 +895,7 @@ export function ContractDetailPanel({ contract, raceCfg, onDeleted, onStatusChan
             className={cn(
               'px-4 py-2 text-sm font-medium border-b-2 transition-colors -mb-px',
               detailTab === t
-                ? 'border-[#00C389] text-[#00C389]'
+                ? 'border-white text-white'
                 : 'border-transparent text-gray-500 hover:text-gray-300',
             )}
             onClick={() => setDetailTab(t)}
@@ -910,13 +910,13 @@ export function ContractDetailPanel({ contract, raceCfg, onDeleted, onStatusChan
       {detailTab === 'overview' && (
         <>
           {/* Balance Chart */}
-          <div className="bg-gray-900/50 border border-white/10 rounded-xl p-6">
+          <div className="bg-neutral-900/50 border border-neutral-800/50 rounded-xl p-6">
             <BalanceChart points={chartPoints} />
           </div>
 
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 items-start">
             {/* Left: Contract Details */}
-            <div className="bg-gray-900/50 border border-white/10 rounded-xl h-full">
+            <div className="bg-neutral-900/50 border border-neutral-800/50 rounded-xl h-full">
               <div className="px-5 pt-5 pb-3">
                 <h3 className="text-sm font-semibold text-white">Contract Details</h3>
               </div>
@@ -952,7 +952,7 @@ export function ContractDetailPanel({ contract, raceCfg, onDeleted, onStatusChan
                   <span className="text-sm text-gray-500">Explorer</span>
                   <div className="flex items-center gap-2 text-xs">
                     <a
-                      className="text-[#00C389] hover:underline underline-offset-4"
+                      className="text-neutral-300 hover:text-white hover:underline underline-offset-4"
                       href={explorerLink(contract.address)}
                       target="_blank"
                       rel="noreferrer"
@@ -961,7 +961,7 @@ export function ContractDetailPanel({ contract, raceCfg, onDeleted, onStatusChan
                     </a>
                     <span className="text-gray-600">|</span>
                     <a
-                      className="text-[#00C389] hover:underline underline-offset-4"
+                      className="text-neutral-300 hover:text-white hover:underline underline-offset-4"
                       href={tonscanLink(contract.address)}
                       target="_blank"
                       rel="noreferrer"
@@ -981,7 +981,7 @@ export function ContractDetailPanel({ contract, raceCfg, onDeleted, onStatusChan
                     {maxDec > 0 && (
                       <div className="w-16 h-2 bg-gray-800 rounded-full overflow-hidden">
                         <div
-                          className="h-full bg-[#00C389] rounded-full transition-all"
+                          className="h-full bg-neutral-400 rounded-full transition-all"
                           style={{ width: `${Math.min(100, decPct)}%` }}
                         />
                       </div>
@@ -994,7 +994,7 @@ export function ContractDetailPanel({ contract, raceCfg, onDeleted, onStatusChan
             {/* Right column */}
             <div className="flex flex-col gap-4">
               {/* Wallet card */}
-              <div className="bg-gray-900/50 border border-white/10 rounded-xl">
+              <div className="bg-neutral-900/50 border border-neutral-800/50 rounded-xl">
                 <div className="px-5 pt-5 pb-3">
                   <div className="flex items-center gap-2">
                     <Wallet className="h-4 w-4 text-gray-500" />
@@ -1014,7 +1014,7 @@ export function ContractDetailPanel({ contract, raceCfg, onDeleted, onStatusChan
                 <div className="px-5 pb-5 space-y-3">
                   {balancesLoading && tokenBalances.length === 0 ? (
                     <div className="flex justify-center py-2">
-                      <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-[#00C389] border-t-transparent" />
+                      <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-neutral-400 border-t-transparent" />
                     </div>
                   ) : tokenBalances.length === 0 ? (
                     <div className="text-xs text-gray-500 text-center py-1">No tokens found</div>
@@ -1078,7 +1078,7 @@ export function ContractDetailPanel({ contract, raceCfg, onDeleted, onStatusChan
               </div>
 
               {/* Quick Actions card */}
-              <div className="bg-gray-900/50 border border-white/10 rounded-xl flex-1">
+              <div className="bg-neutral-900/50 border border-neutral-800/50 rounded-xl flex-1">
                 <div className="px-5 pt-5 pb-3">
                   <h3 className="text-sm font-semibold text-white">Quick Actions</h3>
                 </div>
@@ -1091,8 +1091,8 @@ export function ContractDetailPanel({ contract, raceCfg, onDeleted, onStatusChan
                       className={cn(
                         'inline-flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-lg border transition-colors',
                         withdrawDone.has('close')
-                          ? 'bg-[#00C389]/20 text-[#00C389] border-[#00C389]/30'
-                          : 'border-white/10 text-gray-300 hover:text-white hover:bg-white/5',
+                          ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+                          : 'border-neutral-800 text-neutral-300 hover:text-white hover:bg-white/5',
                       )}
                       onClick={() => void handleCloseOrders()}
                       disabled={!!withdrawBusy || withdrawDone.has('close')}
@@ -1108,8 +1108,8 @@ export function ContractDetailPanel({ contract, raceCfg, onDeleted, onStatusChan
                       className={cn(
                         'inline-flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-lg border transition-colors',
                         withdrawDone.has('jetton') && withdrawDone.has('ton')
-                          ? 'bg-[#00C389]/20 text-[#00C389] border-[#00C389]/30'
-                          : 'border-white/10 text-gray-300 hover:text-white hover:bg-white/5',
+                          ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+                          : 'border-neutral-800 text-neutral-300 hover:text-white hover:bg-white/5',
                       )}
                       onClick={() => void handleWithdrawAll()}
                       disabled={!!withdrawBusy || (withdrawDone.has('jetton') && withdrawDone.has('ton'))}
@@ -1125,7 +1125,7 @@ export function ContractDetailPanel({ contract, raceCfg, onDeleted, onStatusChan
                       className={cn(
                         'inline-flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-lg border transition-colors',
                         revokeSuccess
-                          ? 'bg-[#00C389]/20 text-[#00C389] border-[#00C389]/30'
+                          ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
                           : 'bg-red-500/20 text-red-400 border-red-500/30 hover:bg-red-500/30',
                       )}
                       onClick={() => void handleRevokeAccess()}
@@ -1165,12 +1165,12 @@ export function ContractDetailPanel({ contract, raceCfg, onDeleted, onStatusChan
           {aiError ? (
             <div className="text-sm text-red-400">{aiError}</div>
           ) : aiResponses.length === 0 && !aiLoading ? (
-            <div className="bg-gray-900/50 border border-white/10 rounded-xl py-6 px-5">
+            <div className="bg-neutral-900/50 border border-neutral-800/50 rounded-xl py-6 px-5">
               <span className="text-sm text-gray-500">No AI responses yet.</span>
             </div>
           ) : aiLoading ? (
             <div className="flex justify-center py-4">
-              <span className="inline-block h-5 w-5 animate-spin rounded-full border-2 border-[#00C389] border-t-transparent" />
+              <span className="inline-block h-5 w-5 animate-spin rounded-full border-2 border-neutral-400 border-t-transparent" />
             </div>
           ) : (
             <AnimatePresence>
@@ -1179,7 +1179,7 @@ export function ContractDetailPanel({ contract, raceCfg, onDeleted, onStatusChan
                 const reason = pp?.reasoning as string | undefined;
                 const shareUrl = reason ? buildShareUrl(r.id) : null;
                 const actionColor =
-                  r.action === 'create_order' ? 'bg-[#00C389]/20 text-[#00C389] border-[#00C389]/30' :
+                  r.action === 'create_order' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' :
                   r.action === 'close_order' ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30' :
                   r.action === 'hold' ? 'bg-gray-500/20 text-gray-400 border-gray-500/30' :
                   'bg-white/5 text-gray-300 border-white/10';
@@ -1189,7 +1189,7 @@ export function ContractDetailPanel({ contract, raceCfg, onDeleted, onStatusChan
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: idx * 0.03 }}
-                    className="bg-gray-900/50 border border-white/10 rounded-xl border-l-4 border-l-white/5"
+                    className="bg-neutral-900/50 border border-neutral-800/50 rounded-xl border-l-4 border-l-white/5"
                   >
                     <div className="p-4 space-y-2">
                       <div className="flex items-start justify-between gap-2">
@@ -1218,7 +1218,7 @@ export function ContractDetailPanel({ contract, raceCfg, onDeleted, onStatusChan
                             className={cn(
                               'inline-flex items-center justify-center h-7 w-7 rounded-md transition-colors',
                               copiedId === r.id
-                                ? 'text-[#00C389]'
+                                ? 'text-emerald-400'
                                 : 'text-gray-500 hover:text-white hover:bg-white/5',
                             )}
                             title="Copy share link"
@@ -1276,7 +1276,7 @@ export function ContractDetailPanel({ contract, raceCfg, onDeleted, onStatusChan
                     type="button"
                     className={cn(
                       'inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-lg transition-colors hover:bg-white/5',
-                      promptCopied ? 'text-[#00C389]' : 'text-gray-400 hover:text-white',
+                      promptCopied ? 'text-emerald-400' : 'text-gray-400 hover:text-white',
                     )}
                     onClick={() => {
                       void navigator.clipboard.writeText(promptEditing ? promptDraft : prompt).then(() => {
@@ -1293,7 +1293,7 @@ export function ContractDetailPanel({ contract, raceCfg, onDeleted, onStatusChan
               <div className="px-6 pb-6">
                 {promptEditing ? (
                   <textarea
-                    className="w-full text-sm font-mono min-h-[40vh] max-h-[60vh] bg-gray-900 border border-white/10 text-white rounded-lg p-4 resize-y focus:outline-none focus:ring-1 focus:ring-[#00C389]/50"
+                    className="w-full text-sm font-mono min-h-[40vh] max-h-[60vh] bg-neutral-900 border border-neutral-800 text-white rounded-lg p-4 resize-y focus:outline-none focus:ring-1 focus:ring-neutral-700"
                     value={promptDraft}
                     onChange={(e) => setPromptDraft(e.target.value)}
                     disabled={promptSaving}
@@ -1314,7 +1314,7 @@ export function ContractDetailPanel({ contract, raceCfg, onDeleted, onStatusChan
                       </button>
                       <button
                         type="button"
-                        className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg bg-[#00C389] text-black hover:bg-[#00C389]/90 transition-colors disabled:opacity-50"
+                        className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg bg-white text-black hover:bg-neutral-200 transition-colors disabled:opacity-50"
                         onClick={() => void handleSavePrompt()}
                         disabled={promptSaving || !promptDraft.trim() || promptDraft.trim() === prompt}
                       >
