@@ -702,6 +702,17 @@ export function ContractDetailPanel({ contract, raceCfg, theme, onDeleted, onSta
       .sort((a, b) => a.time - b.time);
   }, [aiResponses]);
 
+  // Check if agent was stopped by AI (action=stop)
+  const stopResponse = useMemo(() => {
+    return aiResponses.find((r) => r.action === 'stop') ?? null;
+  }, [aiResponses]);
+  const stopReason = stopResponse?.parsed_params
+    ? ((stopResponse.parsed_params as Record<string, unknown>).human_opinion as string)
+      ?? ((stopResponse.parsed_params as Record<string, unknown>).reasoning as string)
+      ?? ((stopResponse.parsed_params as Record<string, unknown>).short_reason as string)
+      ?? null
+    : null;
+
   const usedDec = contract.used_decisions ?? 0;
   const maxDec = contract.max_decisions ?? 0;
   const decPct = maxDec > 0 ? Math.round((usedDec / maxDec) * 100) : 0;
@@ -818,6 +829,19 @@ export function ContractDetailPanel({ contract, raceCfg, theme, onDeleted, onSta
           )}
         </div>
       </div>
+
+      {/* Stop reason banner */}
+      {stopReason && (
+        <div className="card bg-error/10 border border-error/20 shadow-sm">
+          <div className="card-body p-3 flex-row items-start gap-2">
+            <AlertTriangle className="h-4 w-4 text-error mt-0.5 shrink-0" />
+            <div>
+              <div className="text-xs font-semibold text-error">Agent Stopped</div>
+              <div className="text-xs opacity-70 mt-0.5">{stopReason}</div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ===== 2. Five Stat Cards ===== */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
