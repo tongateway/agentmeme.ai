@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Zap } from 'lucide-react';
 import {
   getTokenPredictionAccuracy,
   type TokenOpinionSummary,
   type TokenPredictionAccuracy,
   type PublicApiConfig,
-} from '../../lib/api';
-import { cn } from '../utils/cn';
+} from '@/lib/api';
+import { Zap } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 type PredictionMarketProps = {
   raceCfg: PublicApiConfig;
@@ -34,19 +34,24 @@ export function PredictionMarket({ raceCfg, stats }: PredictionMarketProps) {
     stats.bullish_pct > stats.bearish_pct
       ? 'UP'
       : stats.bearish_pct > stats.bullish_pct
-      ? 'DOWN'
-      : null;
+        ? 'DOWN'
+        : null;
   const conviction = (probability / 100) * stats.avg_confidence * 100;
 
-  let accuracyColor = 'text-gray-500';
+  let accuracyColor = 'text-gray-400';
+  let accuracyBg = 'bg-gray-800';
   if (accuracy) {
-    if (accuracy.accuracy_pct > 60) accuracyColor = 'text-[#00C389]';
-    else if (accuracy.accuracy_pct >= 40) accuracyColor = 'text-yellow-400';
-    else accuracyColor = 'text-red-400';
+    if (accuracy.accuracy_pct > 60) {
+      accuracyColor = 'text-[#00C389]';
+      accuracyBg = 'bg-[#00C389]/10';
+    } else if (accuracy.accuracy_pct >= 40) {
+      accuracyColor = 'text-amber-400';
+      accuracyBg = 'bg-amber-500/10';
+    } else {
+      accuracyColor = 'text-red-400';
+      accuracyBg = 'bg-red-500/10';
+    }
   }
-
-  const directionColor = direction === 'UP' ? 'text-[#00C389]' : 'text-red-400';
-  const barColor = direction === 'UP' ? 'bg-[#00C389]' : 'bg-red-500';
 
   return (
     <div className="flex flex-col gap-2">
@@ -54,43 +59,81 @@ export function PredictionMarket({ raceCfg, stats }: PredictionMarketProps) {
         Prediction Market
       </span>
 
-      <div className="rounded-xl border border-white/5 bg-gray-800/60 p-3 flex flex-col gap-2">
+      {/* Conviction card */}
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+        className="rounded-xl border border-white/10 bg-gray-900/50 p-3 flex flex-col gap-2"
+      >
         {direction ? (
           <>
             <div className="flex items-center gap-2">
-              <Zap className="h-4 w-4 text-yellow-400" />
+              <Zap className="h-4 w-4 text-amber-400" />
               <span className="text-sm font-semibold text-white">{stats.token_symbol} Price Direction</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className={cn('text-xs', directionColor)}>Conviction {direction}</span>
-              <span className={cn('font-mono text-sm font-bold tabular-nums', directionColor)}>
+              <span
+                className={
+                  direction === 'UP'
+                    ? 'text-xs text-[#00C389]'
+                    : 'text-xs text-red-400'
+                }
+              >
+                Conviction {direction}
+              </span>
+              <span
+                className={
+                  direction === 'UP'
+                    ? 'font-mono text-sm font-bold tabular-nums text-[#00C389]'
+                    : 'font-mono text-sm font-bold tabular-nums text-red-400'
+                }
+              >
                 {conviction.toFixed(0)}%
               </span>
             </div>
-            <div className="h-2 rounded-full overflow-hidden bg-gray-700">
-              <div className={cn('h-full rounded-full', barColor)} style={{ width: `${conviction}%` }} />
+            {/* Progress bar */}
+            <div className="flex h-2 rounded-full overflow-hidden bg-black/50">
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{ width: `${conviction}%` }}
+                transition={{ duration: 0.6, ease: 'easeOut' }}
+                className={
+                  direction === 'UP'
+                    ? 'bg-[#00C389] rounded-full'
+                    : 'bg-red-500 rounded-full'
+                }
+              />
             </div>
           </>
         ) : (
-          <p className="text-xs text-gray-500">No clear directional consensus</p>
+          <p className="text-xs text-gray-400">No clear directional consensus</p>
         )}
-      </div>
+      </motion.div>
 
+      {/* Historical Accuracy */}
       {accuracy && accuracy.total_predictions > 0 && (
-        <div className="rounded-xl border border-white/5 bg-gray-800/60 p-3 flex flex-col gap-1">
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.1 }}
+          className="rounded-xl border border-white/10 bg-gray-900/50 p-3 flex flex-col gap-1"
+        >
           <div className="flex items-center justify-between">
-            <span className="text-[11px] uppercase tracking-wider text-gray-600">Accuracy</span>
-            <span className={cn('font-mono text-sm font-bold tabular-nums', accuracyColor)}>
+            <span className="text-[11px] uppercase tracking-wider text-gray-500">Accuracy</span>
+            <span className={`font-mono text-sm font-bold tabular-nums rounded-md px-2 py-0.5 ${accuracyColor} ${accuracyBg}`}>
               {accuracy.accuracy_pct.toFixed(0)}%
             </span>
           </div>
-          <span className="text-[10px] text-gray-600">
+          <span className="text-[10px] text-gray-500">
             {accuracy.correct_predictions} of {accuracy.total_predictions} calls correct
           </span>
           {accuracy.streak > 1 && (
-            <span className="text-[10px] text-gray-600">On a {accuracy.streak}-call streak</span>
+            <span className="text-[10px] text-gray-500">
+              On a {accuracy.streak}-call streak
+            </span>
           )}
-        </div>
+        </motion.div>
       )}
     </div>
   );

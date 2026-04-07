@@ -1,12 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import {
-  createChart,
-  CandlestickSeries,
-  HistogramSeries,
-  type IChartApi,
-  type UTCTimestamp,
-} from 'lightweight-charts';
-import { getCandles, type CandleInterval, type PublicApiConfig } from '../../lib/api';
+import { createChart, CandlestickSeries, HistogramSeries, type IChartApi, type UTCTimestamp } from 'lightweight-charts';
+import { getCandles, type CandleInterval, type PublicApiConfig } from '@/lib/api';
 import { cn } from '../utils/cn';
 
 type CandlestickChartProps = {
@@ -40,19 +34,19 @@ export function CandlestickChart({ raceCfg, fromSymbol, toSymbol }: CandlestickC
       height: 350,
       layout: {
         background: { color: 'transparent' },
-        textColor: 'rgba(255,255,255,0.4)',
+        textColor: 'rgba(255,255,255,0.5)',
       },
       grid: {
-        vertLines: { color: 'rgba(255,255,255,0.04)' },
-        horzLines: { color: 'rgba(255,255,255,0.04)' },
+        vertLines: { color: 'rgba(255,255,255,0.05)' },
+        horzLines: { color: 'rgba(255,255,255,0.05)' },
       },
       timeScale: {
         timeVisible: true,
         secondsVisible: false,
-        borderColor: 'rgba(255,255,255,0.08)',
+        borderColor: 'rgba(255,255,255,0.1)',
       },
       rightPriceScale: {
-        borderColor: 'rgba(255,255,255,0.08)',
+        borderColor: 'rgba(255,255,255,0.1)',
       },
       crosshair: {
         mode: 0,
@@ -94,11 +88,11 @@ export function CandlestickChart({ raceCfg, fromSymbol, toSymbol }: CandlestickC
 
         const candleSeries = chart.addSeries(CandlestickSeries, {
           upColor: '#00C389',
-          downColor: '#FF5353',
+          downColor: '#ef4444',
           borderUpColor: '#00C389',
-          borderDownColor: '#FF5353',
+          borderDownColor: '#ef4444',
           wickUpColor: '#00C389',
-          wickDownColor: '#FF5353',
+          wickDownColor: '#ef4444',
         });
 
         candleSeries.setData(
@@ -112,7 +106,7 @@ export function CandlestickChart({ raceCfg, fromSymbol, toSymbol }: CandlestickC
         );
 
         const volumeSeries = chart.addSeries(HistogramSeries, {
-          color: '#26a69a80',
+          color: '#00C38940',
           priceFormat: { type: 'volume' },
           priceScaleId: '',
         });
@@ -125,7 +119,7 @@ export function CandlestickChart({ raceCfg, fromSymbol, toSymbol }: CandlestickC
           candles.map((c) => ({
             time: c.t as UTCTimestamp,
             value: c.v,
-            color: c.c >= c.o ? '#00C38940' : '#FF535340',
+            color: c.c >= c.o ? '#00C38940' : '#ef444440',
           })),
         );
 
@@ -154,58 +148,62 @@ export function CandlestickChart({ raceCfg, fromSymbol, toSymbol }: CandlestickC
   }, [raceCfg, fromSymbol, toSymbol, interval, buildChart]);
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex items-center justify-between">
-        <span className="text-xs font-semibold text-gray-500">
-          {fromSymbol}/{toSymbol} Price Chart
-        </span>
-        <div className="flex gap-0.5 rounded-lg bg-gray-800 p-0.5">
-          {INTERVALS.map((i) => (
-            <button
-              key={i}
-              type="button"
-              onClick={() => setInterval(i)}
-              className={cn(
-                'rounded-md px-2.5 py-1 text-[11px] font-semibold transition-colors',
-                interval === i
-                  ? 'bg-[#00C389] text-black'
-                  : 'text-gray-400 hover:text-white',
-              )}
-            >
-              {i}
-            </button>
-          ))}
+    <div className="overflow-hidden rounded-xl border border-white/10 bg-gray-900/50">
+      <div className="p-4 flex flex-col gap-3">
+        {/* Header with interval selector */}
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+            {fromSymbol}/{toSymbol} Price Chart
+          </span>
+          <div className="flex gap-0.5 rounded-lg bg-black/50 border border-white/5 p-0.5">
+            {INTERVALS.map((i) => (
+              <button
+                key={i}
+                type="button"
+                onClick={() => setInterval(i)}
+                className={cn(
+                  'h-6 px-2 text-xs rounded-md font-medium transition-all',
+                  interval === i
+                    ? 'bg-[#00C389] text-black shadow-sm'
+                    : 'text-gray-400 hover:text-white',
+                )}
+              >
+                {i}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
 
-      <div style={{ position: 'relative', height: 350 }}>
-        <div ref={containerRef} style={{ height: 350 }} />
-        {loading && (
-          <div
-            style={{
-              position: 'absolute',
-              inset: 0,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <div className="h-5 w-5 animate-spin rounded-full border-2 border-[#00C389] border-t-transparent" />
-          </div>
-        )}
-        {!loading && error && (
-          <div
-            style={{
-              position: 'absolute',
-              inset: 0,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <span className="text-sm text-gray-500">{error}</span>
-          </div>
-        )}
+        {/* Chart area */}
+        <div style={{ position: 'relative', height: 350 }}>
+          <div ref={containerRef} style={{ height: 350 }} />
+          {loading && (
+            <div
+              style={{
+                position: 'absolute',
+                inset: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <div className="h-6 w-6 animate-spin rounded-full border-2 border-[#00C389] border-t-transparent" />
+            </div>
+          )}
+          {!loading && error && (
+            <div
+              style={{
+                position: 'absolute',
+                inset: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <span className="text-sm text-gray-400">{error}</span>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
