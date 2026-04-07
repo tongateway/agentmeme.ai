@@ -32,15 +32,17 @@ export type HomePageProps = {
   onViewLeaderboard: () => void;
 };
 
-function formatPrice(price: number): string {
-  if (price >= 1) return `$${price.toFixed(2)}`;
-  if (price >= 0.01) return `$${price.toFixed(4)}`;
-  return `$${price.toFixed(6)}`;
+function formatPrice(price: number | null | undefined): string {
+  const p = price ?? 0;
+  if (p >= 1) return `$${p.toFixed(2)}`;
+  if (p >= 0.01) return `$${p.toFixed(4)}`;
+  return `$${p.toFixed(6)}`;
 }
 
-function formatChange(change: number): string {
-  const sign = change >= 0 ? '+' : '';
-  return `${sign}${change.toFixed(2)}%`;
+function formatChange(change: number | null | undefined): string {
+  const c = change ?? 0;
+  const sign = c >= 0 ? '+' : '';
+  return `${sign}${c.toFixed(2)}%`;
 }
 
 function consensusBadgeVariant(consensus: string): 'bullish' | 'bearish' | 'neutral' {
