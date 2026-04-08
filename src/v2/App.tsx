@@ -5,14 +5,7 @@ import { LeaderboardPage } from './components/pages/LeaderboardPage';
 import { AgentHubPage } from './components/pages/AgentHubPage';
 import { StatsPage } from './components/pages/StatsPage';
 import { DeployPage } from './components/pages/DeployPage';
-
-function PlaceholderPage({ name }: { name: string }) {
-  return (
-    <div className="flex items-center justify-center min-h-[60vh] text-xl text-muted-foreground">
-      {name} — coming soon
-    </div>
-  );
-}
+import { ContractDetailPage } from './components/pages/ContractDetailPage';
 
 const router = createBrowserRouter(
   [
@@ -27,7 +20,7 @@ const router = createBrowserRouter(
         { path: 'agent-hub', element: <AgentHubPage /> },
         { path: 'agent-hub/:token', element: <AgentHubPage /> },
         { path: 'trader/deploy', element: <DeployPage /> },
-        { path: 'trader/:id', element: <PlaceholderPage name="Contract Detail" /> },
+        { path: 'trader/:id', element: <ContractDetailPage /> },
       ],
     },
   ],
