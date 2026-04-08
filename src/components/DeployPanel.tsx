@@ -367,6 +367,138 @@ type DeployPanelProps = {
   onContractRegistered?: (contractId: string) => void;
 };
 
+function TopupJettonForm({
+  agentAddress,
+  baseToken,
+  quoteToken,
+  raceCfg,
+  tonAddress,
+  tonConnectUI,
+  isConnected,
+}: {
+  agentAddress: string;
+  baseToken: string;
+  quoteToken: string | null;
+  raceCfg: PublicApiConfig;
+  tonAddress: string;
+  tonConnectUI: ReturnType<typeof useTonConnectUI>[0];
+  isConnected: boolean;
+}) {
+  const [baseAmount, setBaseAmount] = useState('0');
+  const [quoteAmount, setQuoteAmount] = useState('0');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const [done, setDone] = useState(false);
+
+  const handleTopup = useCallback(async () => {
+    setErr(null);
+    if (!isConnected || !tonAddress) { setErr('Connect wallet first.'); return; }
+    const bAmt = parseFloat(baseAmount) || 0;
+    const qAmt = parseFloat(quoteAmount) || 0;
+    if (bAmt <= 0 && qAmt <= 0) { setErr('Enter an amount to send.'); return; }
+
+    try {
+      setBusy(true);
+      const tokens = await getRaceTokens(raceCfg);
+      const tokenMap = new Map<string, RaceToken>();
+      for (const t of tokens) tokenMap.set(t.symbol.toUpperCase(), t);
+
+      const destination = Address.parse(agentAddress);
+      const owner = Address.parse(tonAddress);
+      const messages: { address: string; amount: string; payload?: string }[] = [];
+
+      const addMsg = async (symbol: string, amount: number) => {
+        const info = tokenMap.get(symbol.toUpperCase());
+        if (!info) throw new Error(`Token ${symbol} not found`);
+        const nano = BigInt(Math.round(amount * 10 ** info.decimals));
+        if (nano <= 0n) return;
+        const jettonWallet = await resolveJettonWallet(tonAddress, info.address);
+        const payload = buildJettonTransferBody({
+          amount: nano,
+          destination,
+          responseDestination: owner,
+          forwardTonAmount: 1n,
+        });
+        messages.push({
+          address: Address.parse(jettonWallet).toString({ bounceable: true }),
+          amount: nanoFromTon('0.065'),
+          payload,
+        });
+      };
+
+      if (bAmt > 0) await addMsg(baseToken, bAmt);
+      if (qAmt > 0 && quoteToken) await addMsg(quoteToken, qAmt);
+
+      await tonConnectUI.sendTransaction({
+        validUntil: Math.floor(Date.now() / 1000) + 10 * 60,
+        messages,
+      });
+      setDone(true);
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  }, [agentAddress, baseAmount, quoteAmount, baseToken, quoteToken, tonAddress, tonConnectUI, isConnected, raceCfg]);
+
+  if (done) {
+    return (
+      <div className="flex items-center gap-2 text-success text-xs py-1">
+        <Check className="h-3.5 w-3.5" />
+        Tokens sent to agent
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="text-[10px] uppercase tracking-wider font-semibold opacity-40">Send tokens to agent</div>
+      <div className="text-[10px] opacity-30 mono break-all">Agent: {agentAddress}</div>
+
+      {/* Base token */}
+      <div className="flex items-center gap-2">
+        <span className="h-2 w-2 rounded-full" style={{ background: TOKEN_COLORS[baseToken] ?? '#888' }} />
+        <span className="text-xs font-semibold w-14">{baseToken}</span>
+        <input
+          type="text"
+          className="input input-bordered input-sm flex-1 mono"
+          value={baseAmount}
+          onChange={(e) => setBaseAmount(e.target.value)}
+          inputMode="decimal"
+          placeholder="0"
+        />
+      </div>
+
+      {/* Quote token */}
+      {quoteToken && quoteToken !== baseToken && (
+        <div className="flex items-center gap-2">
+          <span className="h-2 w-2 rounded-full" style={{ background: TOKEN_COLORS[quoteToken] ?? '#888' }} />
+          <span className="text-xs font-semibold w-14">{quoteToken}</span>
+          <input
+            type="text"
+            className="input input-bordered input-sm flex-1 mono"
+            value={quoteAmount}
+            onChange={(e) => setQuoteAmount(e.target.value)}
+            inputMode="decimal"
+            placeholder="0"
+          />
+        </div>
+      )}
+
+      {err && <p className="text-xs text-error">{err}</p>}
+
+      <button
+        className={`btn btn-outline btn-sm w-full gap-1 ${busy ? 'btn-disabled' : ''}`}
+        onClick={() => void handleTopup()}
+        type="button"
+      >
+        {busy ? <span className="loading loading-spinner loading-xs" /> : <ArrowRight className="h-3.5 w-3.5" />}
+        {busy ? 'Sending...' : 'Send tokens'}
+      </button>
+    </div>
+  );
+}
+
 export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegistered }: DeployPanelProps) {
   const wallet = useTonWallet();
   const tonAddress = useTonAddress();
@@ -664,11 +796,6 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
 
       // Use non-bounceable address for deploy (contract doesn't exist yet)
       const deployAddress = Address.parse(deployData.mint_keeper_address).toString({ bounceable: false });
-      // Agent's final wallet address (not the MintKeeper) — jetton topups go here
-      const agentWalletAddr = persisted.contractAddress
-        ? Address.parse(persisted.contractAddress)
-        : Address.parse(deployData.mint_keeper_address);
-      const ownerAddr = Address.parse(tonAddress);
 
       const messages: { address: string; amount: string; stateInit?: string; payload?: string }[] = [
         {
@@ -678,40 +805,6 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
           payload: hexBocToBase64(deployData.body_boc_hex),
         },
       ];
-
-      // 3. Build jetton transfer messages for AGNT + quote token topups
-      const agntAmount = parseFloat(persisted.agntTopup || '0') || 0;
-      const quoteAmount = parseFloat(persisted.quoteTopup || '0') || 0;
-      const base = persisted.baseToken ?? 'AGNT';
-      const quote = persisted.quoteToken;
-
-      if (agntAmount > 0 || quoteAmount > 0) {
-        const tokens = await getRaceTokens(raceCfg);
-        const tokenMap = new Map<string, RaceToken>();
-        for (const t of tokens) tokenMap.set(t.symbol.toUpperCase(), t);
-
-        const addJettonMsg = async (symbol: string, amount: number) => {
-          const tokenInfo = tokenMap.get(symbol.toUpperCase());
-          if (!tokenInfo) throw new Error(`Token ${symbol} not found`);
-          const nano = BigInt(Math.round(amount * 10 ** tokenInfo.decimals));
-          if (nano <= 0n) return;
-          const jettonWallet = await resolveJettonWallet(tonAddress, tokenInfo.address);
-          const payload = buildJettonTransferBody({
-            amount: nano,
-            destination: agentWalletAddr,
-            responseDestination: ownerAddr,
-            forwardTonAmount: 1n, // minimal forward for notification
-          });
-          messages.push({
-            address: Address.parse(jettonWallet).toString({ bounceable: true }),
-            amount: nanoFromTon('0.065'), // gas for jetton transfer
-            payload,
-          });
-        };
-
-        if (agntAmount > 0) await addJettonMsg(base, agntAmount);
-        if (quoteAmount > 0 && quote) await addJettonMsg(quote, quoteAmount);
-      }
 
       await tonConnectUI.sendTransaction({
         validUntil: Math.floor(Date.now() / 1000) + 10 * 60,
@@ -1152,47 +1245,6 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
                 </div>
               </div>
 
-              {/* Base token topup */}
-              <div className="flex items-center justify-between px-4 py-3 border-t border-base-content/5">
-                <div className="flex items-center gap-2">
-                  <span className="h-2.5 w-2.5 rounded-full" style={{ background: TOKEN_COLORS[persisted.baseToken ?? 'AGNT'] ?? '#888' }} />
-                  <span className="text-sm font-semibold">{persisted.baseToken ?? 'AGNT'} topup</span>
-                  <span className="text-[10px] opacity-40">base capital</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <button className="btn btn-ghost btn-xs btn-square" type="button" onClick={() => {
-                    const cur = parseFloat(persisted.agntTopup || '0');
-                    if (cur > 0) setPersisted((p) => ({ ...p, agntTopup: String(Math.max(0, cur - 1)) }));
-                  }}><Minus className="h-3 w-3" /></button>
-                  <input type="text" className="input input-bordered input-sm w-16 text-center mono font-semibold" value={persisted.agntTopup ?? '0'} onChange={(e) => setPersisted((p) => ({ ...p, agntTopup: e.target.value }))} inputMode="decimal" />
-                  <button className="btn btn-ghost btn-xs btn-square" type="button" onClick={() => {
-                    const cur = parseFloat(persisted.agntTopup || '0');
-                    setPersisted((p) => ({ ...p, agntTopup: String(cur + 1) }));
-                  }}><Plus className="h-3 w-3" /></button>
-                </div>
-              </div>
-
-              {/* Quote token topup */}
-              {persisted.quoteToken && persisted.quoteToken !== 'AGNT' && (
-                <div className="flex items-center justify-between px-4 py-3 border-t border-base-content/5">
-                  <div className="flex items-center gap-2">
-                    <span className="h-2.5 w-2.5 rounded-full" style={{ background: TOKEN_COLORS[persisted.quoteToken] ?? '#888' }} />
-                    <span className="text-sm font-semibold">{persisted.quoteToken} topup</span>
-                    <span className="text-[10px] opacity-40">quote capital</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <button className="btn btn-ghost btn-xs btn-square" type="button" onClick={() => {
-                      const cur = parseFloat(persisted.quoteTopup || '0');
-                      if (cur > 0) setPersisted((p) => ({ ...p, quoteTopup: String(Math.max(0, cur - 1)) }));
-                    }}><Minus className="h-3 w-3" /></button>
-                    <input type="text" className="input input-bordered input-sm w-16 text-center mono font-semibold" value={persisted.quoteTopup ?? '0'} onChange={(e) => setPersisted((p) => ({ ...p, quoteTopup: e.target.value }))} inputMode="decimal" />
-                    <button className="btn btn-ghost btn-xs btn-square" type="button" onClick={() => {
-                      const cur = parseFloat(persisted.quoteTopup || '0');
-                      setPersisted((p) => ({ ...p, quoteTopup: String(cur + 1) }));
-                    }}><Plus className="h-3 w-3" /></button>
-                  </div>
-                </div>
-              )}
 
               {/* WHERE YOUR TON GOES */}
               <div className="border-t border-base-content/10 px-4 py-3 space-y-1.5">
@@ -1238,7 +1290,7 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
             {/* Footer note */}
             <div className="flex items-center gap-1.5 text-[10px] opacity-40">
               <Info className="h-3 w-3 shrink-0" />
-              Tokens transferred to agent&apos;s on-chain wallet for <strong className="opacity-70">{persisted.baseToken ?? 'AGNT'}/{persisted.quoteToken ?? '...'}</strong>. Signed via TonConnect.
+              TON is used for gas fees. Fund tokens after deploy. Signed via TonConnect.
             </div>
 
             {/* Validation checklist */}
@@ -1292,7 +1344,7 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
             </div>
           )}
 
-          {/* Top-up (collapsible, only after deploy) */}
+          {/* Top-up (shown after deploy) */}
           {persisted.contractAddress && (
             <>
               <div className="divider my-0 opacity-30" />
@@ -1304,33 +1356,46 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
                 >
                   <span className="inline-flex items-center gap-2">
                     <Wallet className="h-3.5 w-3.5" />
-                    Add more funds
+                    Fund agent with tokens
                   </span>
                   {showAdvanced ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
                 </button>
 
                 {showAdvanced && (
-                  <div className="mt-3 flex gap-2">
-                    <input
-                      id="topupAmount"
-                      type="text"
-                      className="input input-bordered input-sm flex-1"
-                      value={persisted.topupAmountTon}
-                      onChange={(e) => setPersisted((p) => ({ ...p, topupAmountTon: e.target.value }))}
-                      inputMode="decimal"
-                      placeholder="Amount in TON"
+                  <div className="mt-3 space-y-3">
+                    {/* TON top-up */}
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        className="input input-bordered input-sm flex-1"
+                        value={persisted.topupAmountTon}
+                        onChange={(e) => setPersisted((p) => ({ ...p, topupAmountTon: e.target.value }))}
+                        inputMode="decimal"
+                        placeholder="Amount in TON"
+                      />
+                      <button
+                        className={`btn btn-outline btn-sm ${busy ? 'btn-disabled' : ''}`}
+                        onClick={() => void topUpExistingContract()}
+                        type="button"
+                      >
+                        {busy === 'topup' ? (
+                          <span className="loading loading-spinner loading-xs" />
+                        ) : (
+                          'Send TON'
+                        )}
+                      </button>
+                    </div>
+
+                    {/* Jetton top-up */}
+                    <TopupJettonForm
+                      agentAddress={persisted.contractAddress}
+                      baseToken={persisted.baseToken ?? 'AGNT'}
+                      quoteToken={persisted.quoteToken ?? null}
+                      raceCfg={raceCfg}
+                      tonAddress={tonAddress}
+                      tonConnectUI={tonConnectUI}
+                      isConnected={isConnected}
                     />
-                    <button
-                      className={`btn btn-outline btn-sm ${busy ? 'btn-disabled' : ''}`}
-                      onClick={() => void topUpExistingContract()}
-                      type="button"
-                    >
-                      {busy === 'topup' ? (
-                        <span className="loading loading-spinner loading-xs" />
-                      ) : (
-                        'Send TON'
-                      )}
-                    </button>
                   </div>
                 )}
               </div>

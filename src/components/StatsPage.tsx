@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { BarChart3, ArrowDownUp, TrendingUp, ArrowUp, ArrowDown } from 'lucide-react';
+import { BarChart3, TrendingUp, ArrowUp, ArrowDown } from 'lucide-react';
 import {
   getDexCoinPrice,
   getDexOrderBook,
@@ -511,7 +511,6 @@ type StatsPageProps = {
 
 export function StatsPage({ raceCfg, pairSlug, onPairChange }: StatsPageProps) {
   const [selectedPairIdx, setSelectedPairIdx] = useState(() => pairIdxFromSlug(pairSlug ?? null));
-  const [reversed, setReversed] = useState(false);
   const [tokenPrices, setTokenPrices] = useState<Map<string, number>>(new Map());
 
   // Open4Dev order book state
@@ -523,19 +522,7 @@ export function StatsPage({ raceCfg, pairSlug, onPairChange }: StatsPageProps) {
   const [tradingPeriods, setTradingPeriods] = useState<TradingPeriodsState | null>(null);
 
   const pairs = DEFAULT_PAIRS;
-  const currentPair = pairs[selectedPairIdx] ?? pairs[0];
-
-  const effectivePair = useMemo(() => {
-    if (!reversed) return currentPair;
-    return {
-      ...currentPair,
-      label: `${currentPair.toSymbol} / ${currentPair.fromSymbol}`,
-      fromSymbol: currentPair.toSymbol,
-      toSymbol: currentPair.fromSymbol,
-      baseVault: currentPair.quoteVault,
-      quoteVault: currentPair.baseVault,
-    };
-  }, [currentPair, reversed]);
+  const effectivePair = pairs[selectedPairIdx] ?? pairs[0];
 
   const [refreshTick, setRefreshTick] = useState(0);
 
@@ -736,7 +723,6 @@ export function StatsPage({ raceCfg, pairSlug, onPairChange }: StatsPageProps) {
   const selectPair = useCallback(
     (idx: number) => {
       setSelectedPairIdx(idx);
-      setReversed(false);
       onPairChange?.(pairs[idx].slug);
     },
     [onPairChange, pairs],
@@ -764,7 +750,7 @@ export function StatsPage({ raceCfg, pairSlug, onPairChange }: StatsPageProps) {
 
       <div className="flex flex-wrap items-center gap-2">
         {pairs.map((p, idx) => {
-          const isSelected = selectedPairIdx === idx && !reversed;
+          const isSelected = selectedPairIdx === idx;
           return (
             <button
               key={p.slug}
@@ -778,15 +764,6 @@ export function StatsPage({ raceCfg, pairSlug, onPairChange }: StatsPageProps) {
             </button>
           );
         })}
-        <button
-          className="btn btn-ghost btn-sm gap-1 opacity-60 hover:opacity-100"
-          onClick={() => setReversed((r) => !r)}
-          type="button"
-          title="Reverse pair"
-        >
-          <ArrowDownUp className="h-3 w-3" />
-          Flip
-        </button>
       </div>
 
       {pairStats ? (
