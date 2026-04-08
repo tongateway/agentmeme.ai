@@ -90,9 +90,8 @@ function fmtUsd(n: number): string {
 /* ---------- normalized level ---------- */
 
 type NormalizedLevel = {
-  price: number; // display price
-  amount: number; // human-readable amount
-  crossTotal: number; // pre-computed total in the other currency
+  price: number; // fromSymbol per toSymbol
+  amount: number; // in fromSymbol
   orderCount: number;
 };
 
@@ -127,14 +126,11 @@ function normalizeOpen4DevBook(book: DexOrderBookResponse): NormalizedBook {
   };
   const shouldInvert = ref != null ? ref > 1 : true;
 
-  // total_value from parser uses the amount-side decimal factor, but it represents
-  // the opposite currency. Correct by applying the cross-decimal ratio.
   const asks: NormalizedLevel[] = book.asks
     .filter((a) => a.price_rate > 0)
     .map((a) => ({
       price: toDisplayPrice(a.price_rate),
       amount: a.total_amount,
-      crossTotal: a.total_value / decAdj,
       orderCount: a.order_count,
     }));
 
@@ -143,7 +139,6 @@ function normalizeOpen4DevBook(book: DexOrderBookResponse): NormalizedBook {
     .map((b) => ({
       price: toDisplayPrice(b.price_rate),
       amount: b.total_amount,
-      crossTotal: b.total_value * decAdj,
       orderCount: b.order_count,
     }));
 
@@ -277,7 +272,7 @@ function OrderBookTable({
                 {normalized.bids.map((lvl, i) => {
                   const pct = maxBidAmount > 0 ? (lvl.amount / maxBidAmount) * 100 : 0;
                   const usdVal = amountPriceUsd != null ? lvl.amount * amountPriceUsd : null;
-                  const fromTotal = lvl.crossTotal;
+                  const fromTotal = normalized.inverted ? lvl.amount * lvl.price : (lvl.price > 0 ? lvl.amount / lvl.price : 0);
                   return (
                     <div
                       key={`bid-${i}-${refreshTick}`}
@@ -330,7 +325,7 @@ function OrderBookTable({
                 {asksReversed.map((lvl, i) => {
                   const pct = maxAskAmount > 0 ? (lvl.amount / maxAskAmount) * 100 : 0;
                   const usdVal = fromPriceUsd != null ? lvl.amount * fromPriceUsd : null;
-                  const toTotal = lvl.crossTotal;
+                  const toTotal = normalized.inverted ? (lvl.price > 0 ? lvl.amount / lvl.price : 0) : lvl.amount * lvl.price;
                   return (
                     <div
                       key={`ask-${i}-${refreshTick}`}
