@@ -90,9 +90,8 @@ function fmtUsd(n: number): string {
 /* ---------- normalized level ---------- */
 
 type NormalizedLevel = {
-  price: number; // display price
-  amount: number; // in the amount-currency side
-  totalValue: number; // in the opposite currency (pre-calculated by API)
+  price: number; // fromSymbol per toSymbol
+  amount: number; // in fromSymbol
   orderCount: number;
 };
 
@@ -132,7 +131,6 @@ function normalizeOpen4DevBook(book: DexOrderBookResponse): NormalizedBook {
     .map((a) => ({
       price: toDisplayPrice(a.price_rate),
       amount: a.total_amount,
-      totalValue: a.total_value,
       orderCount: a.order_count,
     }));
 
@@ -141,7 +139,6 @@ function normalizeOpen4DevBook(book: DexOrderBookResponse): NormalizedBook {
     .map((b) => ({
       price: toDisplayPrice(b.price_rate),
       amount: b.total_amount,
-      totalValue: b.total_value,
       orderCount: b.order_count,
     }));
 
@@ -275,7 +272,7 @@ function OrderBookTable({
                 {normalized.bids.map((lvl, i) => {
                   const pct = maxBidAmount > 0 ? (lvl.amount / maxBidAmount) * 100 : 0;
                   const usdVal = amountPriceUsd != null ? lvl.amount * amountPriceUsd : null;
-                  const fromTotal = lvl.totalValue;
+                  const fromTotal = normalized.inverted ? lvl.amount * lvl.price : (lvl.price > 0 ? lvl.amount / lvl.price : 0);
                   return (
                     <div
                       key={`bid-${i}-${refreshTick}`}
@@ -328,7 +325,7 @@ function OrderBookTable({
                 {asksReversed.map((lvl, i) => {
                   const pct = maxAskAmount > 0 ? (lvl.amount / maxAskAmount) * 100 : 0;
                   const usdVal = fromPriceUsd != null ? lvl.amount * fromPriceUsd : null;
-                  const toTotal = lvl.totalValue;
+                  const toTotal = normalized.inverted ? (lvl.price > 0 ? lvl.amount / lvl.price : 0) : lvl.amount * lvl.price;
                   return (
                     <div
                       key={`ask-${i}-${refreshTick}`}
