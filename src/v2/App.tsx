@@ -4,6 +4,7 @@ import { HomePage } from './components/pages/HomePage';
 import { LeaderboardPage } from './components/pages/LeaderboardPage';
 import { AgentHubPage } from './components/pages/AgentHubPage';
 import { StatsPage } from './components/pages/StatsPage';
+import { DeployPage } from './components/pages/DeployPage';
 
 function PlaceholderPage({ name }: { name: string }) {
   return (
@@ -25,7 +26,7 @@ const router = createBrowserRouter(
         { path: 'stats/:pair', element: <StatsPage /> },
         { path: 'agent-hub', element: <AgentHubPage /> },
         { path: 'agent-hub/:token', element: <AgentHubPage /> },
-        { path: 'trader/deploy', element: <PlaceholderPage name="Deploy" /> },
+        { path: 'trader/deploy', element: <DeployPage /> },
         { path: 'trader/:id', element: <PlaceholderPage name="Contract Detail" /> },
       ],
     },
