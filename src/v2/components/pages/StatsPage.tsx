@@ -13,7 +13,7 @@ import {
   type ScannerStatsResponse,
   type ScannerStatsWindow,
 } from '@/lib/api';
-import { Card, CardContent } from '@/v2/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/v2/components/ui/card';
 import { Badge } from '@/v2/components/ui/badge';
 import { Button } from '@/v2/components/ui/button';
 import { Skeleton } from '@/v2/components/ui/skeleton';
@@ -441,34 +441,33 @@ function ActivityWindow({
   const volumeText = volume > 0 ? fmtUsd(volume) : '$0.00';
 
   return (
-    <div
-      className={`rounded-lg px-3 py-2.5 relative overflow-hidden border border-border/50 ${
-        highlight ? 'bg-muted/80' : 'bg-muted/50'
-      }`}
-    >
+    <Card className={`relative overflow-hidden ${highlight ? 'border-green-500/30' : ''}`}>
+      {/* Completion progress bar */}
       <div
-        className="absolute left-0 bottom-0 h-[2px] bg-green-500/50 transition-all duration-700"
+        className="absolute left-0 bottom-0 h-[3px] bg-gradient-to-r from-green-500/60 to-green-400/40 transition-all duration-700"
         style={{ width: `${completionPct}%` }}
       />
-      <div className="flex items-center justify-between mb-2">
-        <Badge variant="outline" className="text-[10px] px-1.5 py-0">{label}</Badge>
-        <TrendingUp className="h-3.5 w-3.5 text-muted-foreground/30" />
-      </div>
-      <div className="grid grid-cols-3 gap-2">
-        <div>
-          <div className="text-[9px] uppercase tracking-wide text-muted-foreground">Open</div>
-          <div className="text-sm font-semibold font-mono text-blue-400">{openOrders.toLocaleString()}</div>
+      <CardContent className="p-4">
+        <div className="flex items-center justify-between mb-3">
+          <Badge variant={highlight ? 'default' : 'outline'} className="text-xs font-bold px-2.5 py-0.5">{label}</Badge>
+          <TrendingUp className="h-4 w-4 text-muted-foreground/30" />
         </div>
-        <div>
-          <div className="text-[9px] uppercase tracking-wide text-muted-foreground">Filled</div>
-          <div className="text-sm font-semibold font-mono text-green-500">{filledOrders.toLocaleString()}</div>
+        <div className="grid grid-cols-3 gap-3">
+          <div>
+            <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Open</p>
+            <p className="text-lg font-bold font-mono tabular-nums text-blue-400">{openOrders.toLocaleString()}</p>
+          </div>
+          <div>
+            <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Filled</p>
+            <p className="text-lg font-bold font-mono tabular-nums text-green-500">{filledOrders.toLocaleString()}</p>
+          </div>
+          <div>
+            <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Volume</p>
+            <p className="text-lg font-bold font-mono tabular-nums text-foreground">{volumeText}</p>
+          </div>
         </div>
-        <div>
-          <div className="text-[9px] uppercase tracking-wide text-muted-foreground">Volume</div>
-          <div className="text-sm font-semibold font-mono text-foreground/75">{volumeText}</div>
-        </div>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -508,23 +507,27 @@ function PairActivityRow({ stats, fromSymbol, toSymbol, volumeUsdByWindow, tradi
   const tp30d = mergePeriod('30d') ?? mergePeriod('7d');
 
   return (
-    <div className="rounded-xl border border-border/50 bg-card/60 p-3">
-      <div className="flex items-center justify-between mb-2.5">
-        <div className="flex items-center gap-2">
-          <div className="w-1 h-3.5 rounded-full bg-blue-400/60" />
-          <span className="text-[11px] font-bold tracking-tight text-muted-foreground">
+    <Card>
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-sm font-bold flex items-center gap-2">
+            <div className="w-1 h-4 rounded-full bg-blue-400" />
             {fromSymbol}/{toSymbol} Order Stats
-          </span>
+          </CardTitle>
+          <div className="flex items-center gap-1.5">
+            <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+            <span className="text-[10px] text-muted-foreground">Live</span>
+          </div>
         </div>
-        <div className="h-2 w-2 rounded-full bg-green-500/50 animate-pulse" />
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-        <ActivityWindow label="1H" data={stats.windows['1h']} volumeUsdOverride={volumeUsdByWindow?.['1h'] ?? null} tradingPeriod={tp1h} />
-        <ActivityWindow label="24H" data={stats.windows['24h']} volumeUsdOverride={volumeUsdByWindow?.['24h'] ?? null} tradingPeriod={tp24h} />
-        <ActivityWindow label="30D" data={stats.windows.all_time} volumeUsdOverride={volumeUsdByWindow?.max ?? null} tradingPeriod={tp30d} highlight />
-      </div>
-    </div>
+      </CardHeader>
+      <CardContent className="pt-0">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <ActivityWindow label="1H" data={stats.windows['1h']} volumeUsdOverride={volumeUsdByWindow?.['1h'] ?? null} tradingPeriod={tp1h} />
+          <ActivityWindow label="24H" data={stats.windows['24h']} volumeUsdOverride={volumeUsdByWindow?.['24h'] ?? null} tradingPeriod={tp24h} />
+          <ActivityWindow label="30D" data={stats.windows.all_time} volumeUsdOverride={volumeUsdByWindow?.max ?? null} tradingPeriod={tp30d} highlight />
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
