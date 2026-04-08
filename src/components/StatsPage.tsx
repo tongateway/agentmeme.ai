@@ -90,8 +90,9 @@ function fmtUsd(n: number): string {
 /* ---------- normalized level ---------- */
 
 type NormalizedLevel = {
-  price: number; // fromSymbol per toSymbol
-  amount: number; // in fromSymbol
+  price: number; // display price
+  amount: number; // human-readable amount
+  wasInverted: boolean; // true if rate was >1 and got 1/rate * decAdj treatment
   orderCount: number;
 };
 
@@ -138,33 +139,31 @@ function normalizeOpen4DevBook(book: DexOrderBookResponse): NormalizedBook {
     }
   }
 
-  const toDisplayPrice = (priceRate: number): number => {
-    if (priceRate > 1) return (1 / priceRate) * decAdj;
+  const toDisplayPrice = (priceRate: number): { price: number; wasInverted: boolean } => {
+    if (priceRate > 1) return { price: (1 / priceRate) * decAdj, wasInverted: true };
     // For small rates when we expect big rates to be the norm:
     // check if this rate is already in display format (already inverted).
     // If scaling by decAdj would produce a value >50× the reference, skip decAdj.
     if (ratesNeedInversion && refDisplay != null && decAdj !== 1) {
       const scaled = priceRate * decAdj;
-      if (scaled > refDisplay * 50) return priceRate;
+      if (scaled > refDisplay * 50) return { price: priceRate, wasInverted: false };
     }
-    return priceRate * decAdj;
+    return { price: priceRate * decAdj, wasInverted: false };
   };
 
   const asks: NormalizedLevel[] = book.asks
     .filter((a) => a.price_rate > 0)
-    .map((a) => ({
-      price: toDisplayPrice(a.price_rate),
-      amount: a.total_amount,
-      orderCount: a.order_count,
-    }));
+    .map((a) => {
+      const { price, wasInverted } = toDisplayPrice(a.price_rate);
+      return { price, amount: a.total_amount, wasInverted, orderCount: a.order_count };
+    });
 
   const bids: NormalizedLevel[] = book.bids
     .filter((b) => b.price_rate > 0)
-    .map((b) => ({
-      price: toDisplayPrice(b.price_rate),
-      amount: b.total_amount,
-      orderCount: b.order_count,
-    }));
+    .map((b) => {
+      const { price, wasInverted } = toDisplayPrice(b.price_rate);
+      return { price, amount: b.total_amount, wasInverted, orderCount: b.order_count };
+    });
 
   asks.sort((a, b) => a.price - b.price);
   bids.sort((a, b) => b.price - a.price);
@@ -297,7 +296,9 @@ function OrderBookTable({
                 {normalized.bids.map((lvl, i) => {
                   const pct = maxBidAmount > 0 ? (lvl.amount / maxBidAmount) * 100 : 0;
                   const usdVal = amountPriceUsd != null ? lvl.amount * amountPriceUsd : null;
-                  const fromTotal = normalized.inverted ? lvl.amount * lvl.price : (lvl.price > 0 ? lvl.amount / lvl.price : 0);
+                  // wasInverted: price = (1/rate)*decAdj, meaning fromSymbol per toSymbol → total = amount * price
+                  // not inverted: price = rate (toSymbol per fromSymbol) → total = amount / price
+                  const fromTotal = lvl.wasInverted ? lvl.amount * lvl.price : (lvl.price > 0 ? lvl.amount / lvl.price : 0);
                   return (
                     <div
                       key={`bid-${i}-${refreshTick}`}
@@ -350,7 +351,9 @@ function OrderBookTable({
                 {asksReversed.map((lvl, i) => {
                   const pct = maxAskAmount > 0 ? (lvl.amount / maxAskAmount) * 100 : 0;
                   const usdVal = fromPriceUsd != null ? lvl.amount * fromPriceUsd : null;
-                  const toTotal = normalized.inverted ? (lvl.price > 0 ? lvl.amount / lvl.price : 0) : lvl.amount * lvl.price;
+                  // wasInverted: price = fromSymbol per toSymbol → total = amount / price
+                  // not inverted: price = rate (toSymbol per fromSymbol) → total = amount * price
+                  const toTotal = lvl.wasInverted ? (lvl.price > 0 ? lvl.amount / lvl.price : 0) : lvl.amount * lvl.price;
                   return (
                     <div
                       key={`ask-${i}-${refreshTick}`}
