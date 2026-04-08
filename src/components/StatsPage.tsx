@@ -119,9 +119,20 @@ function normalizeOpen4DevBook(book: DexOrderBookResponse): NormalizedBook {
   const decAdj = 10 ** ((book.to_decimals ?? 9) - (book.from_decimals ?? 9));
   // Asks have large rates (to/from >> 1), bids have tiny rates (to/from << 1).
   // Invert large rates, apply direct scaling to small rates.
-  // This produces consistent human-readable prices for both sides.
+  // Some orders have price_rate already in display format (inverted).
+  // Detect: if rate < 1 and applying decAdj would overshoot the expected display
+  // price by >100×, the rate is already in display format — use as-is.
+  const expectedDisplay = ref != null && ref > 1 ? (1 / ref) * decAdj : null;
   const toDisplayPrice = (priceRate: number): number => {
     if (priceRate > 1) return (1 / priceRate) * decAdj;
+    // For small rates: check if multiplying by decAdj would overshoot
+    if (expectedDisplay != null && decAdj !== 1) {
+      const scaled = priceRate * decAdj;
+      if (scaled > expectedDisplay * 100) {
+        // Rate is already in display format — use as-is
+        return priceRate;
+      }
+    }
     return priceRate * decAdj;
   };
   const shouldInvert = ref != null ? ref > 1 : true;
