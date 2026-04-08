@@ -1260,17 +1260,19 @@ export async function getDexOrderBook(opts: {
   const askFactor = 10 ** fromDec;
   const bidFactor = 10 ** toDec;
 
-  const parseLevel = (l: Record<string, unknown>, factor: number): DexOrderBookLevel => ({
+  const parseLevel = (l: Record<string, unknown>, amtFactor: number, valFactor: number): DexOrderBookLevel => ({
     price_rate: Number(l.price_rate ?? 0) / priceFactor,
-    total_amount: Number(l.total_amount ?? 0) / factor,
+    total_amount: Number(l.total_amount ?? 0) / amtFactor,
     order_count: Number(l.order_count ?? 0),
-    total_value: Number(l.total_value ?? 0) / factor,
-    cumulative_amount: Number(l.cumulative_amount ?? 0) / factor,
-    cumulative_value: Number(l.cumulative_value ?? 0) / factor,
+    total_value: Number(l.total_value ?? 0) / valFactor,
+    cumulative_amount: Number(l.cumulative_amount ?? 0) / amtFactor,
+    cumulative_value: Number(l.cumulative_value ?? 0) / valFactor,
   });
 
-  const asks = Array.isArray(data.asks) ? data.asks.map((a: Record<string, unknown>) => parseLevel(a, askFactor)) : [];
-  const bids = Array.isArray(data.bids) ? data.bids.map((b: Record<string, unknown>) => parseLevel(b, bidFactor)) : [];
+  // Asks: amount in from_symbol, value in to_symbol
+  // Bids: amount in to_symbol, value in from_symbol
+  const asks = Array.isArray(data.asks) ? data.asks.map((a: Record<string, unknown>) => parseLevel(a, askFactor, bidFactor)) : [];
+  const bids = Array.isArray(data.bids) ? data.bids.map((b: Record<string, unknown>) => parseLevel(b, bidFactor, askFactor)) : [];
 
   return {
     from_symbol: String(data.from_symbol ?? opts.fromSymbol),
