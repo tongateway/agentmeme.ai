@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { TonConnectUIProvider } from '@tonconnect/ui-react';
 import { Buffer } from 'buffer';
 import './index.css';
-import App from './App.tsx';
+import { App } from './App.tsx';
 
 // @ton/core (and friends) rely on Buffer in the browser.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
