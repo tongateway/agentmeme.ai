@@ -63,6 +63,7 @@ export type ContractListItem = {
   max_decisions?: number | null;
   used_decisions?: number | null;
   trading_pairs?: string | null;
+  profit_usd?: number | null;
 };
 
 export type ContractDetail = {
@@ -184,6 +185,7 @@ export type AiResponse = {
   parsed_params: Record<string, unknown> | null;
   order_id: string | null;
   balance_usd: number | null;
+  profit_usd: number | null;
   bullish_count: number;
   bearish_count: number;
   created_at: string;
@@ -1612,4 +1614,48 @@ export async function checkProof(cfg: PublicApiConfig, body: CheckProofRequest):
   });
   const data = (await jsonOrThrow(res)) as CheckProofResponse;
   return data.token;
+}
+
+// --- Provider Stats ---
+
+export type ProviderStat = {
+  provider: string;
+  total_requests: number;
+  success_count: number;
+  fail_count: number;
+  success_rate: number;
+  avg_elapsed_ms: number;
+  max_elapsed_ms: number;
+  last_success: string | null;
+  last_failure: string | null;
+  status: 'up' | 'down' | 'degraded';
+};
+
+export type ProviderLog = {
+  id?: string;
+  provider: string;
+  success: boolean;
+  elapsed_ms: number;
+  created_at: string;
+  error?: string | null;
+};
+
+export async function getProviderStats(cfg: PublicApiConfig): Promise<ProviderStat[]> {
+  const res = await fetch(raceUrl(cfg, '/api/provider-stats'), {
+    headers: publicGetHeaders(),
+  });
+  return (await jsonOrThrow(res)) as ProviderStat[];
+}
+
+export async function getProviderLogs(
+  cfg: PublicApiConfig,
+  provider: string,
+  hours = 24,
+  limit = 100,
+): Promise<ProviderLog[]> {
+  const params = new URLSearchParams({ provider, hours: String(hours), limit: String(limit) });
+  const res = await fetch(raceUrl(cfg, `/api/provider-stats/logs?${params}`), {
+    headers: publicGetHeaders(),
+  });
+  return (await jsonOrThrow(res)) as ProviderLog[];
 }

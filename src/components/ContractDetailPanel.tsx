@@ -30,7 +30,7 @@ import {
   Trash2, ArrowDownToLine, ArrowUpFromLine, XCircle,
   Share2, Check, Pause, Play, Wallet, AlertTriangle, RefreshCw,
   FileText, Copy, Pencil, Save,
-  Bot, Zap, Activity, ArrowUpRight, Clock, ShieldOff,
+  Bot, Zap, Activity, ArrowUpRight, Clock, ShieldOff, TrendingUp, TrendingDown,
 } from 'lucide-react';
 import { buildShareUrl } from './ShareCard';
 import { nanoFromTon } from '@/lib/ton/agentWalletV5';
@@ -110,11 +110,12 @@ async function fetchTonBalance(address: string): Promise<string> {
   return fracStr ? `${whole}.${fracStr}` : `${whole}`;
 }
 
-/* ---------- Balance Chart (Recharts) ---------- */
+/* ---------- Charts (Recharts) ---------- */
 
 type ChartPoint = { time: number; value: number };
 
 const CHART_GREEN = '#00C389';
+const CHART_RED = '#FF5470';
 
 type TimeRange = '1h' | '6h' | '24h' | '7d';
 const TIME_RANGES: { key: TimeRange; label: string; ms: number }[] = [
@@ -221,6 +222,108 @@ function BalanceChart({ points }: { points: ChartPoint[]; theme: AppTheme }) {
               fill="url(#balanceGradient)"
               dot={false}
               activeDot={{ r: 4, fill: CHART_GREEN, strokeWidth: 0 }}
+            />
+          </AreaChart>
+        </ResponsiveContainer>
+      )}
+    </div>
+  );
+}
+
+function ProfitChart({ points }: { points: ChartPoint[] }) {
+  const [range, setRange] = useState<TimeRange>('24h');
+
+  const filtered = useMemo(() => {
+    const rangeMs = TIME_RANGES.find((r) => r.key === range)?.ms ?? 24 * 60 * 60 * 1000;
+    const cutoff = Date.now() - rangeMs;
+    const result = points.filter((p) => p.time >= cutoff);
+    return result.length > 0 ? result : points.slice(-20);
+  }, [points, range]);
+
+  const currentProfit = filtered.length > 0 ? filtered[filtered.length - 1].value : 0;
+  const isPositive = currentProfit >= 0;
+
+  const fmtTime = (ts: number) => {
+    const d = new Date(ts);
+    if (range === '7d') return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    return d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+  };
+
+  const strokeColor = isPositive ? CHART_GREEN : CHART_RED;
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex items-center justify-between">
+        <div>
+          <div className="text-xs opacity-50">Profit (USD)</div>
+          <div className="flex items-baseline gap-2">
+            <span className={`text-3xl font-bold mono tabular-nums ${isPositive ? 'text-success' : 'text-error'}`}>
+              {isPositive ? '+' : ''}{currentProfit.toFixed(2)}
+            </span>
+          </div>
+        </div>
+        <div className="flex gap-0.5 bg-base-300 rounded-lg p-0.5">
+          {TIME_RANGES.map((r) => (
+            <button
+              key={r.key}
+              type="button"
+              className={`btn btn-xs px-3 ${range === r.key ? 'btn-active' : 'btn-ghost'}`}
+              onClick={() => setRange(r.key)}
+            >
+              {r.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {filtered.length === 0 ? (
+        <div className="flex items-center justify-center" style={{ height: 200 }}>
+          <span className="text-sm opacity-60">No profit data yet.</span>
+        </div>
+      ) : (
+        <ResponsiveContainer width="100%" height={200}>
+          <AreaChart data={filtered} margin={{ top: 5, right: 5, left: 0, bottom: 0 }}>
+            <defs>
+              <linearGradient id="profitGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={strokeColor} stopOpacity={0.3} />
+                <stop offset="100%" stopColor={strokeColor} stopOpacity={0.02} />
+              </linearGradient>
+            </defs>
+            <XAxis
+              dataKey="time"
+              tickFormatter={fmtTime}
+              tick={{ fontSize: 11, fill: 'currentColor', opacity: 0.4 }}
+              axisLine={false}
+              tickLine={false}
+              minTickGap={40}
+            />
+            <YAxis
+              domain={['auto', 'auto']}
+              tickFormatter={(v: number) => `$${v.toFixed(2)}`}
+              tick={{ fontSize: 11, fill: 'currentColor', opacity: 0.4 }}
+              axisLine={false}
+              tickLine={false}
+              width={65}
+            />
+            <Tooltip
+              contentStyle={{
+                backgroundColor: 'oklch(var(--b2))',
+                border: '1px solid oklch(var(--bc) / 0.1)',
+                borderRadius: 8,
+                fontSize: 12,
+                padding: '6px 10px',
+              }}
+              labelFormatter={(ts) => new Date(ts as number).toLocaleString()}
+              formatter={(value) => [`$${Number(value).toFixed(2)}`, 'Profit']}
+            />
+            <Area
+              type="monotone"
+              dataKey="value"
+              stroke={strokeColor}
+              strokeWidth={2.5}
+              fill="url(#profitGradient)"
+              dot={false}
+              activeDot={{ r: 4, fill: strokeColor, strokeWidth: 0 }}
             />
           </AreaChart>
         </ResponsiveContainer>
@@ -702,6 +805,13 @@ export function ContractDetailPanel({ contract, raceCfg, theme, onDeleted, onSta
       .sort((a, b) => a.time - b.time);
   }, [aiResponses]);
 
+  const profitPoints = useMemo<ChartPoint[]>(() => {
+    return aiResponses
+      .filter((r) => r.profit_usd != null)
+      .map((r) => ({ time: new Date(r.created_at).getTime(), value: r.profit_usd! }))
+      .sort((a, b) => a.time - b.time);
+  }, [aiResponses]);
+
   // Check if agent was stopped by AI (action=stop)
   const stopResponse = useMemo(() => {
     return aiResponses.find((r) => r.action === 'stop') ?? null;
@@ -851,8 +961,8 @@ export function ContractDetailPanel({ contract, raceCfg, theme, onDeleted, onSta
         </div>
       )}
 
-      {/* ===== 2. Five Stat Cards ===== */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+      {/* ===== 2. Stat Cards ===== */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         {/* Model */}
         <div className="card bg-base-200 shadow-sm">
           <div className="card-body py-3 px-4 gap-1">
@@ -876,6 +986,22 @@ export function ContractDetailPanel({ contract, raceCfg, theme, onDeleted, onSta
               {totalUsdBalance > 0 ? `$${totalUsdBalance.toFixed(2)}` : '$0.00'}
             </div>
             <div className="text-xs opacity-40">USD equiv.</div>
+          </div>
+        </div>
+
+        {/* Profit */}
+        <div className="card bg-base-200 shadow-sm">
+          <div className="card-body py-3 px-4 gap-1">
+            <div className="flex items-center gap-1.5">
+              {(contract.profit_usd ?? 0) >= 0
+                ? <TrendingUp className="h-3.5 w-3.5 text-success" />
+                : <TrendingDown className="h-3.5 w-3.5 text-error" />}
+              <span className="text-xs opacity-60">Profit</span>
+            </div>
+            <div className={`text-lg font-bold mono ${(contract.profit_usd ?? 0) >= 0 ? 'text-success' : 'text-error'}`}>
+              {contract.profit_usd != null ? `${contract.profit_usd >= 0 ? '+' : ''}$${contract.profit_usd.toFixed(2)}` : '$0.00'}
+            </div>
+            <div className="text-xs opacity-40">Total P&L</div>
           </div>
         </div>
 
@@ -961,6 +1087,15 @@ export function ContractDetailPanel({ contract, raceCfg, theme, onDeleted, onSta
               <BalanceChart points={chartPoints} theme={theme} />
             </div>
           </div>
+
+          {/* Profit Chart */}
+          {profitPoints.length > 0 && (
+            <div className="card bg-base-200 shadow-md overflow-hidden">
+              <div className="card-body">
+                <ProfitChart points={profitPoints} />
+              </div>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 items-start">
             {/* Left: Contract Details */}

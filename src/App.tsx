@@ -18,12 +18,13 @@ import { StatsPage } from './components/StatsPage';
 import { DocsPage } from './components/DocsPage';
 import { AgentHubPage } from './components/AgentHubPage';
 import { TokenOpinionPage } from './components/TokenOpinionPage';
+import { StatusPage } from './components/StatusPage';
 
 const THEME_KEY = 'ai-trader-race:theme';
 
-type Page = 'home' | 'leaderboard' | 'stats' | 'trader' | 'share' | 'docs' | 'agent-hub';
+type Page = 'home' | 'leaderboard' | 'stats' | 'trader' | 'share' | 'docs' | 'agent-hub' | 'status';
 
-const VALID_PAGES = new Set<Page>(['home', 'leaderboard', 'stats', 'trader', 'docs', 'agent-hub']);
+const VALID_PAGES = new Set<Page>(['home', 'leaderboard', 'stats', 'trader', 'docs', 'agent-hub', 'status']);
 
 function tabFromHashParts(parts: string[]): TabKey {
   const second = parts[1]?.toLowerCase();
@@ -60,6 +61,7 @@ function hashFromRoute(page: Page, tab: TabKey, statsPair?: string | null, hubTo
   if (page === 'stats') return statsPair ? `stats/${statsPair}` : 'stats';
   if (page === 'agent-hub') return hubToken ? `agent-hub/${encodeURIComponent(hubToken)}` : 'agent-hub';
   if (page === 'docs') return 'docs';
+  if (page === 'status') return 'status';
   if (tab.kind === 'deploy') return 'trader/deploy';
   return `trader/contract/${encodeURIComponent(tab.contractId)}`;
 }
@@ -375,6 +377,13 @@ export default function App() {
             Order Book
           </button>
           <button
+            className={`btn btn-sm shrink-0 ${page === 'status' ? 'btn-active' : 'btn-ghost'}`}
+            onClick={() => setPage('status')}
+            type="button"
+          >
+            Status
+          </button>
+          <button
             className={`btn btn-sm shrink-0 ${page === 'trader' ? 'btn-active' : 'btn-ghost'}`}
             onClick={openTraderFromNav}
             type="button"
@@ -407,6 +416,8 @@ export default function App() {
           ) : (
             <AgentHubPage raceCfg={raceCfg} onSelectToken={(s) => setHubToken(s)} onDeploy={openDeploy} onViewLeaderboard={() => setPage('leaderboard')} />
           )
+        ) : page === 'status' ? (
+          <StatusPage raceCfg={raceCfg} />
         ) : (
           <>
             {/* Auth warning — wallet connected but no JWT */}
