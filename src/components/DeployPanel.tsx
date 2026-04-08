@@ -1152,11 +1152,11 @@ export function DeployPanel({ persisted, setPersisted, raceCfg, onContractRegist
                 </div>
               </div>
 
-              {/* AGNT topup */}
+              {/* Base token topup */}
               <div className="flex items-center justify-between px-4 py-3 border-t border-base-content/5">
                 <div className="flex items-center gap-2">
-                  <span className="h-2.5 w-2.5 rounded-full" style={{ background: TOKEN_COLORS.AGNT }} />
-                  <span className="text-sm font-semibold">AGNT topup</span>
+                  <span className="h-2.5 w-2.5 rounded-full" style={{ background: TOKEN_COLORS[persisted.baseToken ?? 'AGNT'] ?? '#888' }} />
+                  <span className="text-sm font-semibold">{persisted.baseToken ?? 'AGNT'} topup</span>
                   <span className="text-[10px] opacity-40">base capital</span>
                 </div>
                 <div className="flex items-center gap-1.5">
