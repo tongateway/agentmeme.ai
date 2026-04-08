@@ -90,9 +90,8 @@ function fmtUsd(n: number): string {
 /* ---------- normalized level ---------- */
 
 type NormalizedLevel = {
-  price: number; // display price
+  price: number; // display price (always same direction within a book)
   amount: number; // human-readable amount
-  wasInverted: boolean; // true if rate was >1 and got 1/rate * decAdj treatment
   orderCount: number;
 };
 
@@ -118,58 +117,81 @@ type NormalizedBook = {
 function normalizeOpen4DevBook(book: DexOrderBookResponse): NormalizedBook {
   const decAdj = 10 ** ((book.to_decimals ?? 9) - (book.from_decimals ?? 9));
 
-  // Determine if rates need inversion by looking at the majority of ask rates.
-  // Normal convention: asks have large rates (>1), bids have small rates (<1).
+  // All rates > 1 produce consistent display prices via (1/rate)*decAdj.
+  // Normal rates < 1 produce consistent prices via rate*decAdj (same direction).
+  // Some rates < 1 are "already display" (entered in human format) and need
+  // detection so they're not wrongly scaled by decAdj.
+  //
+  // Strategy: compute reference price from rates > 1, detect outlier small rates,
+  // and convert ALL prices to the same direction.
+
   const allRates = [
     ...book.asks.filter((a) => a.price_rate > 0).map((a) => a.price_rate),
     ...book.bids.filter((b) => b.price_rate > 0).map((b) => b.price_rate),
   ];
-  const bigRateCount = allRates.filter((r) => r > 1).length;
-  const ratesNeedInversion = bigRateCount > allRates.length / 2;
 
-  // Compute a reference display price from the majority of rates
-  // to detect outlier rates that are already in display format.
+  // Reference display price from rates > 1 (if any exist)
+  const bigRates = allRates.filter((r) => r > 1);
   let refDisplay: number | null = null;
-  if (ratesNeedInversion) {
-    const bigRates = allRates.filter((r) => r > 1);
-    if (bigRates.length > 0) {
-      bigRates.sort((a, b) => a - b);
-      const medianRate = bigRates[Math.floor(bigRates.length / 2)];
-      refDisplay = (1 / medianRate) * decAdj;
+  if (bigRates.length > 0) {
+    bigRates.sort((a, b) => a - b);
+    refDisplay = (1 / bigRates[Math.floor(bigRates.length / 2)]) * decAdj;
+  }
+  // Fallback: reference from normal small rates (those that are very small)
+  if (refDisplay == null) {
+    const smallRates = allRates.filter((r) => r > 0 && r < 1);
+    if (smallRates.length > 0) {
+      smallRates.sort((a, b) => a - b);
+      refDisplay = smallRates[Math.floor(smallRates.length / 2)] * decAdj;
     }
   }
 
-  const toDisplayPrice = (priceRate: number): { price: number; wasInverted: boolean } => {
-    if (priceRate > 1) return { price: (1 / priceRate) * decAdj, wasInverted: true };
-    // For small rates when we expect big rates to be the norm:
-    // check if this rate is already in display format (already inverted).
-    // If scaling by decAdj would produce a value >50× the reference, skip decAdj.
-    if (ratesNeedInversion && refDisplay != null && decAdj !== 1) {
+  const toDisplayPrice = (priceRate: number): number => {
+    if (priceRate > 1) return (1 / priceRate) * decAdj;
+    // Detect already-display rates: if scaling by decAdj overshoots reference by >50×
+    if (refDisplay != null && Math.abs(refDisplay) > 0 && decAdj !== 1) {
       const scaled = priceRate * decAdj;
-      if (scaled > refDisplay * 50) return { price: priceRate, wasInverted: false };
+      if (Math.abs(scaled) > Math.abs(refDisplay) * 50) {
+        // Rate is already in display format — need to convert to same direction
+        // as the inverted prices. Inverted = (1/rate)*decAdj direction.
+        // Already-display rate is in the opposite direction → take reciprocal.
+        // But if decAdj < 1, both directions are the same → use as-is.
+        if (decAdj > 1) {
+          // decAdj > 1: inverted path produces opposite direction from normal path.
+          // This already-display rate is in the "normal" direction (toSymbol per fromSymbol).
+          // Convert to inverted direction (fromSymbol per toSymbol) by reciprocating
+          // with decimal adjustment: 1/rate gives raw fromSymbol/toSymbol, then
+          // we need the same decAdj scaling as the inverted path.
+          // But 1/rate would give a huge number. Instead, since the rate IS the
+          // display price in the opposite direction, just reciprocate it.
+          return 1 / priceRate;
+        }
+        // decAdj < 1: both paths produce same direction, but scaling overshoots.
+        // Rate is already in display format, use as-is.
+        return priceRate;
+      }
     }
-    return { price: priceRate * decAdj, wasInverted: false };
+    return priceRate * decAdj;
   };
+
+  // When decAdj > 1 (e.g., USDT/BUILD: toDec > fromDec), inverted rates (1/rate)*decAdj
+  // produce prices in a DIFFERENT direction than normal rates (rate*decAdj).
+  // When decAdj ≤ 1 (e.g., AGNT/USDT: toDec ≤ fromDec), both produce the SAME direction.
+  // The Total formula depends on this: inverted=true means bid=amt*price, ask=amt/price.
+  const shouldInvert = decAdj > 1 && bigRates.length > 0;
 
   const asks: NormalizedLevel[] = book.asks
     .filter((a) => a.price_rate > 0)
-    .map((a) => {
-      const { price, wasInverted } = toDisplayPrice(a.price_rate);
-      return { price, amount: a.total_amount, wasInverted, orderCount: a.order_count };
-    });
+    .map((a) => ({ price: toDisplayPrice(a.price_rate), amount: a.total_amount, orderCount: a.order_count }));
 
   const bids: NormalizedLevel[] = book.bids
     .filter((b) => b.price_rate > 0)
-    .map((b) => {
-      const { price, wasInverted } = toDisplayPrice(b.price_rate);
-      return { price, amount: b.total_amount, wasInverted, orderCount: b.order_count };
-    });
+    .map((b) => ({ price: toDisplayPrice(b.price_rate), amount: b.total_amount, orderCount: b.order_count }));
 
   asks.sort((a, b) => a.price - b.price);
   bids.sort((a, b) => b.price - a.price);
 
-  // Determine inverted flag for Total calculations based on whether we inverted rates
-  return { asks, bids, inverted: ratesNeedInversion };
+  return { asks, bids, inverted: shouldInvert };
 }
 
 /* ---------- stats from normalized book ---------- */
@@ -296,9 +318,7 @@ function OrderBookTable({
                 {normalized.bids.map((lvl, i) => {
                   const pct = maxBidAmount > 0 ? (lvl.amount / maxBidAmount) * 100 : 0;
                   const usdVal = amountPriceUsd != null ? lvl.amount * amountPriceUsd : null;
-                  // wasInverted: price = (1/rate)*decAdj, meaning fromSymbol per toSymbol → total = amount * price
-                  // not inverted: price = rate (toSymbol per fromSymbol) → total = amount / price
-                  const fromTotal = lvl.wasInverted ? lvl.amount * lvl.price : (lvl.price > 0 ? lvl.amount / lvl.price : 0);
+                  const fromTotal = normalized.inverted ? lvl.amount * lvl.price : (lvl.price > 0 ? lvl.amount / lvl.price : 0);
                   return (
                     <div
                       key={`bid-${i}-${refreshTick}`}
@@ -351,9 +371,7 @@ function OrderBookTable({
                 {asksReversed.map((lvl, i) => {
                   const pct = maxAskAmount > 0 ? (lvl.amount / maxAskAmount) * 100 : 0;
                   const usdVal = fromPriceUsd != null ? lvl.amount * fromPriceUsd : null;
-                  // wasInverted: price = fromSymbol per toSymbol → total = amount / price
-                  // not inverted: price = rate (toSymbol per fromSymbol) → total = amount * price
-                  const toTotal = lvl.wasInverted ? (lvl.price > 0 ? lvl.amount / lvl.price : 0) : lvl.amount * lvl.price;
+                  const toTotal = normalized.inverted ? (lvl.price > 0 ? lvl.amount / lvl.price : 0) : lvl.amount * lvl.price;
                   return (
                     <div
                       key={`ask-${i}-${refreshTick}`}
