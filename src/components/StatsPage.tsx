@@ -396,14 +396,19 @@ function ActivityWindow({
   data,
   highlight,
   volumeUsdOverride,
+  tradingPeriod,
 }: {
   label: string;
   data: ScannerStatsWindow;
   highlight?: boolean;
   volumeUsdOverride?: number | null;
+  tradingPeriod?: DexTradingStatsPeriod | null;
 }) {
-  const total = data.open_orders + data.completed_orders;
-  const completionPct = total > 0 ? (data.completed_orders / total) * 100 : 0;
+  // Prefer trading-stats order counts when scanner returns 0
+  const openOrders = (data.open_orders > 0 ? data.open_orders : tradingPeriod?.by_status?.['open']?.count) ?? data.open_orders;
+  const filledOrders = (data.completed_orders > 0 ? data.completed_orders : tradingPeriod?.by_status?.['completed']?.count) ?? data.completed_orders;
+  const total = openOrders + filledOrders;
+  const completionPct = total > 0 ? (filledOrders / total) * 100 : 0;
   const rawVolume =
     volumeUsdOverride ??
     Number(String(data.volume_usd ?? '0').replaceAll(',', '').trim());
@@ -425,11 +430,11 @@ function ActivityWindow({
       <div className="grid grid-cols-3 gap-2">
         <div>
           <div className="text-[9px] uppercase tracking-wide opacity-40">Open</div>
-          <div className="text-sm font-semibold mono text-info">{data.open_orders.toLocaleString()}</div>
+          <div className="text-sm font-semibold mono text-info">{openOrders.toLocaleString()}</div>
         </div>
         <div>
           <div className="text-[9px] uppercase tracking-wide opacity-40">Filled</div>
-          <div className="text-sm font-semibold mono text-success">{data.completed_orders.toLocaleString()}</div>
+          <div className="text-sm font-semibold mono text-success">{filledOrders.toLocaleString()}</div>
         </div>
         <div>
           <div className="text-[9px] uppercase tracking-wide opacity-40">Volume</div>
@@ -440,12 +445,41 @@ function ActivityWindow({
   );
 }
 
-function PairActivityRow({ stats, fromSymbol, toSymbol, volumeUsdByWindow }: {
+function PairActivityRow({ stats, fromSymbol, toSymbol, volumeUsdByWindow, tradingPeriods }: {
   stats: ScannerStatsResponse;
   fromSymbol: string;
   toSymbol: string;
   volumeUsdByWindow?: ActivityVolumeUsdByWindow | null;
+  tradingPeriods?: TradingPeriodsState | null;
 }) {
+  // Merge bid+ask trading periods into combined order counts per time window
+  const mergePeriod = (period: string): DexTradingStatsPeriod | null => {
+    if (!tradingPeriods) return null;
+    const bid = tradingPeriods.bid.find((p) => p.period === period);
+    const ask = tradingPeriods.ask.find((p) => p.period === period);
+    if (!bid && !ask) return null;
+    const mergeStatus = (key: string) => ({
+      count: (bid?.by_status?.[key]?.count ?? 0) + (ask?.by_status?.[key]?.count ?? 0),
+      volume: (bid?.by_status?.[key]?.volume ?? 0) + (ask?.by_status?.[key]?.volume ?? 0),
+    });
+    const allKeys = new Set([
+      ...Object.keys(bid?.by_status ?? {}),
+      ...Object.keys(ask?.by_status ?? {}),
+    ]);
+    const by_status: Record<string, { count: number; volume: number }> = {};
+    for (const k of allKeys) by_status[k] = mergeStatus(k);
+    return {
+      period,
+      total_orders: (bid?.total_orders ?? 0) + (ask?.total_orders ?? 0),
+      total_volume: (bid?.total_volume ?? 0) + (ask?.total_volume ?? 0),
+      by_status,
+    };
+  };
+
+  const tp1h = mergePeriod('1h');
+  const tp24h = mergePeriod('24h');
+  const tp30d = mergePeriod('30d') ?? mergePeriod('7d');
+
   return (
     <div className="rounded-xl border border-base-content/5 bg-base-200/60 p-3">
       <div className="flex items-center justify-between mb-2.5">
@@ -459,9 +493,9 @@ function PairActivityRow({ stats, fromSymbol, toSymbol, volumeUsdByWindow }: {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-        <ActivityWindow label="1H" data={stats.windows['1h']} volumeUsdOverride={volumeUsdByWindow?.['1h'] ?? null} />
-        <ActivityWindow label="24H" data={stats.windows['24h']} volumeUsdOverride={volumeUsdByWindow?.['24h'] ?? null} />
-        <ActivityWindow label="30D" data={stats.windows.all_time} volumeUsdOverride={volumeUsdByWindow?.max ?? null} highlight />
+        <ActivityWindow label="1H" data={stats.windows['1h']} volumeUsdOverride={volumeUsdByWindow?.['1h'] ?? null} tradingPeriod={tp1h} />
+        <ActivityWindow label="24H" data={stats.windows['24h']} volumeUsdOverride={volumeUsdByWindow?.['24h'] ?? null} tradingPeriod={tp24h} />
+        <ActivityWindow label="30D" data={stats.windows.all_time} volumeUsdOverride={volumeUsdByWindow?.max ?? null} tradingPeriod={tp30d} highlight />
       </div>
     </div>
   );
@@ -761,6 +795,7 @@ export function StatsPage({ raceCfg, pairSlug, onPairChange }: StatsPageProps) {
           fromSymbol={fromUpper}
           toSymbol={toUpper}
           volumeUsdByWindow={activityVolumeUsd}
+          tradingPeriods={tradingPeriods}
         />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
