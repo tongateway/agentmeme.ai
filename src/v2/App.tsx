@@ -3,6 +3,7 @@ import { RootLayout } from './components/layout/RootLayout';
 import { HomePage } from './components/pages/HomePage';
 import { LeaderboardPage } from './components/pages/LeaderboardPage';
 import { AgentHubPage } from './components/pages/AgentHubPage';
+import { StatsPage } from './components/pages/StatsPage';
 
 function PlaceholderPage({ name }: { name: string }) {
   return (
@@ -20,8 +21,8 @@ const router = createBrowserRouter(
       children: [
         { index: true, element: <HomePage /> },
         { path: 'leaderboard', element: <LeaderboardPage /> },
-        { path: 'stats', element: <PlaceholderPage name="Stats" /> },
-        { path: 'stats/:pair', element: <PlaceholderPage name="Stats" /> },
+        { path: 'stats', element: <StatsPage /> },
+        { path: 'stats/:pair', element: <StatsPage /> },
         { path: 'agent-hub', element: <AgentHubPage /> },
         { path: 'agent-hub/:token', element: <AgentHubPage /> },
         { path: 'trader/deploy', element: <PlaceholderPage name="Deploy" /> },
