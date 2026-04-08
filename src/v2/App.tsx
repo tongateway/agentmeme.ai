@@ -1,6 +1,7 @@
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import { RootLayout } from './components/layout/RootLayout';
 import { HomePage } from './components/pages/HomePage';
+import { LeaderboardPage } from './components/pages/LeaderboardPage';
 
 function PlaceholderPage({ name }: { name: string }) {
   return (
@@ -17,7 +18,7 @@ const router = createBrowserRouter(
       element: <RootLayout />,
       children: [
         { index: true, element: <HomePage /> },
-        { path: 'leaderboard', element: <PlaceholderPage name="Leaderboard" /> },
+        { path: 'leaderboard', element: <LeaderboardPage /> },
         { path: 'stats', element: <PlaceholderPage name="Stats" /> },
         { path: 'stats/:pair', element: <PlaceholderPage name="Stats" /> },
         { path: 'agent-hub', element: <PlaceholderPage name="Agent Hub" /> },
