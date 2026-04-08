@@ -230,11 +230,8 @@ function OrderBookTable({
   sourceLabel,
   realStats24h: _realStats24h,
 }: OrderBookTableProps) {
-  const maxAmount = useMemo(() => {
-    const maxAsk = Math.max(...normalized.asks.map((a) => a.amount), 0);
-    const maxBid = Math.max(...normalized.bids.map((b) => b.amount), 0);
-    return Math.max(maxAsk, maxBid);
-  }, [normalized]);
+  const maxBidAmount = useMemo(() => Math.max(...normalized.bids.map((b) => b.amount), 0), [normalized]);
+  const maxAskAmount = useMemo(() => Math.max(...normalized.asks.map((a) => a.amount), 0), [normalized]);
 
   // Column labels depend on whether price was inverted
   // Inverted (USDT/BUILD): price=fromSymbol, asks amount=fromSymbol, bids amount=toSymbol
@@ -273,7 +270,7 @@ function OrderBookTable({
             ) : (
               <div className="flex flex-col">
                 {normalized.bids.map((lvl, i) => {
-                  const pct = maxAmount > 0 ? (lvl.amount / maxAmount) * 100 : 0;
+                  const pct = maxBidAmount > 0 ? (lvl.amount / maxBidAmount) * 100 : 0;
                   const usdVal = amountPriceUsd != null ? lvl.amount * amountPriceUsd : null;
                   const fromTotal = normalized.inverted ? lvl.amount * lvl.price : (lvl.price > 0 ? lvl.amount / lvl.price : 0);
                   return (
@@ -326,7 +323,7 @@ function OrderBookTable({
             ) : (
               <div className="flex flex-col">
                 {asksReversed.map((lvl, i) => {
-                  const pct = maxAmount > 0 ? (lvl.amount / maxAmount) * 100 : 0;
+                  const pct = maxAskAmount > 0 ? (lvl.amount / maxAskAmount) * 100 : 0;
                   const usdVal = fromPriceUsd != null ? lvl.amount * fromPriceUsd : null;
                   const toTotal = normalized.inverted ? (lvl.price > 0 ? lvl.amount / lvl.price : 0) : lvl.amount * lvl.price;
                   return (
@@ -464,7 +461,7 @@ function PairActivityRow({ stats, fromSymbol, toSymbol, volumeUsdByWindow }: {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
         <ActivityWindow label="1H" data={stats.windows['1h']} volumeUsdOverride={volumeUsdByWindow?.['1h'] ?? null} />
         <ActivityWindow label="24H" data={stats.windows['24h']} volumeUsdOverride={volumeUsdByWindow?.['24h'] ?? null} />
-        <ActivityWindow label="MAX" data={stats.windows.all_time} volumeUsdOverride={volumeUsdByWindow?.max ?? null} highlight />
+        <ActivityWindow label="30D" data={stats.windows.all_time} volumeUsdOverride={volumeUsdByWindow?.max ?? null} highlight />
       </div>
     </div>
   );
