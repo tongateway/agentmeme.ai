@@ -7,8 +7,8 @@ import { Separator } from '@/v2/components/ui/separator';
 import { cn } from '@/v2/lib/utils';
 
 const NAV_LINKS = [
-  { to: '/', label: 'Home', icon: Bot },
-  { to: '/agent-hub', label: 'Agent Hub', icon: Layers },
+  { to: '/', label: 'Home', icon: Layers },
+  { to: '/agent-hub', label: 'Agent Hub', icon: Bot },
   { to: '/stats', label: 'Order Book', icon: BarChart3 },
   { to: '/status', label: 'Status', icon: Activity },
   { to: '/trader/deploy', label: 'My Agents', icon: Rocket },
