@@ -127,6 +127,14 @@ const TOKEN_COLORS: Record<string, string> = {
   TON: '#888',
 };
 
+const TOKEN_LOGOS: Record<string, string> = {
+  AGNT: 'https://raw.githubusercontent.com/AiTRADELABTON/agentmeme.ai/refs/heads/main/agnt-logo.png',
+  TON: 'https://assets.dedust.io/images/ton.webp',
+  NOT: 'https://assets.dedust.io/images/not.webp',
+  BUILD: 'https://cdn.joincommunity.xyz/build/build_logo.png',
+  USDT: 'https://assets.dedust.io/images/usdt.webp',
+};
+
 /** Parse suggested_pairs from API into a token set for tradingTokens state. */
 function parseSuggestedTokens(pairs: string): string[] {
   const tokens = new Set<string>(['AGNT']);
@@ -147,6 +155,29 @@ const FALLBACK_AI_MODELS: AiModelOption[] = [
   { id: 'gemini-3.1-pro-preview', name: 'Gemini 3.1 Pro', provider: 'Google' },
   { id: 'grok-4', name: 'Grok 4', provider: 'xAI' },
 ];
+
+const PROVIDER_LOGOS: Record<string, string> = {
+  Qwen: 'https://cdn.simpleicons.org/alibabadotcom/ffffff',
+  OpenAI: 'https://cdn.simpleicons.org/openai/ffffff',
+  Anthropic: 'https://cdn.simpleicons.org/anthropic/ffffff',
+  DeepSeek: 'https://cdn.simpleicons.org/deepseek/ffffff',
+  Google: 'https://cdn.simpleicons.org/google/ffffff',
+  xAI: 'https://cdn.simpleicons.org/x/ffffff',
+};
+
+function TokenIcon({ symbol, size = 'h-4 w-4' }: { symbol: string; size?: string }) {
+  const logo = TOKEN_LOGOS[symbol];
+  if (logo) {
+    return <img src={logo} alt={symbol} className={`${size} rounded-full object-cover`} />;
+  }
+  return <span className={`${size} rounded-full`} style={{ background: TOKEN_COLORS[symbol] ?? '#888' }} />;
+}
+
+function ProviderIcon({ provider }: { provider: string }) {
+  const logo = PROVIDER_LOGOS[provider];
+  if (!logo) return null;
+  return <img src={logo} alt={provider} className="h-4 w-4" />;
+}
 
 /** Extract short model name from description (strip "--- long subtitle" suffix) */
 function shortModelName(name: string): string {
@@ -535,7 +566,7 @@ function TopupJettonForm({
 
       {/* Base token */}
       <div className="flex items-center gap-2">
-        <span className="h-2 w-2 rounded-full" style={{ background: TOKEN_COLORS[baseToken] ?? '#888' }} />
+        <TokenIcon symbol={baseToken} size="h-4 w-4" />
         <span className="text-xs font-semibold w-14">{baseToken}</span>
         <Input
           type="text"
@@ -550,7 +581,7 @@ function TopupJettonForm({
       {/* Quote token */}
       {quoteToken && quoteToken !== baseToken && (
         <div className="flex items-center gap-2">
-          <span className="h-2 w-2 rounded-full" style={{ background: TOKEN_COLORS[quoteToken] ?? '#888' }} />
+          <TokenIcon symbol={quoteToken} size="h-4 w-4" />
           <span className="text-xs font-semibold w-14">{quoteToken}</span>
           <Input
             type="text"
@@ -960,6 +991,7 @@ export function DeployPage() {
                 className="flex items-center w-full text-left cursor-pointer rounded-lg border-2 border-green-600 bg-green-500/[0.08] px-3 py-2.5"
                 onClick={() => setModelListOpen(true)}
               >
+                <ProviderIcon provider={selectedModelOption.provider?.trim() || ''} />
                 <div className="flex flex-col min-w-0 flex-1">
                   <span className="text-[10px] font-medium leading-tight text-muted-foreground capitalize truncate">
                     {selectedModelOption.provider?.trim() || 'Unknown'}
@@ -1018,6 +1050,7 @@ export function DeployPage() {
                         }}
                         title={m.description ?? undefined}
                       >
+                        <ProviderIcon provider={modelProvider} />
                         <div className="flex flex-col min-w-0 flex-1">
                           <span className="text-[10px] font-medium leading-tight text-muted-foreground capitalize truncate">
                             {modelProvider || 'Unknown'}
@@ -1076,7 +1109,7 @@ export function DeployPage() {
                   className={`inline-flex items-center gap-1.5 rounded-full pl-3 pr-2.5 py-1.5 text-sm font-bold transition-all cursor-pointer bg-muted ${pickingSide === 'base' ? 'ring-2 ring-primary/50' : 'hover:ring-2 hover:ring-primary/20'}`}
                   onClick={() => setPickingSide(pickingSide === 'base' ? null : 'base')}
                 >
-                  <span className="h-2.5 w-2.5 rounded-full" style={{ background: TOKEN_COLORS[persisted.baseToken ?? 'AGNT'] }} />
+                  <TokenIcon symbol={persisted.baseToken ?? 'AGNT'} size="h-5 w-5" />
                   {persisted.baseToken ?? 'AGNT'}
                   <ChevronDown className="h-3 w-3 text-muted-foreground" />
                 </button>
@@ -1097,7 +1130,7 @@ export function DeployPage() {
                             setPickingSide(null);
                           }}
                         >
-                          <span className="h-2.5 w-2.5 rounded-full" style={{ background: TOKEN_COLORS[token] ?? '#888' }} />
+                          <TokenIcon symbol={token} size="h-5 w-5" />
                           {token}
                           {isSelected && <Check className="h-3.5 w-3.5 ml-auto text-green-500" />}
                         </button>
@@ -1117,7 +1150,7 @@ export function DeployPage() {
                     className={`inline-flex items-center gap-1.5 rounded-full pl-3 pr-2.5 py-1.5 text-sm font-bold transition-all cursor-pointer bg-muted ${pickingSide === 'quote' ? 'ring-2 ring-primary/50' : 'hover:ring-2 hover:ring-primary/20'}`}
                     onClick={() => setPickingSide(pickingSide === 'quote' ? null : 'quote')}
                   >
-                    <span className="h-2.5 w-2.5 rounded-full" style={{ background: TOKEN_COLORS[persisted.quoteToken] ?? '#888' }} />
+                    <TokenIcon symbol={persisted.quoteToken} size="h-5 w-5" />
                     {persisted.quoteToken}
                     <ChevronDown className="h-3 w-3 text-muted-foreground" />
                   </button>
@@ -1140,7 +1173,7 @@ export function DeployPage() {
                             setPickingSide(null);
                           }}
                         >
-                          <span className="h-2.5 w-2.5 rounded-full" style={{ background: TOKEN_COLORS[token] ?? '#888' }} />
+                          <TokenIcon symbol={token} size="h-5 w-5" />
                           {token}
                           {isSelected && <Check className="h-3.5 w-3.5 ml-auto text-green-500" />}
                         </button>
@@ -1321,7 +1354,7 @@ export function DeployPage() {
               {/* Extra TON */}
               <div className="flex items-center justify-between px-4 py-3">
                 <div className="flex items-center gap-2">
-                  <span className="h-2.5 w-2.5 rounded-full" style={{ background: TOKEN_COLORS.TON }} />
+                  <TokenIcon symbol="TON" size="h-5 w-5" />
                   <span className="text-sm font-semibold">Extra TON</span>
                   <span className="text-[10px] text-muted-foreground">gas & fees</span>
                 </div>

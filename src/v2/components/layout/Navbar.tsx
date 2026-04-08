@@ -1,6 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
 import { TonConnectButton } from '@tonconnect/ui-react';
-import { Bot, BarChart3, Trophy, Layers, Rocket, Menu } from 'lucide-react';
+import { Bot, BarChart3, Layers, Rocket, Menu, Activity } from 'lucide-react';
 import { Button } from '@/v2/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/v2/components/ui/sheet';
 import { Separator } from '@/v2/components/ui/separator';
@@ -8,10 +8,10 @@ import { cn } from '@/v2/lib/utils';
 
 const NAV_LINKS = [
   { to: '/', label: 'Home', icon: Bot },
-  { to: '/leaderboard', label: 'Leaderboard', icon: Trophy },
-  { to: '/stats', label: 'Stats', icon: BarChart3 },
   { to: '/agent-hub', label: 'Agent Hub', icon: Layers },
-  { to: '/trader/deploy', label: 'Deploy', icon: Rocket },
+  { to: '/stats', label: 'Order Book', icon: BarChart3 },
+  { to: '/status', label: 'Status', icon: Activity },
+  { to: '/trader/deploy', label: 'My Agents', icon: Rocket },
 ];
 
 export function Navbar() {

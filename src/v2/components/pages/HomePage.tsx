@@ -348,7 +348,7 @@ export function HomePage() {
                           {change24h >= 0 ? '+' : ''}{change24h.toFixed(1)}%
                         </TableCell>
                         <TableCell className="text-center">
-                          <Badge variant={consensusUpper === 'BULLISH' ? 'default' : consensusUpper === 'BEARISH' ? 'destructive' : 'secondary'} className="gap-1">
+                          <Badge className={`gap-1 ${consensusUpper === 'BULLISH' ? 'bg-green-600 text-white border-green-600' : consensusUpper === 'BEARISH' ? 'bg-red-600 text-white border-red-600' : ''}`} variant={consensusUpper === 'BULLISH' || consensusUpper === 'BEARISH' ? undefined : 'secondary'}>
                             {consensusUpper === 'BULLISH' && <TrendingUp className="h-3 w-3" />}
                             {consensusUpper === 'BEARISH' && <TrendingDown className="h-3 w-3" />}
                             {consensusUpper || 'NEUTRAL'} {pct.toFixed(0)}%
