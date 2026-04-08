@@ -245,6 +245,7 @@ function normalizeContract(item: Record<string, unknown>): ContractListItem {
     max_decisions: typeof item.max_decisions === 'number' ? item.max_decisions : null,
     used_decisions: typeof item.used_decisions === 'number' ? item.used_decisions : null,
     trading_pairs: typeof item.trading_pairs === 'string' ? item.trading_pairs : null,
+    profit_usd: typeof item.profit_usd === 'number' ? item.profit_usd : null,
   };
 }
 
@@ -656,6 +657,7 @@ export async function listContractsFromLeaderboard(cfg: PublicApiConfig): Promis
     created_at: e.created_at,
     updated_at: e.created_at, // leaderboard doesn't have updated_at
     total_decisions: e.total_decisions ?? null,
+    profit_usd: e.profit_usd ?? null,
   }));
 }
 
