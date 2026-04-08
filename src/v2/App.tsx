@@ -2,6 +2,7 @@ import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import { RootLayout } from './components/layout/RootLayout';
 import { HomePage } from './components/pages/HomePage';
 import { LeaderboardPage } from './components/pages/LeaderboardPage';
+import { AgentHubPage } from './components/pages/AgentHubPage';
 
 function PlaceholderPage({ name }: { name: string }) {
   return (
@@ -21,8 +22,8 @@ const router = createBrowserRouter(
         { path: 'leaderboard', element: <LeaderboardPage /> },
         { path: 'stats', element: <PlaceholderPage name="Stats" /> },
         { path: 'stats/:pair', element: <PlaceholderPage name="Stats" /> },
-        { path: 'agent-hub', element: <PlaceholderPage name="Agent Hub" /> },
-        { path: 'agent-hub/:token', element: <PlaceholderPage name="Agent Hub" /> },
+        { path: 'agent-hub', element: <AgentHubPage /> },
+        { path: 'agent-hub/:token', element: <AgentHubPage /> },
         { path: 'trader/deploy', element: <PlaceholderPage name="Deploy" /> },
         { path: 'trader/:id', element: <PlaceholderPage name="Contract Detail" /> },
       ],
