@@ -6,6 +6,7 @@ import { AgentHubPage } from './components/pages/AgentHubPage';
 import { StatsPage } from './components/pages/StatsPage';
 import { DeployPage } from './components/pages/DeployPage';
 import { ContractDetailPage } from './components/pages/ContractDetailPage';
+import { StatusPage } from './components/pages/StatusPage';
 
 const router = createBrowserRouter(
   [
@@ -21,6 +22,7 @@ const router = createBrowserRouter(
         { path: 'agent-hub/:token', element: <AgentHubPage /> },
         { path: 'trader/deploy', element: <DeployPage /> },
         { path: 'trader/:id', element: <ContractDetailPage /> },
+        { path: 'status', element: <StatusPage /> },
       ],
     },
   ],
