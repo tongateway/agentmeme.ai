@@ -115,27 +115,40 @@ type NormalizedBook = {
  * smaller than mid_price, it's already inverted and should be used as-is.
  */
 function normalizeOpen4DevBook(book: DexOrderBookResponse): NormalizedBook {
-  const ref = book.mid_price ?? null;
   const decAdj = 10 ** ((book.to_decimals ?? 9) - (book.from_decimals ?? 9));
-  // Asks have large rates (to/from >> 1), bids have tiny rates (to/from << 1).
-  // Invert large rates, apply direct scaling to small rates.
-  // Some orders have price_rate already in display format (inverted).
-  // Detect: if rate < 1 and applying decAdj would overshoot the expected display
-  // price by >100×, the rate is already in display format — use as-is.
-  const expectedDisplay = ref != null && ref > 1 ? (1 / ref) * decAdj : null;
+
+  // Determine if rates need inversion by looking at the majority of ask rates.
+  // Normal convention: asks have large rates (>1), bids have small rates (<1).
+  const allRates = [
+    ...book.asks.filter((a) => a.price_rate > 0).map((a) => a.price_rate),
+    ...book.bids.filter((b) => b.price_rate > 0).map((b) => b.price_rate),
+  ];
+  const bigRateCount = allRates.filter((r) => r > 1).length;
+  const ratesNeedInversion = bigRateCount > allRates.length / 2;
+
+  // Compute a reference display price from the majority of rates
+  // to detect outlier rates that are already in display format.
+  let refDisplay: number | null = null;
+  if (ratesNeedInversion) {
+    const bigRates = allRates.filter((r) => r > 1);
+    if (bigRates.length > 0) {
+      bigRates.sort((a, b) => a - b);
+      const medianRate = bigRates[Math.floor(bigRates.length / 2)];
+      refDisplay = (1 / medianRate) * decAdj;
+    }
+  }
+
   const toDisplayPrice = (priceRate: number): number => {
     if (priceRate > 1) return (1 / priceRate) * decAdj;
-    // For small rates: check if multiplying by decAdj would overshoot
-    if (expectedDisplay != null && decAdj !== 1) {
+    // For small rates when we expect big rates to be the norm:
+    // check if this rate is already in display format (already inverted).
+    // If scaling by decAdj would produce a value >50× the reference, skip decAdj.
+    if (ratesNeedInversion && refDisplay != null && decAdj !== 1) {
       const scaled = priceRate * decAdj;
-      if (scaled > expectedDisplay * 100) {
-        // Rate is already in display format — use as-is
-        return priceRate;
-      }
+      if (scaled > refDisplay * 50) return priceRate;
     }
     return priceRate * decAdj;
   };
-  const shouldInvert = ref != null ? ref > 1 : true;
 
   const asks: NormalizedLevel[] = book.asks
     .filter((a) => a.price_rate > 0)
@@ -156,7 +169,8 @@ function normalizeOpen4DevBook(book: DexOrderBookResponse): NormalizedBook {
   asks.sort((a, b) => a.price - b.price);
   bids.sort((a, b) => b.price - a.price);
 
-  return { asks, bids, inverted: shouldInvert };
+  // Determine inverted flag for Total calculations based on whether we inverted rates
+  return { asks, bids, inverted: ratesNeedInversion };
 }
 
 /* ---------- stats from normalized book ---------- */
