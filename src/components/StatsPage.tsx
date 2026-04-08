@@ -590,25 +590,22 @@ export function StatsPage({ raceCfg, pairSlug, onPairChange }: StatsPageProps) {
 
   const fetchTradingStats = useCallback(async () => {
     try {
-      const [bidSide, askSide] = await Promise.all([
-        getDexTradingStats(effectivePair.fromSymbol, effectivePair.toSymbol),
-        getDexTradingStats(effectivePair.toSymbol, effectivePair.fromSymbol),
-      ]);
+      // Use a single direction (fromSymbol → toSymbol) for trading stats
+      const stats = await getDexTradingStats(effectivePair.fromSymbol, effectivePair.toSymbol);
 
-      const bid24h = bidSide.periods.find((p) => p.period === '24h') ?? null;
-      const ask24h = askSide.periods.find((p) => p.period === '24h') ?? null;
+      const period24h = stats.periods.find((p) => p.period === '24h') ?? null;
 
       setRealStats24h({
-        bidOrders: bid24h?.total_orders ?? null,
-        askOrders: ask24h?.total_orders ?? null,
-        bidVolume: bid24h?.total_volume ?? null,
-        askVolume: ask24h?.total_volume ?? null,
+        bidOrders: period24h?.total_orders ?? null,
+        askOrders: period24h?.total_orders ?? null,
+        bidVolume: period24h?.total_volume ?? null,
+        askVolume: period24h?.total_volume ?? null,
         bidVolumeSymbol: effectivePair.fromSymbol,
-        askVolumeSymbol: effectivePair.toSymbol,
+        askVolumeSymbol: effectivePair.fromSymbol,
       });
       setTradingPeriods({
-        bid: bidSide.periods,
-        ask: askSide.periods,
+        bid: stats.periods,
+        ask: stats.periods,
       });
     } catch {
       setRealStats24h(null);
