@@ -273,28 +273,26 @@ function OrderBookTable({
 
   return (
     <div className="space-y-3">
-      {/* Spread summary bar — at top of orderbook */}
+      {/* Spread summary bar — compact single-row at top of orderbook */}
       {stats.bestBid != null && stats.bestAsk != null && stats.spreadPct != null && (
-        <Card>
-          <CardContent className="p-3 flex flex-row items-center justify-center gap-6">
-            <div className="text-center">
-              <div className="text-[10px] text-muted-foreground">Best Bid</div>
-              <div className="font-mono text-sm font-bold text-green-500">{fmtRate(stats.bestBid)}</div>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-12 h-1 rounded-full bg-green-500" />
-              <div className="text-center">
-                <div className="text-[10px] text-muted-foreground">Spread</div>
-                <div className={`font-mono text-xs font-bold ${stats.spreadPct < 0 ? 'text-yellow-500' : ''}`}>
-                  {stats.spreadPct < 0 ? 'Crossed' : `${stats.spreadPct.toFixed(2)}%`}
-                </div>
-              </div>
-              <div className="w-12 h-1 rounded-full bg-red-500" />
-            </div>
-            <div className="text-center">
-              <div className="text-[10px] text-muted-foreground">Best Ask</div>
-              <div className="font-mono text-sm font-bold text-red-500">{fmtRate(stats.bestAsk)}</div>
-            </div>
+        <Card className="py-0">
+          <CardContent className="px-3 py-1.5 flex flex-row items-center justify-center gap-4 text-xs font-mono">
+            <span className="flex items-center gap-1.5">
+              <span className="text-[10px] text-muted-foreground">Best Bid</span>
+              <span className="font-bold text-green-500">{fmtRate(stats.bestBid)}</span>
+            </span>
+            <span className="h-3 w-px bg-border" />
+            <span className="flex items-center gap-1.5">
+              <span className="text-[10px] text-muted-foreground">Spread</span>
+              <span className={`font-bold ${stats.spreadPct < 0 ? 'text-yellow-500' : ''}`}>
+                {stats.spreadPct < 0 ? 'Crossed' : `${stats.spreadPct.toFixed(2)}%`}
+              </span>
+            </span>
+            <span className="h-3 w-px bg-border" />
+            <span className="flex items-center gap-1.5">
+              <span className="text-[10px] text-muted-foreground">Best Ask</span>
+              <span className="font-bold text-red-500">{fmtRate(stats.bestAsk)}</span>
+            </span>
           </CardContent>
         </Card>
       )}
