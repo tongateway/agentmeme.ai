@@ -129,7 +129,7 @@ const TOKEN_COLORS: Record<string, string> = {
 };
 
 const TOKEN_LOGOS: Record<string, string> = {
-  AGNT: 'https://raw.githubusercontent.com/AiTRADELABTON/agentmeme.ai/refs/heads/main/agnt-logo.png',
+  AGNT: '/logo.png',
   TON: 'https://assets.dedust.io/images/ton.webp',
   NOT: 'https://assets.dedust.io/images/not.webp',
   BUILD: 'https://cdn.joincommunity.xyz/build/build_logo.png',
@@ -169,9 +169,17 @@ const PROVIDER_LOGOS: Record<string, string> = {
 function TokenIcon({ symbol, size = 'h-4 w-4' }: { symbol: string; size?: string }) {
   const logo = TOKEN_LOGOS[symbol];
   if (logo) {
-    return <img src={logo} alt={symbol} className={`${size} rounded-full object-cover`} />;
+    // AGNT uses a text-based logo, needs contain-fit + dark bg + invert
+    if (symbol === 'AGNT') {
+      return (
+        <span className={`${size} rounded-full bg-black flex items-center justify-center overflow-hidden shrink-0`}>
+          <img src={logo} alt={symbol} className="w-[85%] object-contain invert" />
+        </span>
+      );
+    }
+    return <img src={logo} alt={symbol} className={`${size} rounded-full object-cover shrink-0`} />;
   }
-  return <span className={`${size} rounded-full`} style={{ background: TOKEN_COLORS[symbol] ?? '#888' }} />;
+  return <span className={`${size} rounded-full shrink-0`} style={{ background: TOKEN_COLORS[symbol] ?? '#888' }} />;
 }
 
 function ProviderIcon({ provider }: { provider: string }) {
@@ -959,9 +967,9 @@ export function DeployPage() {
   void rawAddr;
 
   return (
-    <div className="mt-4 mx-auto max-w-2xl">
+    <div className="flex flex-col gap-4">
       <ContractTabBar />
-      <Card className="overflow-hidden">
+      <Card className="overflow-hidden mx-auto w-full max-w-2xl">
         {/* Header */}
         <div className="border-b border-border/50 px-6 py-5">
           <div className="flex items-center gap-3">
