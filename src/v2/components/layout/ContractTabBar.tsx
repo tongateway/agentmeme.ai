@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useTonAddress } from '@tonconnect/ui-react';
+import { Address } from '@ton/core';
 import { Bot, Plus, Loader2 } from 'lucide-react';
-import { listRaceContracts, type ContractListItem, type PublicApiConfig } from '@/lib/api';
+import { listRaceContracts, listContractsFromLeaderboard, type ContractListItem, type PublicApiConfig } from '@/lib/api';
 import { useAuth } from '@/lib/useAuth';
 import { Button } from '@/v2/components/ui/button';
 import { cn } from '@/v2/lib/utils';
@@ -12,6 +13,14 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://ai-api.open4dev.x
 function fmtAddrShort(addr: string): string {
   if (addr.length <= 12) return addr;
   return `${addr.slice(0, 6)}…${addr.slice(-4)}`;
+}
+
+function normalizeTonAddress(addr: string): string {
+  try {
+    return Address.parse(addr).toRawString();
+  } catch {
+    return addr.toLowerCase();
+  }
 }
 
 function statusDotClass(status: string | undefined): string {
@@ -24,7 +33,7 @@ export function ContractTabBar() {
   const navigate = useNavigate();
   const location = useLocation();
   const { id: activeId } = useParams<{ id?: string }>();
-  const rawAddr = useTonAddress(false);
+  const tonAddress = useTonAddress();
 
   const raceCfg: PublicApiConfig = useMemo(() => ({ baseUrl: API_BASE }), []);
   const { jwtToken } = useAuth(raceCfg);
@@ -32,23 +41,35 @@ export function ContractTabBar() {
   const [contracts, setContracts] = useState<ContractListItem[]>([]);
   const [loading, setLoading] = useState(false);
 
+  const walletRawAddress = useMemo(
+    () => (tonAddress ? normalizeTonAddress(tonAddress) : null),
+    [tonAddress],
+  );
+
   const isDeployTab =
     location.pathname === '/trader/deploy' || location.pathname.endsWith('/trader/deploy');
 
   const load = useCallback(async () => {
-    if (!rawAddr) {
+    if (!walletRawAddress) {
       setContracts([]);
       return;
     }
     setLoading(true);
     try {
       const cfg: PublicApiConfig = { baseUrl: API_BASE, jwtToken };
-      const all = await listRaceContracts(cfg, 'all');
-      // Filter to contracts owned by the current wallet
-      const mineAddr = rawAddr.toLowerCase();
+      let all = await listRaceContracts(cfg, 'active,paused,deploying');
+      if (all.length === 0) {
+        all = await listContractsFromLeaderboard(cfg);
+      }
+      // Filter to contracts owned by the current wallet using normalized raw addresses
       const mine = all.filter((c) => {
-        const owner = (c.owner_address || '').toLowerCase();
-        return owner === mineAddr || owner.replace(/^0:/, '') === mineAddr.replace(/^0:/, '');
+        if (!c.owner_address) return false;
+        return normalizeTonAddress(c.owner_address) === walletRawAddress;
+      });
+      mine.sort((a, b) => {
+        const byCreated = new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        if (byCreated !== 0) return byCreated;
+        return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
       });
       setContracts(mine);
     } catch {
@@ -56,13 +77,13 @@ export function ContractTabBar() {
     } finally {
       setLoading(false);
     }
-  }, [rawAddr, jwtToken]);
+  }, [walletRawAddress, jwtToken]);
 
   useEffect(() => {
     void load();
   }, [load]);
 
-  if (!rawAddr) {
+  if (!tonAddress) {
     return null;
   }
 
