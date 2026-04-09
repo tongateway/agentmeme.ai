@@ -465,6 +465,8 @@ const DEFAULT_PERSISTED: Persisted = {
   agentSecretKeyHex: '',
   contractAddress: null,
   raceContractId: null,
+  baseToken: 'AGNT',
+  quoteToken: 'USDT',
 };
 
 // ---------------------------------------------------------------------------

@@ -3,14 +3,13 @@ import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
   BarChart, Bar, CartesianGrid,
 } from 'recharts';
-import { RefreshCw, CheckCircle, AlertTriangle, XCircle, Activity, Loader2 } from 'lucide-react';
+import { CheckCircle, AlertTriangle, XCircle, Activity, Loader2 } from 'lucide-react';
 import {
   getProviderStats, getProviderLogs,
   type PublicApiConfig, type ProviderStat, type ProviderLog,
 } from '@/lib/api';
 import { Card, CardContent } from '@/v2/components/ui/card';
 import { Badge } from '@/v2/components/ui/badge';
-import { Button } from '@/v2/components/ui/button';
 import { Separator } from '@/v2/components/ui/separator';
 
 const raceCfg: PublicApiConfig = {
@@ -271,23 +270,12 @@ export function StatusPage() {
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Activity className="h-5 w-5 text-primary" />
-          <div>
-            <h1 className="text-lg font-semibold tracking-tight">Provider Status</h1>
-            <p className="text-[11px] text-muted-foreground">AI provider health and performance</p>
-          </div>
+      <div className="flex items-center gap-2">
+        <Activity className="h-5 w-5 text-primary" />
+        <div>
+          <h1 className="text-lg font-semibold tracking-tight">Provider Status</h1>
+          <p className="text-[11px] text-muted-foreground">AI provider health and performance</p>
         </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => void load()}
-          disabled={loading}
-        >
-          <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-          Refresh
-        </Button>
       </div>
 
       {/* Overall status banner */}

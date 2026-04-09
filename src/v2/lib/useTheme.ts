@@ -1,13 +1,25 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 export type Theme = 'light' | 'dark';
 const STORAGE_KEY = 'agentmeme:v2:theme';
 
 function readStoredTheme(): Theme {
   if (typeof window === 'undefined') return 'dark';
-  const raw = localStorage.getItem(STORAGE_KEY);
-  if (raw === 'light' || raw === 'dark') return raw;
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw === 'light' || raw === 'dark') return raw;
+  } catch {
+    // localStorage may throw (e.g., disabled, quota exceeded on read)
+  }
   return 'dark';
+}
+
+function safeWriteTheme(theme: Theme) {
+  try {
+    localStorage.setItem(STORAGE_KEY, theme);
+  } catch {
+    // Silently ignore quota/permission errors — theme still works in-memory for this session
+  }
 }
 
 function applyTheme(theme: Theme) {
@@ -26,10 +38,16 @@ export function hydrateTheme() {
 
 export function useTheme() {
   const [theme, setThemeState] = useState<Theme>(readStoredTheme);
+  // Skip writing the initial value back to storage — only persist user-triggered changes.
+  const isInitial = useRef(true);
 
   useEffect(() => {
     applyTheme(theme);
-    localStorage.setItem(STORAGE_KEY, theme);
+    if (isInitial.current) {
+      isInitial.current = false;
+      return;
+    }
+    safeWriteTheme(theme);
   }, [theme]);
 
   const setTheme = useCallback((next: Theme) => {
