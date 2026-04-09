@@ -273,6 +273,32 @@ function OrderBookTable({
 
   return (
     <div className="space-y-3">
+      {/* Spread summary bar — at top of orderbook */}
+      {stats.bestBid != null && stats.bestAsk != null && stats.spreadPct != null && (
+        <Card>
+          <CardContent className="p-3 flex flex-row items-center justify-center gap-6">
+            <div className="text-center">
+              <div className="text-[10px] text-muted-foreground">Best Bid</div>
+              <div className="font-mono text-sm font-bold text-green-500">{fmtRate(stats.bestBid)}</div>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-12 h-1 rounded-full bg-green-500" />
+              <div className="text-center">
+                <div className="text-[10px] text-muted-foreground">Spread</div>
+                <div className={`font-mono text-xs font-bold ${stats.spreadPct < 0 ? 'text-yellow-500' : ''}`}>
+                  {stats.spreadPct < 0 ? 'Crossed' : `${stats.spreadPct.toFixed(2)}%`}
+                </div>
+              </div>
+              <div className="w-12 h-1 rounded-full bg-red-500" />
+            </div>
+            <div className="text-center">
+              <div className="text-[10px] text-muted-foreground">Best Ask</div>
+              <div className="font-mono text-sm font-bold text-red-500">{fmtRate(stats.bestAsk)}</div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Bids panel */}
         <Card className="overflow-hidden">
@@ -380,32 +406,6 @@ function OrderBookTable({
           </CardContent>
         </Card>
       </div>
-
-      {/* Spread summary bar */}
-      {stats.bestBid != null && stats.bestAsk != null && stats.spreadPct != null && (
-        <Card>
-          <CardContent className="p-3 flex flex-row items-center justify-center gap-6">
-            <div className="text-center">
-              <div className="text-[10px] text-muted-foreground">Best Bid</div>
-              <div className="font-mono text-sm font-bold text-green-500">{fmtRate(stats.bestBid)}</div>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-12 h-1 rounded-full bg-green-500" />
-              <div className="text-center">
-                <div className="text-[10px] text-muted-foreground">Spread</div>
-                <div className={`font-mono text-xs font-bold ${stats.spreadPct < 0 ? 'text-yellow-500' : ''}`}>
-                  {stats.spreadPct < 0 ? 'Crossed' : `${stats.spreadPct.toFixed(2)}%`}
-                </div>
-              </div>
-              <div className="w-12 h-1 rounded-full bg-red-500" />
-            </div>
-            <div className="text-center">
-              <div className="text-[10px] text-muted-foreground">Best Ask</div>
-              <div className="font-mono text-sm font-bold text-red-500">{fmtRate(stats.bestAsk)}</div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {sourceLabel && (
         <div className="px-3 py-1.5 text-[10px] tracking-wide text-muted-foreground border-t border-border/50 bg-muted/30 text-center rounded-b-xl">
@@ -827,40 +827,6 @@ export function StatsPage() {
         })}
       </div>
 
-      {pairStats ? (
-        <PairActivityRow
-          stats={pairStats}
-          fromSymbol={fromUpper}
-          toSymbol={toUpper}
-          volumeUsdByWindow={activityVolumeUsd}
-          tradingPeriods={tradingPeriods}
-        />
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-          {['1H', '24H', 'ALL'].map((label) => (
-            <div key={label} className="rounded-lg px-3 py-2.5 border border-border/50 bg-muted/50">
-              <div className="flex items-center justify-between mb-2">
-                <Badge variant="outline" className="text-[10px] px-1.5 py-0">{label}</Badge>
-              </div>
-              <div className="grid grid-cols-3 gap-2">
-                <div>
-                  <div className="text-[9px] uppercase tracking-wide text-muted-foreground">Open</div>
-                  <Skeleton className="h-4 w-8 mt-1" />
-                </div>
-                <div>
-                  <div className="text-[9px] uppercase tracking-wide text-muted-foreground">Filled</div>
-                  <Skeleton className="h-4 w-8 mt-1" />
-                </div>
-                <div>
-                  <div className="text-[9px] uppercase tracking-wide text-muted-foreground">Volume</div>
-                  <Skeleton className="h-4 w-14 mt-1" />
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
       {bookError ? (
         <Card>
           <CardContent className="p-4">
@@ -888,6 +854,22 @@ export function StatsPage() {
           realStats24h={realStats24h}
         />
       ) : null}
+
+      {pairStats ? (
+        <PairActivityRow
+          stats={pairStats}
+          fromSymbol={fromUpper}
+          toSymbol={toUpper}
+          volumeUsdByWindow={activityVolumeUsd}
+          tradingPeriods={tradingPeriods}
+        />
+      ) : (
+        <Card className="py-0">
+          <CardContent className="p-3">
+            <Skeleton className="h-32 w-full" />
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
