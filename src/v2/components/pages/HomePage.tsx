@@ -117,7 +117,13 @@ export function HomePage() {
   }
 
   const feedItems = aiResponses
-    .filter((r) => r.parsed_params && typeof r.parsed_params.reasoning === 'string' && (r.parsed_params.reasoning as string).length > 0)
+    .filter((r) => {
+      if (!r.parsed_params) return false;
+      const pp = r.parsed_params as Record<string, unknown>;
+      const human = typeof pp.human_opinion === 'string' ? pp.human_opinion : '';
+      const reason = typeof pp.reasoning === 'string' ? pp.reasoning : '';
+      return human.length > 0 || reason.length > 0;
+    })
     .slice(0, 6);
 
   return (
@@ -266,58 +272,54 @@ export function HomePage() {
       {/* 4. Activity Feed */}
       {!loading && feedItems.length > 0 && (
         <section>
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+              <TrendingUp className="h-3.5 w-3.5 text-muted-foreground" />
               <span className="font-semibold text-sm">Agent Activity Feed</span>
-              <Badge variant="outline" className="gap-1">
+              <Badge variant="outline" className="gap-1 h-5 text-[10px] px-1.5">
                 <span className="live-dot" /> Live
               </Badge>
             </div>
-            <Button variant="ghost" size="sm" onClick={() => navigate('/leaderboard')}>
-              View all <ChevronRight className="h-3.5 w-3.5 ml-1" />
+            <Button variant="ghost" size="sm" className="h-6 text-[11px]" onClick={() => navigate('/leaderboard')}>
+              View all <ChevronRight className="h-3 w-3 ml-0.5" />
             </Button>
           </div>
-          <div className="flex flex-col gap-3">
-            {feedItems.map((r) => {
-              const pp = r.parsed_params as Record<string, unknown>;
-              const reasoning = pp.reasoning as string;
-              const from = pp.from_token as string | undefined;
-              const to = pp.to_token as string | undefined;
-              const tokenPair = from && to ? `${from}/${to}` : undefined;
-              const agent = agentMap.get(r.smart_contract_id);
-              const agentName = agent?.name || fmtAddr(r.smart_contract_id);
-              const model = agent?.model ? agent.model.split('/').pop() ?? agent.model : '';
+          <Card className="py-0 overflow-hidden">
+            <div className="divide-y divide-border/30">
+              {feedItems.map((r) => {
+                const pp = r.parsed_params as Record<string, unknown>;
+                const humanOpinion = typeof pp.human_opinion === 'string' ? pp.human_opinion : '';
+                const reasoning = typeof pp.reasoning === 'string' ? pp.reasoning : '';
+                const text = humanOpinion || reasoning;
+                const from = pp.from_token as string | undefined;
+                const to = pp.to_token as string | undefined;
+                const tokenPair = from && to ? `${from}/${to}` : undefined;
+                const agent = agentMap.get(r.smart_contract_id);
+                const agentName = agent?.name || fmtAddr(r.smart_contract_id);
+                const model = agent?.model ? agent.model.split('/').pop() ?? agent.model : '';
 
-              return (
-                <Card key={r.id} className="border-l-4 border-l-border">
-                  <CardContent className="p-4">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted">
-                          <Bot className="h-4 w-4 text-muted-foreground" />
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-bold">{agentName}</span>
-                            {model && <Badge variant="secondary" className="text-xs">{model}</Badge>}
-                          </div>
-                        </div>
+                return (
+                  <div key={r.id} className="px-3 py-2 hover:bg-accent/20 transition-colors">
+                    <div className="flex items-center justify-between gap-2 mb-1">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Bot className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                        <span className="text-xs font-bold truncate">{agentName}</span>
+                        {model && <Badge variant="secondary" className="h-4 text-[9px] px-1 shrink-0">{model}</Badge>}
                       </div>
-                      <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
-                        <Badge variant={actionVariant(r.action)}>{actionLabel(r.action)}</Badge>
-                        {tokenPair && <Badge variant="outline">{tokenPair}</Badge>}
-                        <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                          <Clock className="h-3 w-3" /> {timeAgo(r.created_at)}
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <Badge variant={actionVariant(r.action)} className="h-4 text-[9px] px-1.5">{actionLabel(r.action)}</Badge>
+                        {tokenPair && <Badge variant="outline" className="h-4 text-[9px] px-1.5">{tokenPair}</Badge>}
+                        <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground">
+                          <Clock className="h-2.5 w-2.5" /> {timeAgo(r.created_at)}
                         </span>
                       </div>
                     </div>
-                    {reasoning && <p className="text-xs text-muted-foreground mt-2 leading-relaxed">{reasoning}</p>}
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
+                    {text && <p className="text-[11px] text-muted-foreground leading-snug line-clamp-2 pl-5">{text}</p>}
+                  </div>
+                );
+              })}
+            </div>
+          </Card>
         </section>
       )}
 
