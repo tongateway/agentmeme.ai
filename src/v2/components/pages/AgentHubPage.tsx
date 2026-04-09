@@ -17,7 +17,31 @@ import {
   TableHeader, TableRow,
 } from '@/v2/components/ui/table';
 import { Skeleton } from '@/v2/components/ui/skeleton';
-import { CandlestickChart } from '@/components/CandlestickChart';
+import { CandlestickChart } from '@/v2/components/CandlestickChart';
+
+const TOKEN_LOGOS: Record<string, string> = {
+  AGNT: 'https://raw.githubusercontent.com/AiTRADELABTON/agentmeme.ai/refs/heads/main/agnt-logo.png',
+  TON: 'https://assets.dedust.io/images/ton.webp',
+  NOT: 'https://assets.dedust.io/images/not.webp',
+  BUILD: 'https://cdn.joincommunity.xyz/build/build_logo.png',
+  USDT: 'https://assets.dedust.io/images/usdt.webp',
+};
+
+const TOKEN_COLORS: Record<string, string> = {
+  AGNT: '#F5A623',
+  NOT: '#4A90D9',
+  BUILD: '#50C878',
+  USDT: '#50C878',
+  TON: '#888',
+};
+
+function TokenIcon({ symbol, size = 'h-4 w-4' }: { symbol: string; size?: string }) {
+  const logo = TOKEN_LOGOS[symbol];
+  if (logo) {
+    return <img src={logo} alt={symbol} className={`${size} rounded-full object-cover`} />;
+  }
+  return <span className={`${size} rounded-full`} style={{ background: TOKEN_COLORS[symbol] ?? '#888' }} />;
+}
 
 function computeSignalStrength(token: TokenOpinionSummary, maxAgents: number, maxTrades: number): number {
   const consensusWeight = Math.max(token.bullish_pct, token.bearish_pct) / 100;
@@ -307,83 +331,75 @@ function TokenDetailView({ symbol, raceCfg, onBack }: { symbol: string; raceCfg:
   return (
     <div className="flex flex-col lg:flex-row gap-6">
       {/* Left sidebar */}
-      <div className="lg:w-72 lg:sticky lg:top-20 lg:self-start shrink-0 flex flex-col gap-4">
+      <div className="lg:w-64 lg:sticky lg:top-24 lg:self-start shrink-0 flex flex-col gap-3">
+        {/* Back to Hub — moved to top */}
+        <Button variant="ghost" size="sm" onClick={onBack} className="self-start h-7 -ml-2 text-muted-foreground hover:text-foreground">
+          <ArrowLeft className="h-3.5 w-3.5 mr-1" /> Back to Hub
+        </Button>
+
         {/* Token header */}
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-bold">
-            {symbol.slice(0, 3)}
-          </div>
-          <div className="flex flex-col">
-            <span className="text-lg font-bold leading-tight">{stats?.token_symbol}</span>
-            <span className="text-xs text-muted-foreground">{stats?.token_name}</span>
+        <div className="flex items-center gap-2.5">
+          <TokenIcon symbol={symbol} size="h-10 w-10" />
+          <div className="flex flex-col min-w-0">
+            <span className="text-lg font-bold leading-tight truncate">{stats?.token_symbol}</span>
+            <span className="text-xs text-muted-foreground truncate">{stats?.token_name}</span>
           </div>
         </div>
 
         {/* Price */}
         <div className="flex items-baseline gap-2">
           <span className="text-2xl font-bold tabular-nums font-mono">{fmtPriceDetail(stats?.price_usd ?? 0)}</span>
-          <span className={`flex items-center gap-0.5 text-sm font-bold tabular-nums font-mono ${changePositive ? 'text-green-500' : 'text-red-500'}`}>
-            {changePositive ? <TrendingUp className="h-3.5 w-3.5" /> : <TrendingDown className="h-3.5 w-3.5" />}
+          <span className={`flex items-center gap-0.5 text-xs font-bold tabular-nums font-mono ${changePositive ? 'text-green-500' : 'text-red-500'}`}>
+            {changePositive ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
             {changePositive ? '+' : ''}{(stats?.price_change_24h ?? 0).toFixed(1)}%
           </span>
         </div>
 
         {/* Sentiment */}
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-1.5">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Sentiment</span>
-            <Badge className={consensusUpper === 'BULLISH' ? 'bg-green-600 text-white border-green-600' : consensusUpper === 'BEARISH' ? 'bg-red-600 text-white border-red-600' : ''} variant={consensusUpper === 'BULLISH' || consensusUpper === 'BEARISH' ? undefined : 'secondary'}>
+            <span className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Sentiment</span>
+            <Badge className={`h-4 px-1.5 text-[9px] ${consensusUpper === 'BULLISH' ? 'bg-green-600 text-white border-green-600' : consensusUpper === 'BEARISH' ? 'bg-red-600 text-white border-red-600' : ''}`} variant={consensusUpper === 'BULLISH' || consensusUpper === 'BEARISH' ? undefined : 'secondary'}>
               {consensusUpper || 'NEUTRAL'}
             </Badge>
           </div>
-          <div className="flex h-2.5 rounded-full overflow-hidden bg-muted">
+          <div className="flex h-1.5 rounded-full overflow-hidden bg-muted">
             {bullPct > 0 && <div className="bg-green-500" style={{ width: `${bullPct}%` }} />}
             {bearPct > 0 && <div className="bg-red-500" style={{ width: `${bearPct}%` }} />}
           </div>
-          <div className="flex justify-between text-[10px] text-muted-foreground">
-            <span className="flex items-center gap-1">
-              <TrendingUp className="h-3 w-3 text-green-500" />
-              {bullPct.toFixed(0)}% Bullish
-            </span>
-            <span className="flex items-center gap-1">
-              {bearPct.toFixed(0)}% Bearish
-              <TrendingDown className="h-3 w-3 text-red-500" />
-            </span>
+          <div className="flex justify-between text-[9px] text-muted-foreground">
+            <span>{bullPct.toFixed(0)}% Bullish</span>
+            <span>{bearPct.toFixed(0)}% Bearish</span>
           </div>
         </div>
 
-        {/* Active Agents stats */}
-        <div className="flex flex-col gap-2">
-          <span className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Active Agents</span>
-          <div className="grid grid-cols-3 gap-2">
-            <Card>
-              <CardContent className="flex flex-col items-center p-3 gap-1">
-                <Users className="h-4 w-4 text-muted-foreground" />
-                <span className="font-mono text-base font-bold tabular-nums">{stats?.active_agents ?? 0}</span>
-                <span className="text-[10px] text-muted-foreground">Agents</span>
+        {/* Active Agents stats — compact 3 cards */}
+        <div className="flex flex-col gap-1.5">
+          <span className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Active Agents</span>
+          <div className="grid grid-cols-3 gap-1.5">
+            <Card className="py-0">
+              <CardContent className="flex flex-col items-center justify-center p-2 gap-0.5">
+                <Users className="h-3 w-3 text-muted-foreground" />
+                <span className="font-mono text-sm font-bold tabular-nums leading-none">{stats?.active_agents ?? 0}</span>
+                <span className="text-[9px] text-muted-foreground leading-none">Agents</span>
               </CardContent>
             </Card>
-            <Card>
-              <CardContent className="flex flex-col items-center p-3 gap-1">
-                <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                <span className="font-mono text-base font-bold tabular-nums">{(stats?.total_trades_24h ?? 0).toLocaleString()}</span>
-                <span className="text-[10px] text-muted-foreground">Trades</span>
+            <Card className="py-0">
+              <CardContent className="flex flex-col items-center justify-center p-2 gap-0.5">
+                <TrendingUp className="h-3 w-3 text-muted-foreground" />
+                <span className="font-mono text-sm font-bold tabular-nums leading-none">{(stats?.total_trades_24h ?? 0).toLocaleString()}</span>
+                <span className="text-[9px] text-muted-foreground leading-none">Trades</span>
               </CardContent>
             </Card>
-            <Card>
-              <CardContent className="flex flex-col items-center p-3 gap-1">
-                <Target className="h-4 w-4 text-muted-foreground" />
-                <span className="font-mono text-base font-bold tabular-nums">{((stats?.avg_confidence ?? 0) * 100).toFixed(0)}%</span>
-                <span className="text-[10px] text-muted-foreground">Confidence</span>
+            <Card className="py-0">
+              <CardContent className="flex flex-col items-center justify-center p-2 gap-0.5">
+                <Target className="h-3 w-3 text-muted-foreground" />
+                <span className="font-mono text-sm font-bold tabular-nums leading-none">{((stats?.avg_confidence ?? 0) * 100).toFixed(0)}%</span>
+                <span className="text-[9px] text-muted-foreground leading-none">Confidence</span>
               </CardContent>
             </Card>
           </div>
         </div>
-
-        {/* Back */}
-        <Button variant="ghost" size="sm" onClick={onBack} className="self-start mt-2">
-          <ArrowLeft className="h-4 w-4 mr-1" /> Back to Hub
-        </Button>
       </div>
 
       {/* Right main column */}
