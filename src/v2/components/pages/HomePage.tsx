@@ -124,18 +124,18 @@ export function HomePage() {
     <div className="flex flex-col gap-6 pb-20">
 
       {/* 1. Hero */}
-      <section className="flex flex-col items-center text-center pt-10 sm:pt-16 gap-4">
-        <h2 className="text-4xl sm:text-5xl font-bold tracking-tight">AI Agents Arena</h2>
-        <p className="max-w-2xl text-muted-foreground">
+      <section className="flex flex-col items-center text-center pt-4 sm:pt-8 gap-3">
+        <h2 className="text-3xl sm:text-4xl font-bold tracking-tight">AI Agents Arena</h2>
+        <p className="max-w-2xl text-sm text-muted-foreground">
           Autonomous AI trading agents competing on the TON blockchain. Pick your model, set your strategy, and let AI trade for you.
         </p>
-        <div className="flex flex-wrap items-center justify-center gap-3 mt-2">
-          <Button size="lg" onClick={() => navigate('/trader/deploy')}>
-            <Rocket className="h-4 w-4 mr-2" />
+        <div className="flex flex-wrap items-center justify-center gap-2 mt-1">
+          <Button onClick={() => navigate('/trader/deploy')}>
+            <Rocket className="h-4 w-4 mr-1.5" />
             Deploy New Agent
           </Button>
-          <Button size="lg" variant="outline" onClick={() => navigate('/trader/deploy')}>
-            <Bot className="h-4 w-4 mr-2" />
+          <Button variant="outline" onClick={() => navigate('/trader/deploy')}>
+            <Bot className="h-4 w-4 mr-1.5" />
             My Agents
           </Button>
         </div>
@@ -143,98 +143,100 @@ export function HomePage() {
 
       {/* 2. Stats Bar */}
       {!loading && tokens.length > 0 && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <Card>
-            <CardContent className="p-4">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <Card className="py-0">
+            <CardContent className="p-3">
               <div className="flex items-center justify-between">
-                <p className="text-sm text-muted-foreground">Active Agents</p>
-                <Bot className="h-4 w-4 text-muted-foreground" />
+                <p className="text-xs text-muted-foreground">Active Agents</p>
+                <Bot className="h-3.5 w-3.5 text-muted-foreground" />
               </div>
-              <p className="text-2xl font-bold mt-1">{totalActiveAgents}</p>
-              <p className="text-xs text-muted-foreground">trading now</p>
+              <p className="text-xl font-bold mt-0.5">{totalActiveAgents}</p>
+              <p className="text-[10px] text-muted-foreground">trading now</p>
             </CardContent>
           </Card>
-          <Card>
-            <CardContent className="p-4">
+          <Card className="py-0">
+            <CardContent className="p-3">
               <div className="flex items-center justify-between">
-                <p className="text-sm text-muted-foreground">Trades 24h</p>
-                <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                <p className="text-xs text-muted-foreground">Trades 24h</p>
+                <TrendingUp className="h-3.5 w-3.5 text-muted-foreground" />
               </div>
-              <p className="text-2xl font-bold mt-1">{totalTrades24h.toLocaleString()}</p>
-              <p className="text-xs text-muted-foreground">on-chain executions</p>
+              <p className="text-xl font-bold mt-0.5">{totalTrades24h.toLocaleString()}</p>
+              <p className="text-[10px] text-muted-foreground">on-chain executions</p>
             </CardContent>
           </Card>
-          <Card>
-            <CardContent className="p-4">
+          <Card className="py-0">
+            <CardContent className="p-3">
               <div className="flex items-center justify-between">
-                <p className="text-sm text-muted-foreground">Sentiment</p>
+                <p className="text-xs text-muted-foreground">Sentiment</p>
                 {dominantSentiment === 'Bearish'
-                  ? <TrendingDown className="h-4 w-4 text-red-500" />
-                  : <TrendingUp className="h-4 w-4 text-green-500" />}
+                  ? <TrendingDown className="h-3.5 w-3.5 text-red-500" />
+                  : <TrendingUp className="h-3.5 w-3.5 text-green-500" />}
               </div>
-              <p className={`text-2xl font-bold mt-1 ${dominantSentiment === 'Bullish' ? 'text-green-500' : dominantSentiment === 'Bearish' ? 'text-red-500' : ''}`}>
+              <p className={`text-xl font-bold mt-0.5 ${dominantSentiment === 'Bullish' ? 'text-green-500' : dominantSentiment === 'Bearish' ? 'text-red-500' : ''}`}>
                 {dominantSentiment}
               </p>
-              <p className="text-xs text-muted-foreground">{sentimentPct}% of agents</p>
+              <p className="text-[10px] text-muted-foreground">{sentimentPct}% of agents</p>
             </CardContent>
           </Card>
-          <Card>
-            <CardContent className="p-4">
+          <Card className="py-0">
+            <CardContent className="p-3">
               <div className="flex items-center justify-between">
-                <p className="text-sm text-muted-foreground">Avg Signal</p>
-                <Target className="h-4 w-4 text-muted-foreground" />
+                <p className="text-xs text-muted-foreground">Avg Signal</p>
+                <Target className="h-3.5 w-3.5 text-muted-foreground" />
               </div>
-              <p className="text-2xl font-bold mt-1">{avgSignal.toFixed(1)}</p>
-              <p className="text-xs text-muted-foreground">out of 10</p>
+              <p className="text-xl font-bold mt-0.5">{avgSignal.toFixed(1)}</p>
+              <p className="text-[10px] text-muted-foreground">out of 10</p>
             </CardContent>
           </Card>
         </div>
       )}
 
       {loading && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           {[1, 2, 3, 4].map((i) => (
-            <Card key={i}><CardContent className="p-4"><Skeleton className="h-20 w-full" /></CardContent></Card>
+            <Card key={i} className="py-0"><CardContent className="p-3"><Skeleton className="h-14 w-full" /></CardContent></Card>
           ))}
         </div>
       )}
 
       {/* 3. Top Performers */}
       {!loading && top3.length > 0 && (
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-bold flex items-center gap-1.5">
-              <Trophy className="h-4 w-4 text-yellow-500" />
+        <Card className="py-0">
+          <CardHeader className="flex flex-row items-center justify-between p-3 pb-1">
+            <CardTitle className="text-xs font-bold flex items-center gap-1.5">
+              <Trophy className="h-3.5 w-3.5 text-yellow-500" />
               Top Performing Agents
             </CardTitle>
-            <Button variant="ghost" size="sm" onClick={() => navigate('/leaderboard')}>
-              View all <ChevronRight className="h-3.5 w-3.5 ml-1" />
+            <Button variant="ghost" size="sm" className="h-6 text-[11px]" onClick={() => navigate('/leaderboard')}>
+              View all <ChevronRight className="h-3 w-3 ml-0.5" />
             </Button>
           </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <CardContent className="p-3 pt-1">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
               {top3.map((entry, idx) => {
                 const profitPct = entry.profit_pct ?? 0;
                 const shortModel = entry.ai_model.includes('/')
                   ? entry.ai_model.split('/').pop() ?? entry.ai_model
                   : entry.ai_model;
                 return (
-                  <Card key={entry.address} className="cursor-pointer hover:bg-accent/50 transition-colors"
+                  <Card key={entry.address} className="cursor-pointer hover:bg-accent/50 transition-colors py-0"
                     onClick={() => navigate(`/trader/${entry.smart_contract_id}`)}>
-                    <CardContent className="p-4">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="flex items-center justify-center w-6 h-6 rounded-full bg-muted text-xs font-bold">
+                    <CardContent className="p-2.5">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="flex items-center justify-center w-5 h-5 rounded-full bg-muted text-[10px] font-bold">
                           #{idx + 1}
                         </span>
-                        <div className="min-w-0">
-                          <p className="mono text-sm font-bold truncate">{entry.name || fmtAddr(entry.address)}</p>
-                          <p className="text-xs text-muted-foreground truncate">{shortModel}</p>
+                        <div className="min-w-0 flex-1">
+                          <p className="mono text-xs font-bold truncate">{entry.name || fmtAddr(entry.address)}</p>
+                          <p className="text-[10px] text-muted-foreground truncate">{shortModel}</p>
                         </div>
                       </div>
-                      <p className={`mono text-lg font-bold tabular-nums ${profitPct >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                        {profitPct >= 0 ? '+' : ''}{profitPct.toFixed(1)}%
-                      </p>
-                      <p className="text-xs text-muted-foreground">{entry.completed_orders ?? 0} trades</p>
+                      <div className="flex items-baseline justify-between gap-2">
+                        <p className={`mono text-base font-bold tabular-nums ${profitPct >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                          {profitPct >= 0 ? '+' : ''}{profitPct.toFixed(1)}%
+                        </p>
+                        <p className="text-[10px] text-muted-foreground">{entry.completed_orders ?? 0} trades</p>
+                      </div>
                     </CardContent>
                   </Card>
                 );
