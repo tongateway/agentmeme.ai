@@ -38,11 +38,11 @@ const TOKEN_COLORS: Record<string, string> = {
 function TokenIcon({ symbol, size = 'h-4 w-4' }: { symbol: string; size?: string }) {
   const logo = TOKEN_LOGOS[symbol];
   if (logo) {
-    // AGNT uses a text-based logo, needs contain-fit + dark bg + invert
+    // AGNT uses a text-based logo: white bg so the dark text is readable
     if (symbol === 'AGNT') {
       return (
-        <span className={`${size} rounded-full bg-black flex items-center justify-center overflow-hidden shrink-0`}>
-          <img src={logo} alt={symbol} className="w-[85%] object-contain invert" />
+        <span className={`${size} rounded-full bg-white flex items-center justify-center overflow-hidden shrink-0`}>
+          <img src={logo} alt={symbol} className="w-[85%] object-contain" />
         </span>
       );
     }
