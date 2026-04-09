@@ -17,6 +17,9 @@ import { Card, CardContent } from '@/v2/components/ui/card';
 import { Badge } from '@/v2/components/ui/badge';
 import { Button } from '@/v2/components/ui/button';
 import { Skeleton } from '@/v2/components/ui/skeleton';
+import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from '@/v2/components/ui/table';
 
 const AUTO_REFRESH_MS = 10_000; // 10 seconds
 
@@ -406,7 +409,15 @@ function OrderBookTable({
 
       {sourceLabel && (
         <div className="px-3 py-1.5 text-[10px] tracking-wide text-muted-foreground border-t border-border/50 bg-muted/30 text-center rounded-b-xl">
-          {sourceLabel}
+          <a
+            href="https://github.com/tongateway"
+            target="_blank"
+            rel="noreferrer"
+            className="hover:text-foreground underline-offset-4 hover:underline"
+          >
+            tongateway
+          </a>
+          {' '}is data provider
         </div>
       )}
     </div>
@@ -415,20 +426,21 @@ function OrderBookTable({
 
 /* ---------- activity row ---------- */
 
-function ActivityWindow({
-  label,
-  data,
-  highlight,
-  volumeUsdOverride,
-  tradingPeriod,
-}: {
+type ActivityWindowData = {
   label: string;
-  data: ScannerStatsWindow;
-  highlight?: boolean;
-  volumeUsdOverride?: number | null;
-  tradingPeriod?: DexTradingStatsPeriod | null;
-}) {
-  // Prefer trading-stats order counts when scanner returns 0
+  openOrders: number;
+  filledOrders: number;
+  volume: number;
+  volumeText: string;
+  completionPct: number;
+};
+
+function computeWindowData(
+  label: string,
+  data: ScannerStatsWindow,
+  volumeUsdOverride: number | null | undefined,
+  tradingPeriod: DexTradingStatsPeriod | null | undefined,
+): ActivityWindowData {
   const openOrders = (data.open_orders > 0 ? data.open_orders : tradingPeriod?.by_status?.['open']?.count) ?? data.open_orders;
   const filledOrders = (data.completed_orders > 0 ? data.completed_orders : tradingPeriod?.by_status?.['completed']?.count) ?? data.completed_orders;
   const total = openOrders + filledOrders;
@@ -436,35 +448,9 @@ function ActivityWindow({
   const rawVolume =
     volumeUsdOverride ??
     Number(String(data.volume_usd ?? '0').replaceAll(',', '').trim());
-  // Sanity cap: skip if volume looks broken (> $1B)
   const volume = Number.isFinite(rawVolume) && rawVolume > 0 && rawVolume < 1_000_000_000 ? rawVolume : 0;
   const volumeText = volume > 0 ? fmtUsd(volume) : '$0.00';
-
-  return (
-    <div className={`relative overflow-hidden rounded-md border ${highlight ? 'border-green-500/30 bg-muted/40' : 'border-border/50 bg-muted/20'} px-3 py-2`}>
-      <div
-        className="absolute left-0 bottom-0 h-[2px] bg-green-500/60 transition-all duration-700"
-        style={{ width: `${completionPct}%` }}
-      />
-      <div className="flex items-center justify-between gap-3">
-        <Badge variant="outline" className="text-[10px] font-bold px-1.5 py-0 shrink-0">{label}</Badge>
-        <div className="flex items-center gap-4 flex-1 justify-end">
-          <div className="flex items-center gap-1.5">
-            <span className="text-[9px] uppercase text-muted-foreground">Open</span>
-            <span className="text-sm font-bold font-mono tabular-nums text-blue-400">{openOrders.toLocaleString()}</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="text-[9px] uppercase text-muted-foreground">Filled</span>
-            <span className="text-sm font-bold font-mono tabular-nums text-green-500">{filledOrders.toLocaleString()}</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="text-[9px] uppercase text-muted-foreground">Vol</span>
-            <span className="text-sm font-bold font-mono tabular-nums">{volumeText}</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+  return { label, openOrders, filledOrders, volume, volumeText, completionPct };
 }
 
 function PairActivityRow({ stats, fromSymbol, toSymbol, volumeUsdByWindow, tradingPeriods }: {
@@ -502,27 +488,68 @@ function PairActivityRow({ stats, fromSymbol, toSymbol, volumeUsdByWindow, tradi
   const tp24h = mergePeriod('24h');
   const tp30d = mergePeriod('30d') ?? mergePeriod('7d');
 
+  const rows: ActivityWindowData[] = [
+    computeWindowData('1H', stats.windows['1h'], volumeUsdByWindow?.['1h'] ?? null, tp1h),
+    computeWindowData('24H', stats.windows['24h'], volumeUsdByWindow?.['24h'] ?? null, tp24h),
+    computeWindowData('30D', stats.windows.all_time, volumeUsdByWindow?.max ?? null, tp30d),
+  ];
+
   return (
-    <Card className="py-3">
-      <CardContent className="px-3 py-0">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-2">
-            <div className="w-1 h-3 rounded-full bg-blue-400" />
-            <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-              {fromSymbol}/{toSymbol} Order Stats
-            </span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <div className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
-            <span className="text-[10px] text-muted-foreground">Live</span>
-          </div>
+    <Card className="py-0 overflow-hidden">
+      <div className="flex items-center justify-between px-4 py-2.5 border-b border-border/40">
+        <div className="flex items-center gap-2">
+          <div className="w-1 h-3.5 rounded-full bg-blue-400" />
+          <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+            {fromSymbol}/{toSymbol} Order Stats
+          </span>
         </div>
-        <div className="flex flex-col gap-1.5">
-          <ActivityWindow label="1H" data={stats.windows['1h']} volumeUsdOverride={volumeUsdByWindow?.['1h'] ?? null} tradingPeriod={tp1h} />
-          <ActivityWindow label="24H" data={stats.windows['24h']} volumeUsdOverride={volumeUsdByWindow?.['24h'] ?? null} tradingPeriod={tp24h} />
-          <ActivityWindow label="30D" data={stats.windows.all_time} volumeUsdOverride={volumeUsdByWindow?.max ?? null} tradingPeriod={tp30d} highlight />
+        <div className="flex items-center gap-1.5">
+          <div className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
+          <span className="text-[10px] text-muted-foreground">Live</span>
         </div>
-      </CardContent>
+      </div>
+      <Table>
+        <TableHeader>
+          <TableRow className="border-b-border/40 hover:bg-transparent">
+            <TableHead className="w-16 text-[10px] uppercase tracking-wider">Period</TableHead>
+            <TableHead className="text-right text-[10px] uppercase tracking-wider">Open</TableHead>
+            <TableHead className="text-right text-[10px] uppercase tracking-wider">Filled</TableHead>
+            <TableHead className="text-right text-[10px] uppercase tracking-wider">Volume</TableHead>
+            <TableHead className="text-right text-[10px] uppercase tracking-wider hidden sm:table-cell">Fill Rate</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {rows.map((row) => (
+            <TableRow key={row.label} className="border-b-border/20 last:border-0 hover:bg-accent/20">
+              <TableCell>
+                <Badge variant="outline" className="text-[10px] font-bold px-2 py-0">{row.label}</Badge>
+              </TableCell>
+              <TableCell className="text-right font-mono text-sm tabular-nums font-semibold text-blue-400">
+                {row.openOrders.toLocaleString()}
+              </TableCell>
+              <TableCell className="text-right font-mono text-sm tabular-nums font-semibold text-green-500">
+                {row.filledOrders.toLocaleString()}
+              </TableCell>
+              <TableCell className="text-right font-mono text-sm tabular-nums font-semibold">
+                {row.volumeText}
+              </TableCell>
+              <TableCell className="text-right hidden sm:table-cell">
+                <div className="flex items-center justify-end gap-2">
+                  <div className="w-16 h-1 rounded-full bg-muted overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-green-500"
+                      style={{ width: `${row.completionPct}%` }}
+                    />
+                  </div>
+                  <span className="font-mono text-xs tabular-nums text-muted-foreground w-9 text-right">
+                    {row.completionPct.toFixed(0)}%
+                  </span>
+                </div>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
     </Card>
   );
 }
@@ -766,7 +793,17 @@ export function StatsPage() {
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-500 opacity-75" />
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
               </span>
-              <p className="text-xs text-muted-foreground">Live from open4dev DEX</p>
+              <p className="text-xs text-muted-foreground">
+                Live data by{' '}
+                <a
+                  href="https://github.com/tongateway"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="hover:text-foreground underline-offset-4 hover:underline"
+                >
+                  tongateway
+                </a>
+              </p>
             </div>
           </div>
         </div>
@@ -824,23 +861,6 @@ export function StatsPage() {
         </div>
       )}
 
-      <Card>
-        <CardContent className="p-2 flex flex-row items-center justify-center gap-4 flex-wrap text-xs font-mono">
-          <span className="text-muted-foreground">{fromUpper} / {toUpper}</span>
-          {stats ? (
-            <>
-              <span>Bid <span className="text-green-500 font-bold">{fmtRate(stats.bestBid ?? 0)}</span></span>
-              <span>Ask <span className="text-red-500 font-bold">{fmtRate(stats.bestAsk ?? 0)}</span></span>
-              {stats.spreadPct != null && (
-                <span>Spread <span className="text-yellow-500 font-bold">{stats.spreadPct < 0 ? 'Crossed' : `${stats.spreadPct.toFixed(2)}%`}</span></span>
-              )}
-            </>
-          ) : (
-            <span className="text-muted-foreground/30">Loading...</span>
-          )}
-        </CardContent>
-      </Card>
-
       {bookError ? (
         <Card>
           <CardContent className="p-4">
@@ -864,7 +884,7 @@ export function StatsPage() {
           fromPriceUsd={fromPriceUsd}
           amountPriceUsd={amountPriceUsd}
           refreshTick={refreshTick}
-          sourceLabel="open4dev is data provider"
+          sourceLabel="tongateway is data provider"
           realStats24h={realStats24h}
         />
       ) : null}
