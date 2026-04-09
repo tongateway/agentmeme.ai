@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { BarChart3, TrendingUp, ArrowUp, ArrowDown } from 'lucide-react';
+import { BarChart3, ArrowUp, ArrowDown } from 'lucide-react';
 import {
   getDexCoinPrice,
   getDexOrderBook,
@@ -13,7 +13,7 @@ import {
   type ScannerStatsResponse,
   type ScannerStatsWindow,
 } from '@/lib/api';
-import { Card, CardContent, CardHeader, CardTitle } from '@/v2/components/ui/card';
+import { Card, CardContent } from '@/v2/components/ui/card';
 import { Badge } from '@/v2/components/ui/badge';
 import { Button } from '@/v2/components/ui/button';
 import { Skeleton } from '@/v2/components/ui/skeleton';

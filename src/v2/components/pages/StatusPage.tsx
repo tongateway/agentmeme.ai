@@ -28,13 +28,6 @@ function fmtMs(ms: number): string {
   return `${(ms / 1000).toFixed(1)}s`;
 }
 
-function fmtDate(iso: string | null): string {
-  if (!iso) return '\u2014';
-  return new Date(iso).toLocaleString(undefined, {
-    month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
-  });
-}
-
 /** Bucket logs into time intervals for charts. */
 function bucketLogs(logs: ProviderLog[], bucketMinutes = 30): { time: number; success: number; fail: number; avgMs: number }[] {
   if (logs.length === 0) return [];
