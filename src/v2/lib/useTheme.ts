@@ -1,25 +1,26 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 export type Theme = 'light' | 'dark';
-const STORAGE_KEY = 'agentmeme:v2:theme';
+const COOKIE_KEY = 'agentmeme_v2_theme';
+const COOKIE_MAX_AGE = 60 * 60 * 24 * 365; // 1 year
 
-function readStoredTheme(): Theme {
-  if (typeof window === 'undefined') return 'dark';
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw === 'light' || raw === 'dark') return raw;
-  } catch {
-    // localStorage may throw (e.g., disabled, quota exceeded on read)
-  }
-  return 'dark';
+// Use cookies for theme persistence — localStorage quotas can be exceeded by
+// other app data (chart caches, form drafts) which would silently break writes.
+function readCookie(name: string): string | null {
+  if (typeof document === 'undefined') return null;
+  const match = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`));
+  return match ? decodeURIComponent(match[1]) : null;
 }
 
-function safeWriteTheme(theme: Theme) {
-  try {
-    localStorage.setItem(STORAGE_KEY, theme);
-  } catch {
-    // Silently ignore quota/permission errors — theme still works in-memory for this session
-  }
+function writeCookie(name: string, value: string) {
+  if (typeof document === 'undefined') return;
+  document.cookie = `${name}=${encodeURIComponent(value)};max-age=${COOKIE_MAX_AGE};path=/;SameSite=Lax`;
+}
+
+function readStoredTheme(): Theme {
+  const raw = readCookie(COOKIE_KEY);
+  if (raw === 'light' || raw === 'dark') return raw;
+  return 'dark';
 }
 
 function applyTheme(theme: Theme) {
@@ -47,7 +48,7 @@ export function useTheme() {
       isInitial.current = false;
       return;
     }
-    safeWriteTheme(theme);
+    writeCookie(COOKIE_KEY, theme);
   }, [theme]);
 
   const setTheme = useCallback((next: Theme) => {

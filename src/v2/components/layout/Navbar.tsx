@@ -42,7 +42,7 @@ export function Navbar() {
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="mx-auto flex h-20 w-full max-w-6xl items-center px-4">
         <Link to="/" className="mr-6 flex items-center">
-          <img src="/logo.png" alt="AgntM" className="h-12 invert" />
+          <img src="/logo.png" alt="AgntM" className="h-12 dark:invert" />
         </Link>
 
         <nav className="hidden md:flex items-center gap-6 flex-1">
