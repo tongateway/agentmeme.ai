@@ -201,44 +201,72 @@ export function HomePage() {
 
       {/* 3. Top Performers */}
       {!loading && top3.length > 0 && (
-        <Card className="py-0">
-          <CardHeader className="flex flex-row items-center justify-between p-3 pb-1">
-            <CardTitle className="text-xs font-bold flex items-center gap-1.5">
-              <Trophy className="h-3.5 w-3.5 text-yellow-500" />
+        <Card className="py-0 overflow-hidden">
+          <CardHeader className="flex flex-row items-center justify-between p-3 pb-2 border-b border-border/40">
+            <CardTitle className="text-sm font-bold flex items-center gap-2">
+              <div className="flex h-6 w-6 items-center justify-center rounded-md bg-yellow-500/15">
+                <Trophy className="h-3.5 w-3.5 text-yellow-500" />
+              </div>
               Top Performing Agents
             </CardTitle>
-            <Button variant="ghost" size="sm" className="h-6 text-[11px]" onClick={() => navigate('/leaderboard')}>
+            <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => navigate('/leaderboard')}>
               View all <ChevronRight className="h-3 w-3 ml-0.5" />
             </Button>
           </CardHeader>
-          <CardContent className="p-3 pt-1">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+          <CardContent className="p-0">
+            <div className="divide-y divide-border/40">
               {top3.map((entry, idx) => {
                 const profitPct = entry.profit_pct ?? 0;
+                const isPositive = profitPct >= 0;
                 const shortModel = entry.ai_model.includes('/')
                   ? entry.ai_model.split('/').pop() ?? entry.ai_model
                   : entry.ai_model;
+                const medalColors = [
+                  'bg-gradient-to-br from-yellow-400 to-yellow-600 text-yellow-950',
+                  'bg-gradient-to-br from-slate-300 to-slate-500 text-slate-950',
+                  'bg-gradient-to-br from-amber-600 to-amber-800 text-amber-50',
+                ];
+                const medalLabel = ['1st', '2nd', '3rd'][idx];
+                // Compute bar width scaled to max absolute profit in top3
+                const maxAbs = Math.max(...top3.map((e) => Math.abs(e.profit_pct ?? 0)), 1);
+                const barWidth = Math.min(100, (Math.abs(profitPct) / maxAbs) * 100);
+
                 return (
-                  <Card key={entry.address} className="cursor-pointer hover:bg-accent/50 transition-colors py-0"
-                    onClick={() => navigate(`/trader/${entry.smart_contract_id}`)}>
-                    <CardContent className="p-2.5">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="flex items-center justify-center w-5 h-5 rounded-full bg-muted text-[10px] font-bold">
-                          #{idx + 1}
-                        </span>
-                        <div className="min-w-0 flex-1">
-                          <p className="mono text-xs font-bold truncate">{entry.name || fmtAddr(entry.address)}</p>
-                          <p className="text-[10px] text-muted-foreground truncate">{shortModel}</p>
-                        </div>
+                  <button
+                    key={entry.address}
+                    type="button"
+                    className="w-full flex items-center gap-3 p-3 hover:bg-accent/30 transition-colors text-left cursor-pointer"
+                    onClick={() => navigate(`/trader/${entry.smart_contract_id}`)}
+                  >
+                    {/* Medal */}
+                    <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[10px] font-bold shadow-md ${medalColors[idx]}`}>
+                      {medalLabel}
+                    </div>
+
+                    {/* Name + model */}
+                    <div className="min-w-0 flex-1">
+                      <p className="mono text-sm font-bold truncate">{entry.name || fmtAddr(entry.address)}</p>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 font-normal">{shortModel}</Badge>
+                        <span className="text-[10px] text-muted-foreground">{entry.completed_orders ?? 0} trades</span>
                       </div>
-                      <div className="flex items-baseline justify-between gap-2">
-                        <p className={`mono text-base font-bold tabular-nums ${profitPct >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                          {profitPct >= 0 ? '+' : ''}{profitPct.toFixed(1)}%
-                        </p>
-                        <p className="text-[10px] text-muted-foreground">{entry.completed_orders ?? 0} trades</p>
+                    </div>
+
+                    {/* Profit with bar */}
+                    <div className="shrink-0 flex flex-col items-end gap-1 w-24">
+                      <p className={`mono text-base font-bold tabular-nums leading-none ${isPositive ? 'text-green-500' : 'text-red-500'}`}>
+                        {isPositive ? '+' : ''}{profitPct.toFixed(1)}%
+                      </p>
+                      <div className="h-1 w-full rounded-full bg-muted overflow-hidden">
+                        <div
+                          className={`h-full rounded-full ${isPositive ? 'bg-green-500' : 'bg-red-500'}`}
+                          style={{ width: `${barWidth}%` }}
+                        />
                       </div>
-                    </CardContent>
-                  </Card>
+                    </div>
+
+                    <ChevronRight className="h-4 w-4 text-muted-foreground/40 shrink-0" />
+                  </button>
                 );
               })}
             </div>

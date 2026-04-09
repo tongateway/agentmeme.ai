@@ -7,6 +7,7 @@ import { StatsPage } from './components/pages/StatsPage';
 import { DeployPage } from './components/pages/DeployPage';
 import { ContractDetailPage } from './components/pages/ContractDetailPage';
 import { StatusPage } from './components/pages/StatusPage';
+import { DocsPage } from './components/pages/DocsPage';
 
 const router = createBrowserRouter(
   [
@@ -23,6 +24,7 @@ const router = createBrowserRouter(
         { path: 'trader/deploy', element: <DeployPage /> },
         { path: 'trader/:id', element: <ContractDetailPage /> },
         { path: 'status', element: <StatusPage /> },
+        { path: 'docs', element: <DocsPage /> },
       ],
     },
   ],
