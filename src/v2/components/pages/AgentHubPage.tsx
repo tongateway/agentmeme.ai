@@ -508,69 +508,79 @@ function TokenDetailView({ symbol, raceCfg, onBack }: { symbol: string; raceCfg:
 
         {/* Feed header */}
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-bold">Agent Trading Feed</h2>
+          <h2 className="text-base font-bold">Agent Trading Feed</h2>
           <div className="flex items-center gap-1.5">
             <span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
-            <span className="text-xs text-muted-foreground">Live updates</span>
+            <span className="text-[11px] text-muted-foreground">Live updates</span>
           </div>
         </div>
 
         {responses.length === 0 ? (
-          <Card>
-            <CardContent className="p-4">
-              <span className="text-sm text-muted-foreground">No trade activity on this token yet.</span>
+          <Card className="py-0">
+            <CardContent className="p-3">
+              <span className="text-xs text-muted-foreground">No trade activity on this token yet.</span>
             </CardContent>
           </Card>
         ) : (
-          responses.map((r) => {
-            const pp = r.parsed_params ?? {};
-            const fromToken = pp.from_token as string | undefined;
-            const toToken = pp.to_token as string | undefined;
-            const amount = pp.amount as string | undefined;
-            const shortReason = pp.short_reason as string | undefined;
-            const humanOpinion = pp.human_opinion as string | undefined;
-            const reasoning = pp.reasoning as string | undefined;
-            const isBuy = toToken?.toUpperCase() === symbol;
+          <Card className="py-0 overflow-hidden">
+            <div className="divide-y divide-border/30">
+              {responses.map((r) => {
+                const pp = r.parsed_params ?? {};
+                const fromToken = pp.from_token as string | undefined;
+                const toToken = pp.to_token as string | undefined;
+                const amount = pp.amount as string | undefined;
+                const shortReason = pp.short_reason as string | undefined;
+                const humanOpinion = pp.human_opinion as string | undefined;
+                const reasoning = pp.reasoning as string | undefined;
+                const isBuy = toToken?.toUpperCase() === symbol;
+                const title = shortReason || humanOpinion || reasoning || '';
+                const body = (shortReason && (humanOpinion || reasoning)) ? (humanOpinion || reasoning) : '';
+                const amountText = amount && amount !== '0' && fromToken ? `${fmtNano(amount, fromToken)} ${fromToken}` : '';
 
-            return (
-              <Card key={r.id} className={`border-l-4 ${isBuy ? 'border-l-green-500' : 'border-l-red-500'}`}>
-                <CardContent className="p-4">
-                  <div className="flex items-start justify-between gap-2 mb-2">
-                    <div className="flex items-center gap-3">
-                      <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${isBuy ? 'bg-green-500/20 text-green-500' : 'bg-red-500/20 text-red-500'}`}>
-                        <Bot className="h-4 w-4" />
+                return (
+                  <div
+                    key={r.id}
+                    className={`relative px-3 py-2 hover:bg-accent/20 transition-colors border-l-2 ${isBuy ? 'border-l-green-500/70' : 'border-l-red-500/70'}`}
+                  >
+                    {/* Row 1: avatar + name + badges */}
+                    <div className="flex items-center gap-2 mb-1">
+                      <div className={`flex h-5 w-5 shrink-0 items-center justify-center rounded ${isBuy ? 'bg-green-500/20 text-green-500' : 'bg-red-500/20 text-red-500'}`}>
+                        <Bot className="h-3 w-3" />
                       </div>
-                      <div className="flex flex-col">
-                        <span className="text-sm font-semibold">
-                          {r.contract_name || fmtAddrShort(r.smart_contract_id)}
+                      <span className="text-xs font-bold truncate">
+                        {r.contract_name || fmtAddrShort(r.smart_contract_id)}
+                      </span>
+                      <Badge className={`h-4 px-1.5 text-[9px] shrink-0 ${isBuy ? 'bg-green-600 text-white border-green-600' : 'bg-red-600 text-white border-red-600'}`}>
+                        {isBuy ? 'BUY' : 'SELL'}
+                      </Badge>
+                      {(fromToken || toToken) && (
+                        <Badge variant="outline" className="h-4 px-1.5 text-[9px] font-mono shrink-0">
+                          {fromToken}→{toToken}
+                        </Badge>
+                      )}
+                      {amountText && (
+                        <span className="text-[10px] font-mono text-muted-foreground shrink-0">
+                          {amountText}
                         </span>
-                        <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
-                          <Clock className="h-3 w-3" />
-                          {timeAgo(r.created_at)}
-                        </span>
-                      </div>
+                      )}
+                      <span className="ml-auto flex items-center gap-1 text-[10px] text-muted-foreground shrink-0">
+                        <Clock className="h-2.5 w-2.5" />
+                        {timeAgo(r.created_at)}
+                      </span>
                     </div>
-                    <Badge className={isBuy ? 'bg-green-600 text-white border-green-600' : 'bg-red-600 text-white border-red-600'}>
-                      {isBuy ? 'BUY' : 'SELL'}
-                    </Badge>
+
+                    {/* Row 2: title (short reason) + optional body (full reasoning) */}
+                    {title && (
+                      <p className="pl-7 text-xs leading-snug text-foreground">{title}</p>
+                    )}
+                    {body && body !== title && (
+                      <p className="pl-7 text-[11px] leading-snug text-muted-foreground line-clamp-2 mt-0.5">{body}</p>
+                    )}
                   </div>
-
-                  {shortReason && (
-                    <p className="text-sm font-semibold leading-snug mb-2">{shortReason}</p>
-                  )}
-                  {(humanOpinion || reasoning) && (
-                    <p className="text-xs leading-relaxed text-muted-foreground mb-2">{humanOpinion || reasoning}</p>
-                  )}
-                  {(fromToken || toToken) && (
-                    <div className="text-[10px] text-muted-foreground font-mono">
-                      {fromToken} &rarr; {toToken}
-                      {amount && amount !== '0' && ` (${fmtNano(amount, fromToken)} ${fromToken})`}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            );
-          })
+                );
+              })}
+            </div>
+          </Card>
         )}
 
         {responses.length < total && (

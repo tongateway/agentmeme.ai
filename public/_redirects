@@ -1,7 +1,5 @@
-# SPA fallback — serve correct index.html per entry point
-# Cloudflare Pages canonicalizes /v2/index.html → /v2/, so target must be /v2/
-/v2/*  /v2/  200
-/v3/*  /index.html  200
-/v4/*  /index.html  200
-/v5/*  /index.html  200
+# Redirect old /v2/* URLs to the new root (v2 is now the default app)
+/v2/*  /:splat  301
+/v2    /       301
+# SPA fallback — serve index.html for all client-side routes
 /*     /index.html  200

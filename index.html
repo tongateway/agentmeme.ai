@@ -2,19 +2,28 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+    <link rel="icon" type="image/png" href="/agntm_logo.png" />
     <link rel="manifest" href="/site.webmanifest" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>AI Trader Race</title>
+    <title>AgntM</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600&family=IBM+Plex+Mono:wght@400;600&display=swap"
       rel="stylesheet"
     />
+    <script>
+      // Apply theme synchronously before first paint to avoid flash of wrong theme.
+      (function () {
+        var match = document.cookie.match(/(?:^|; )agentmeme_v2_theme=([^;]*)/);
+        var stored = match ? decodeURIComponent(match[1]) : null;
+        var theme = stored === 'light' || stored === 'dark' ? stored : 'dark';
+        if (theme === 'dark') document.documentElement.classList.add('dark');
+      })();
+    </script>
   </head>
-  <body>
+  <body class="bg-background text-foreground">
     <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
+    <script type="module" src="/src/v2/main.tsx"></script>
   </body>
 </html>
