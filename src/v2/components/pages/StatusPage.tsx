@@ -72,7 +72,7 @@ function bucketLogs(logs: ProviderLog[], bucketMinutes = 30): { time: number; su
 function ProviderCard({ stat }: { stat: ProviderStat }) {
   const [logs, setLogs] = useState<ProviderLog[] | null>(null);
   const [loading, setLoading] = useState(false);
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(true);
 
   const meta = STATUS_META[stat.status] ?? STATUS_META.up;
   const Icon = meta.Icon;
@@ -97,61 +97,64 @@ function ProviderCard({ stat }: { stat: ProviderStat }) {
     new Date(ts).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
 
   return (
-    <Card className="shadow-md">
+    <Card>
       <CardContent
-        className="p-4 cursor-pointer"
+        className="p-3 cursor-pointer"
         onClick={() => setExpanded((e) => !e)}
       >
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Icon className={`h-5 w-5 ${meta.colorClass}`} />
-            <div>
-              <div className="font-bold text-base capitalize">{stat.provider}</div>
-              <div className="text-xs text-muted-foreground">{stat.total_requests.toLocaleString()} total requests</div>
-            </div>
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 min-w-0">
+            <Icon className={`h-4 w-4 shrink-0 ${meta.colorClass}`} />
+            <span className="font-bold text-sm capitalize truncate">{stat.provider}</span>
+            <span className="text-[10px] text-muted-foreground shrink-0">{stat.total_requests.toLocaleString()} req</span>
           </div>
-          <Badge variant={meta.variant}>{meta.label}</Badge>
+          <div className="flex items-center gap-3 shrink-0">
+            <div className="hidden sm:flex items-center gap-3 text-xs">
+              <div>
+                <span className="text-[9px] uppercase text-muted-foreground mr-1">Success</span>
+                <span className={`font-bold font-mono ${stat.success_rate >= 80 ? 'text-green-500' : stat.success_rate >= 50 ? 'text-yellow-500' : 'text-red-500'}`}>
+                  {stat.success_rate.toFixed(1)}%
+                </span>
+              </div>
+              <div>
+                <span className="text-[9px] uppercase text-muted-foreground mr-1">Lat</span>
+                <span className="font-bold font-mono">{fmtMs(stat.avg_elapsed_ms)}</span>
+              </div>
+            </div>
+            <Badge variant={meta.variant} className="text-[10px] px-1.5 py-0">{meta.label}</Badge>
+          </div>
         </div>
-
-        {/* Quick stats */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3">
+        {/* Mobile stats */}
+        <div className="flex sm:hidden items-center gap-4 mt-2 text-xs">
           <div>
-            <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Success Rate</div>
-            <div className={`text-lg font-bold font-mono ${stat.success_rate >= 80 ? 'text-green-500' : stat.success_rate >= 50 ? 'text-yellow-500' : 'text-red-500'}`}>
+            <span className="text-[9px] uppercase text-muted-foreground mr-1">Success</span>
+            <span className={`font-bold font-mono ${stat.success_rate >= 80 ? 'text-green-500' : stat.success_rate >= 50 ? 'text-yellow-500' : 'text-red-500'}`}>
               {stat.success_rate.toFixed(1)}%
-            </div>
+            </span>
           </div>
           <div>
-            <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Avg Latency</div>
-            <div className="text-lg font-bold font-mono">{fmtMs(stat.avg_elapsed_ms)}</div>
-          </div>
-          <div>
-            <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Last Success</div>
-            <div className="text-xs font-mono text-muted-foreground">{fmtDate(stat.last_success)}</div>
-          </div>
-          <div>
-            <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Last Failure</div>
-            <div className="text-xs font-mono text-muted-foreground">{fmtDate(stat.last_failure)}</div>
+            <span className="text-[9px] uppercase text-muted-foreground mr-1">Latency</span>
+            <span className="font-bold font-mono">{fmtMs(stat.avg_elapsed_ms)}</span>
           </div>
         </div>
       </CardContent>
 
       {/* Expanded: charts */}
       {expanded && (
-        <div className="px-6 pb-4 space-y-4">
+        <div className="px-4 pb-3 space-y-3">
           <Separator />
           {loading ? (
-            <div className="flex justify-center py-6">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            <div className="flex justify-center py-4">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
             </div>
           ) : chartData.length === 0 ? (
-            <div className="text-center py-4 text-xs text-muted-foreground">No log data available</div>
+            <div className="text-center py-3 text-xs text-muted-foreground">No log data available</div>
           ) : (
             <>
               {/* Success / Fail bar chart */}
               <div>
-                <div className="text-xs font-semibold text-muted-foreground mb-2">Requests (24h)</div>
-                <ResponsiveContainer width="100%" height={180}>
+                <div className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-1">Requests (24h)</div>
+                <ResponsiveContainer width="100%" height={120}>
                   <BarChart data={chartData} margin={{ top: 5, right: 5, left: 0, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                     <XAxis
@@ -184,8 +187,8 @@ function ProviderCard({ stat }: { stat: ProviderStat }) {
 
               {/* Latency area chart */}
               <div>
-                <div className="text-xs font-semibold text-muted-foreground mb-2">Avg Latency (24h)</div>
-                <ResponsiveContainer width="100%" height={150}>
+                <div className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-1">Avg Latency (24h)</div>
+                <ResponsiveContainer width="100%" height={100}>
                   <AreaChart data={chartData} margin={{ top: 5, right: 5, left: 0, bottom: 0 }}>
                     <defs>
                       <linearGradient id={`lat-${stat.provider}`} x1="0" y1="0" x2="0" y2="1">
@@ -260,15 +263,27 @@ export function StatusPage() {
   const allUp = stats.length > 0 && stats.every((s) => s.status === 'up');
   const anyDown = stats.some((s) => s.status === 'down');
 
+  // Group providers by name (case-insensitive) to merge duplicates
+  const groupedStats = useMemo(() => {
+    const byName = new Map<string, ProviderStat[]>();
+    for (const s of stats) {
+      const key = s.provider.toLowerCase().trim();
+      const existing = byName.get(key) ?? [];
+      existing.push(s);
+      byName.set(key, existing);
+    }
+    return Array.from(byName.values());
+  }, [stats]);
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Activity className="h-6 w-6 text-primary" />
+        <div className="flex items-center gap-2">
+          <Activity className="h-5 w-5 text-primary" />
           <div>
-            <h1 className="text-xl font-semibold tracking-tight">Provider Status</h1>
-            <p className="text-xs text-muted-foreground">AI provider health and performance</p>
+            <h1 className="text-lg font-semibold tracking-tight">Provider Status</h1>
+            <p className="text-[11px] text-muted-foreground">AI provider health and performance</p>
           </div>
         </div>
         <Button
@@ -284,14 +299,14 @@ export function StatusPage() {
 
       {/* Overall status banner */}
       {!loading && stats.length > 0 && (
-        <Card className={`border-l-4 ${allUp ? 'border-l-green-500' : anyDown ? 'border-l-red-500' : 'border-l-yellow-500'}`}>
-          <CardContent className="flex items-center gap-3 py-3">
+        <Card className={`border-l-4 py-0 ${allUp ? 'border-l-green-500' : anyDown ? 'border-l-red-500' : 'border-l-yellow-500'}`}>
+          <CardContent className="flex items-center gap-2 py-2 px-3 text-sm">
             {allUp ? (
-              <><CheckCircle className="h-5 w-5 text-green-500" /><span>All systems operational</span></>
+              <><CheckCircle className="h-4 w-4 text-green-500" /><span>All systems operational</span></>
             ) : anyDown ? (
-              <><XCircle className="h-5 w-5 text-red-500" /><span>Some providers are experiencing outages</span></>
+              <><XCircle className="h-4 w-4 text-red-500" /><span>Some providers are experiencing outages</span></>
             ) : (
-              <><AlertTriangle className="h-5 w-5 text-yellow-500" /><span>Some providers are degraded</span></>
+              <><AlertTriangle className="h-4 w-4 text-yellow-500" /><span>Some providers are degraded</span></>
             )}
           </CardContent>
         </Card>
@@ -306,18 +321,22 @@ export function StatusPage() {
 
       {/* Error */}
       {error && (
-        <Card className="border-l-4 border-l-red-500">
-          <CardContent className="flex items-center gap-3 py-3">
-            <XCircle className="h-5 w-5 text-red-500" />
+        <Card className="border-l-4 border-l-red-500 py-0">
+          <CardContent className="flex items-center gap-2 py-2 px-3 text-sm">
+            <XCircle className="h-4 w-4 text-red-500" />
             <span>{error}</span>
           </CardContent>
         </Card>
       )}
 
-      {/* Provider cards */}
-      <div className="space-y-4">
-        {stats.map((s) => (
-          <ProviderCard key={s.provider} stat={s} />
+      {/* Provider cards grouped by provider name */}
+      <div className="space-y-2">
+        {groupedStats.map((group) => (
+          <div key={group[0].provider.toLowerCase()} className="space-y-2">
+            {group.map((s) => (
+              <ProviderCard key={`${s.provider}-${s.total_requests}`} stat={s} />
+            ))}
+          </div>
         ))}
       </div>
 

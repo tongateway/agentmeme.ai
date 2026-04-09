@@ -47,6 +47,7 @@ import {
   ArrowRightLeft, ExternalLink,
 } from 'lucide-react';
 
+import { ContractTabBar } from '@/v2/components/layout/ContractTabBar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/v2/components/ui/card';
 import { Button } from '@/v2/components/ui/button';
 import { Badge } from '@/v2/components/ui/badge';
@@ -1256,6 +1257,7 @@ function ContractDetailInner({ contract, detail, raceCfg, tonConnectUI, tonAddre
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-6 flex flex-col gap-4">
+      <ContractTabBar />
       {/* ===== 1. Agent Header Card ===== */}
       <Card>
         <CardContent className="py-4">

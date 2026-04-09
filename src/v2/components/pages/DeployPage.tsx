@@ -34,6 +34,7 @@ import {
 import { useAuth } from '@/lib/useAuth';
 import { useLocalStorageState } from '@/lib/storage';
 
+import { ContractTabBar } from '@/v2/components/layout/ContractTabBar';
 import { Button } from '@/v2/components/ui/button';
 import { Card, CardContent } from '@/v2/components/ui/card';
 import { Input } from '@/v2/components/ui/input';
@@ -959,6 +960,7 @@ export function DeployPage() {
 
   return (
     <div className="mt-4 mx-auto max-w-2xl">
+      <ContractTabBar />
       <Card className="overflow-hidden">
         {/* Header */}
         <div className="border-b border-border/50 px-6 py-5">

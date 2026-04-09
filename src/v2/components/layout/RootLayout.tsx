@@ -6,7 +6,7 @@ export function RootLayout() {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <main className="container max-w-screen-2xl px-4 py-6">
+      <main className="mx-auto w-full max-w-6xl px-4 py-6">
         <Outlet />
       </main>
       <Toaster />

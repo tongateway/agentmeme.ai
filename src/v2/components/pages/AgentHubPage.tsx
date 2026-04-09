@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Bot, TrendingUp, TrendingDown, Target, Rocket } from 'lucide-react';
+import { Bot, TrendingUp, TrendingDown, Target, Rocket, ArrowLeft, Users, Clock, Loader2 } from 'lucide-react';
 import {
   getTokenOpinions,
   getTokenOpinionDetail,
+  getRaceAiResponses,
   type TokenOpinionSummary,
-  type TokenOpinionDetail,
+  type AiResponse,
   type PublicApiConfig,
 } from '@/lib/api';
 import { Button } from '@/v2/components/ui/button';
@@ -16,6 +17,7 @@ import {
   TableHeader, TableRow,
 } from '@/v2/components/ui/table';
 import { Skeleton } from '@/v2/components/ui/skeleton';
+import { CandlestickChart } from '@/components/CandlestickChart';
 
 function computeSignalStrength(token: TokenOpinionSummary, maxAgents: number, maxTrades: number): number {
   const consensusWeight = Math.max(token.bullish_pct, token.bearish_pct) / 100;
@@ -40,7 +42,6 @@ export function AgentHubPage() {
   const raceCfg: PublicApiConfig = { baseUrl: API_BASE };
 
   const [tokens, setTokens] = useState<TokenOpinionSummary[]>([]);
-  const [detail, setDetail] = useState<TokenOpinionDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -58,26 +59,11 @@ export function AgentHubPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const loadDetail = useCallback(async (symbol: string) => {
-    setLoading(true);
-    setError(null);
-    try {
-      setDetail(await getTokenOpinionDetail(raceCfg, symbol));
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setLoading(false);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   useEffect(() => {
-    if (tokenParam) {
-      void loadDetail(tokenParam);
-    } else {
+    if (!tokenParam) {
       void loadList();
     }
-  }, [tokenParam, loadList, loadDetail]);
+  }, [tokenParam, loadList]);
 
   const maxAgents = Math.max(0, ...tokens.map((x) => x.active_agents));
   const maxTrades = Math.max(0, ...tokens.map((x) => x.total_trades_24h));
@@ -95,80 +81,8 @@ export function AgentHubPage() {
 
   /* ---- Token detail view ---- */
   if (tokenParam) {
-    const stats = detail?.stats;
-    const detailBullishCount = detail?.opinions?.filter((o) => (o.sentiment ?? '').toUpperCase() === 'BULLISH').length ?? 0;
-    const detailBearishCount = detail?.opinions?.filter((o) => (o.sentiment ?? '').toUpperCase() === 'BEARISH').length ?? 0;
-    return (
-      <div className="flex flex-col gap-4">
-        <div className="flex items-center gap-3">
-          <Button variant="outline" size="sm" onClick={() => navigate('/agent-hub')}>Back</Button>
-          <h2 className="text-2xl font-bold">{tokenParam.toUpperCase()} Opinions</h2>
-        </div>
-        {error ? (
-          <p className="text-sm text-red-500">{error}</p>
-        ) : loading || !detail ? (
-          <Skeleton className="h-60 w-full" />
-        ) : (
-          <>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <Card><CardContent className="p-4">
-                <p className="text-sm text-muted-foreground">Consensus</p>
-                <p className={`text-xl font-bold ${(stats?.consensus ?? '').toUpperCase() === 'BULLISH' ? 'text-green-500' : (stats?.consensus ?? '').toUpperCase() === 'BEARISH' ? 'text-red-500' : ''}`}>
-                  {stats?.consensus || 'Neutral'}
-                </p>
-              </CardContent></Card>
-              <Card><CardContent className="p-4">
-                <p className="text-sm text-muted-foreground">Confidence</p>
-                <p className="text-xl font-bold">{((stats?.avg_confidence ?? 0) * 100).toFixed(0)}%</p>
-              </CardContent></Card>
-              <Card><CardContent className="p-4">
-                <p className="text-sm text-muted-foreground">Bullish / Bearish</p>
-                <p className="text-xl font-bold">
-                  <span className="text-green-500">{detailBullishCount}</span>
-                  {' / '}
-                  <span className="text-red-500">{detailBearishCount}</span>
-                </p>
-              </CardContent></Card>
-              <Card><CardContent className="p-4">
-                <p className="text-sm text-muted-foreground">Active Agents</p>
-                <p className="text-xl font-bold">{stats?.active_agents ?? 0}</p>
-              </CardContent></Card>
-            </div>
-
-            {detail.opinions && detail.opinions.length > 0 && (
-              <Card>
-                <CardContent className="p-0">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Agent</TableHead>
-                        <TableHead>Sentiment</TableHead>
-                        <TableHead className="text-right">Confidence</TableHead>
-                        <TableHead className="hidden sm:table-cell">Reasoning</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {detail.opinions.map((op) => (
-                        <TableRow key={op.id}>
-                          <TableCell className="mono text-xs">{op.agent_name || op.smart_contract_id?.slice(0, 10) || 'Agent'}</TableCell>
-                          <TableCell>
-                            <Badge className={(op.sentiment ?? '').toUpperCase() === 'BULLISH' ? 'bg-green-600 text-white border-green-600' : 'bg-red-600 text-white border-red-600'}>
-                              {op.sentiment}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-right mono text-xs">{((op.confidence ?? 0) * 100).toFixed(0)}%</TableCell>
-                          <TableCell className="hidden sm:table-cell text-xs text-muted-foreground max-w-[20rem] truncate">{op.reasoning}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
-            )}
-          </>
-        )}
-      </div>
-    );
+    const symbol = tokenParam.toUpperCase();
+    return <TokenDetailView symbol={symbol} raceCfg={raceCfg} onBack={() => navigate('/agent-hub')} />;
   }
 
   /* ---- Hub overview ---- */
@@ -270,6 +184,299 @@ export function AgentHubPage() {
           )}
         </CardContent>
       </Card>
+    </div>
+  );
+}
+
+function fmtPriceDetail(n: number): string {
+  if (n === 0) return '$0.00';
+  if (n >= 1000) return `$${Math.round(n).toLocaleString()}`;
+  if (n >= 1) return `$${n.toFixed(2)}`;
+  if (n >= 0.01) return `$${n.toFixed(4)}`;
+  return `$${n.toFixed(6)}`;
+}
+
+const TOKEN_DECIMALS: Record<string, number> = { USDT: 6, USDC: 6 };
+
+function fmtNano(nano: string, token?: string): string {
+  const decimals = TOKEN_DECIMALS[(token ?? '').toUpperCase()] ?? 9;
+  const n = Number(nano) / 10 ** decimals;
+  if (n >= 1000) return n.toLocaleString(undefined, { maximumFractionDigits: 2 });
+  if (n >= 1) return n.toFixed(4);
+  return n.toFixed(6);
+}
+
+function fmtAddrShort(addr: string): string {
+  if (addr.length <= 14) return addr;
+  return `${addr.slice(0, 6)}\u2026${addr.slice(-4)}`;
+}
+
+function timeAgo(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime();
+  if (diff < 0) return 'just now';
+  const seconds = Math.floor(diff / 1000);
+  if (seconds < 60) return `${seconds}s ago`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+}
+
+const PAGE_SIZE = 20;
+
+function TokenDetailView({ symbol, raceCfg, onBack }: { symbol: string; raceCfg: PublicApiConfig; onBack: () => void }) {
+  const [stats, setStats] = useState<TokenOpinionSummary | null>(null);
+  const [responses, setResponses] = useState<AiResponse[]>([]);
+  const [total, setTotal] = useState(0);
+  const [offset, setOffset] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = useCallback(async (off: number, append: boolean) => {
+    if (append) setLoadingMore(true);
+    else setLoading(true);
+    setError(null);
+    try {
+      const [statsData, feedData] = await Promise.all([
+        off === 0 ? getTokenOpinionDetail(raceCfg, symbol, { limit: 0 }) : null,
+        getRaceAiResponses(raceCfg, {
+          limit: PAGE_SIZE,
+          offset: off,
+          actions: ['create_order'],
+          tokenSymbol: symbol,
+        }),
+      ]);
+      if (statsData) setStats(statsData.stats);
+      const relevant = feedData.results.filter((r) => {
+        const pp = r.parsed_params ?? {};
+        return (pp.to_token as string)?.toUpperCase() === symbol || (pp.from_token as string)?.toUpperCase() === symbol;
+      });
+      setTotal(feedData.total);
+      setResponses((prev) => (append ? [...prev, ...relevant] : relevant));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setLoading(false);
+      setLoadingMore(false);
+    }
+  }, [raceCfg, symbol]);
+
+  useEffect(() => {
+    setOffset(0);
+    void load(0, false);
+  }, [load]);
+
+  const handleLoadMore = () => {
+    const next = offset + PAGE_SIZE;
+    setOffset(next);
+    void load(next, true);
+  };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center py-8">
+        <Skeleton className="h-60 w-full" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <CardContent className="flex flex-col gap-3 p-6">
+          <p className="text-sm text-red-500">{error}</p>
+          <Button variant="outline" size="sm" onClick={onBack} className="self-start">
+            <ArrowLeft className="h-4 w-4 mr-1" /> Back
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const changePositive = (stats?.price_change_24h ?? 0) >= 0;
+  const bullPct = stats?.bullish_pct ?? 0;
+  const bearPct = stats?.bearish_pct ?? 0;
+  const consensusUpper = (stats?.consensus ?? '').toUpperCase();
+
+  const chartFrom = 'TON';
+  const chartTo = symbol === 'TON' ? 'USDT' : symbol;
+
+  return (
+    <div className="flex flex-col lg:flex-row gap-6">
+      {/* Left sidebar */}
+      <div className="lg:w-72 lg:sticky lg:top-20 lg:self-start shrink-0 flex flex-col gap-4">
+        {/* Token header */}
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-bold">
+            {symbol.slice(0, 3)}
+          </div>
+          <div className="flex flex-col">
+            <span className="text-lg font-bold leading-tight">{stats?.token_symbol}</span>
+            <span className="text-xs text-muted-foreground">{stats?.token_name}</span>
+          </div>
+        </div>
+
+        {/* Price */}
+        <div className="flex items-baseline gap-2">
+          <span className="text-2xl font-bold tabular-nums font-mono">{fmtPriceDetail(stats?.price_usd ?? 0)}</span>
+          <span className={`flex items-center gap-0.5 text-sm font-bold tabular-nums font-mono ${changePositive ? 'text-green-500' : 'text-red-500'}`}>
+            {changePositive ? <TrendingUp className="h-3.5 w-3.5" /> : <TrendingDown className="h-3.5 w-3.5" />}
+            {changePositive ? '+' : ''}{(stats?.price_change_24h ?? 0).toFixed(1)}%
+          </span>
+        </div>
+
+        {/* Sentiment */}
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Sentiment</span>
+            <Badge className={consensusUpper === 'BULLISH' ? 'bg-green-600 text-white border-green-600' : consensusUpper === 'BEARISH' ? 'bg-red-600 text-white border-red-600' : ''} variant={consensusUpper === 'BULLISH' || consensusUpper === 'BEARISH' ? undefined : 'secondary'}>
+              {consensusUpper || 'NEUTRAL'}
+            </Badge>
+          </div>
+          <div className="flex h-2.5 rounded-full overflow-hidden bg-muted">
+            {bullPct > 0 && <div className="bg-green-500" style={{ width: `${bullPct}%` }} />}
+            {bearPct > 0 && <div className="bg-red-500" style={{ width: `${bearPct}%` }} />}
+          </div>
+          <div className="flex justify-between text-[10px] text-muted-foreground">
+            <span className="flex items-center gap-1">
+              <TrendingUp className="h-3 w-3 text-green-500" />
+              {bullPct.toFixed(0)}% Bullish
+            </span>
+            <span className="flex items-center gap-1">
+              {bearPct.toFixed(0)}% Bearish
+              <TrendingDown className="h-3 w-3 text-red-500" />
+            </span>
+          </div>
+        </div>
+
+        {/* Active Agents stats */}
+        <div className="flex flex-col gap-2">
+          <span className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Active Agents</span>
+          <div className="grid grid-cols-3 gap-2">
+            <Card>
+              <CardContent className="flex flex-col items-center p-3 gap-1">
+                <Users className="h-4 w-4 text-muted-foreground" />
+                <span className="font-mono text-base font-bold tabular-nums">{stats?.active_agents ?? 0}</span>
+                <span className="text-[10px] text-muted-foreground">Agents</span>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="flex flex-col items-center p-3 gap-1">
+                <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                <span className="font-mono text-base font-bold tabular-nums">{(stats?.total_trades_24h ?? 0).toLocaleString()}</span>
+                <span className="text-[10px] text-muted-foreground">Trades</span>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="flex flex-col items-center p-3 gap-1">
+                <Target className="h-4 w-4 text-muted-foreground" />
+                <span className="font-mono text-base font-bold tabular-nums">{((stats?.avg_confidence ?? 0) * 100).toFixed(0)}%</span>
+                <span className="text-[10px] text-muted-foreground">Confidence</span>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
+        {/* Back */}
+        <Button variant="ghost" size="sm" onClick={onBack} className="self-start mt-2">
+          <ArrowLeft className="h-4 w-4 mr-1" /> Back to Hub
+        </Button>
+      </div>
+
+      {/* Right main column */}
+      <div className="flex-1 min-w-0 flex flex-col gap-4">
+        {/* Candlestick chart */}
+        {stats && (
+          <Card>
+            <CardContent className="p-4">
+              <CandlestickChart raceCfg={raceCfg} fromSymbol={chartFrom} toSymbol={chartTo} />
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Feed header */}
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-bold">Agent Trading Feed</h2>
+          <div className="flex items-center gap-1.5">
+            <span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
+            <span className="text-xs text-muted-foreground">Live updates</span>
+          </div>
+        </div>
+
+        {responses.length === 0 ? (
+          <Card>
+            <CardContent className="p-4">
+              <span className="text-sm text-muted-foreground">No trade activity on this token yet.</span>
+            </CardContent>
+          </Card>
+        ) : (
+          responses.map((r) => {
+            const pp = r.parsed_params ?? {};
+            const fromToken = pp.from_token as string | undefined;
+            const toToken = pp.to_token as string | undefined;
+            const amount = pp.amount as string | undefined;
+            const shortReason = pp.short_reason as string | undefined;
+            const humanOpinion = pp.human_opinion as string | undefined;
+            const reasoning = pp.reasoning as string | undefined;
+            const isBuy = toToken?.toUpperCase() === symbol;
+
+            return (
+              <Card key={r.id} className={`border-l-4 ${isBuy ? 'border-l-green-500' : 'border-l-red-500'}`}>
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <div className="flex items-center gap-3">
+                      <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${isBuy ? 'bg-green-500/20 text-green-500' : 'bg-red-500/20 text-red-500'}`}>
+                        <Bot className="h-4 w-4" />
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-sm font-semibold">
+                          {r.contract_name || fmtAddrShort(r.smart_contract_id)}
+                        </span>
+                        <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                          <Clock className="h-3 w-3" />
+                          {timeAgo(r.created_at)}
+                        </span>
+                      </div>
+                    </div>
+                    <Badge className={isBuy ? 'bg-green-600 text-white border-green-600' : 'bg-red-600 text-white border-red-600'}>
+                      {isBuy ? 'BUY' : 'SELL'}
+                    </Badge>
+                  </div>
+
+                  {shortReason && (
+                    <p className="text-sm font-semibold leading-snug mb-2">{shortReason}</p>
+                  )}
+                  {(humanOpinion || reasoning) && (
+                    <p className="text-xs leading-relaxed text-muted-foreground mb-2">{humanOpinion || reasoning}</p>
+                  )}
+                  {(fromToken || toToken) && (
+                    <div className="text-[10px] text-muted-foreground font-mono">
+                      {fromToken} &rarr; {toToken}
+                      {amount && amount !== '0' && ` (${fmtNano(amount, fromToken)} ${fromToken})`}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })
+        )}
+
+        {responses.length < total && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleLoadMore}
+            disabled={loadingMore}
+            className="self-center"
+          >
+            {loadingMore ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
+            Load more
+          </Button>
+        )}
+      </div>
     </div>
   );
 }

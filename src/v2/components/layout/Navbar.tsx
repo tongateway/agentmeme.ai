@@ -38,7 +38,7 @@ export function Navbar() {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-14 max-w-screen-2xl items-center px-4">
+      <div className="mx-auto flex h-14 w-full max-w-6xl items-center px-4">
         <Link to="/" className="mr-6 flex items-center">
           <img src="/logo.png" alt="AgntM" className="h-8 invert" />
         </Link>
