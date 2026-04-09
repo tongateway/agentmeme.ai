@@ -1,5 +1,6 @@
 # SPA fallback — serve correct index.html per entry point
-/v2/*  /v2/index.html  200
+# Cloudflare Pages canonicalizes /v2/index.html → /v2/, so target must be /v2/
+/v2/*  /v2/  200
 /v3/*  /index.html  200
 /v4/*  /index.html  200
 /v5/*  /index.html  200
