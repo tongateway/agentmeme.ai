@@ -129,7 +129,7 @@ const TOKEN_COLORS: Record<string, string> = {
 };
 
 const TOKEN_LOGOS: Record<string, string> = {
-  AGNT: '/logo.png',
+  AGNT: '/agnt-token.png',
   TON: 'https://assets.dedust.io/images/ton.webp',
   NOT: 'https://assets.dedust.io/images/not.webp',
   BUILD: 'https://cdn.joincommunity.xyz/build/build_logo.png',
@@ -169,14 +169,6 @@ const PROVIDER_LOGOS: Record<string, string> = {
 function TokenIcon({ symbol, size = 'h-4 w-4' }: { symbol: string; size?: string }) {
   const logo = TOKEN_LOGOS[symbol];
   if (logo) {
-    // AGNT uses a text-based logo: white bg so the dark text is readable
-    if (symbol === 'AGNT') {
-      return (
-        <span className={`${size} rounded-full bg-white flex items-center justify-center overflow-hidden shrink-0`}>
-          <img src={logo} alt={symbol} className="w-[85%] object-contain" />
-        </span>
-      );
-    }
     return <img src={logo} alt={symbol} className={`${size} rounded-full object-cover shrink-0`} />;
   }
   return <span className={`${size} rounded-full shrink-0`} style={{ background: TOKEN_COLORS[symbol] ?? '#888' }} />;
