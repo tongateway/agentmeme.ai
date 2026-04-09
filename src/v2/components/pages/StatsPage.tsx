@@ -23,6 +23,22 @@ import {
 
 const AUTO_REFRESH_MS = 10_000; // 10 seconds
 
+const TOKEN_LOGOS: Record<string, string> = {
+  AGNT: '/agnt-token.png',
+  TON: 'https://assets.dedust.io/images/ton.webp',
+  NOT: 'https://assets.dedust.io/images/not.webp',
+  BUILD: 'https://cdn.joincommunity.xyz/build/build_logo.png',
+  USDT: 'https://assets.dedust.io/images/usdt.webp',
+};
+
+function TokenLogo({ symbol, size = 'h-4 w-4' }: { symbol: string; size?: string }) {
+  const logo = TOKEN_LOGOS[symbol.toUpperCase()];
+  if (logo) {
+    return <img src={logo} alt={symbol} className={`${size} rounded-full object-cover shrink-0`} />;
+  }
+  return <span className={`${size} rounded-full bg-muted shrink-0`} />;
+}
+
 /* ---------- pair definitions ---------- */
 
 type TradingPair = {
@@ -815,10 +831,14 @@ export function StatsPage() {
               key={p.slug}
               size="sm"
               variant={isSelected ? 'default' : 'outline'}
-              className="rounded-full px-4"
+              className="rounded-full pl-1.5 pr-4 gap-2"
               onClick={() => selectPair(idx)}
               type="button"
             >
+              <span className="flex items-center -space-x-1.5">
+                <TokenLogo symbol={p.fromSymbol} size="h-5 w-5" />
+                <TokenLogo symbol={p.toSymbol} size="h-5 w-5" />
+              </span>
               {p.label}
             </Button>
           );

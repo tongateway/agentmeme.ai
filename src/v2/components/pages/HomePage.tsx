@@ -14,7 +14,7 @@ import {
   type PublicApiConfig,
 } from '@/lib/api';
 import { Button } from '@/v2/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/v2/components/ui/card';
+import { Card, CardContent } from '@/v2/components/ui/card';
 import { Badge } from '@/v2/components/ui/badge';
 import {
   Table, TableBody, TableCell, TableHead,
@@ -208,15 +208,15 @@ export function HomePage() {
       {/* 3. Top Performers */}
       {!loading && top3.length > 0 && (
         <Card className="py-0 overflow-hidden">
-          <CardHeader className="flex flex-row items-center justify-between p-2.5 pb-2 border-b border-border/40">
-            <CardTitle className="text-xs font-bold flex items-center gap-1.5">
+          <div className="flex flex-row items-center justify-between px-3 py-2 border-b border-border/40">
+            <div className="text-xs font-bold flex items-center gap-1.5">
               <Trophy className="h-3.5 w-3.5 text-yellow-500" />
               Top Performing Agents
-            </CardTitle>
+            </div>
             <Button variant="ghost" size="sm" className="h-6 text-[11px]" onClick={() => navigate('/leaderboard')}>
               View all <ChevronRight className="h-3 w-3 ml-0.5" />
             </Button>
-          </CardHeader>
+          </div>
           <CardContent className="p-0">
             <div className="divide-y divide-border/30">
               {top3.map((entry, idx) => {

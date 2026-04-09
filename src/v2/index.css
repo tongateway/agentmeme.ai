@@ -97,12 +97,8 @@
 }
 
 @utility live-dot {
-  @apply relative;
-  &::before {
-    content: "";
-    @apply absolute -left-3 top-1/2 -translate-y-1/2 size-2 rounded-full bg-green-500;
-    animation: live-pulse 1.5s ease-in-out infinite;
-  }
+  @apply inline-block size-1.5 rounded-full bg-green-500;
+  animation: live-pulse 1.5s ease-in-out infinite;
 }
 
 @keyframes live-pulse {
