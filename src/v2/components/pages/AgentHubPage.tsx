@@ -110,39 +110,110 @@ export function AgentHubPage() {
   }
 
   /* ---- Hub overview ---- */
-  return (
-    <div className="flex flex-col gap-4">
-      {!loading && tokens.length > 0 && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <Card><CardContent className="p-4">
-            <div className="flex items-center justify-between"><p className="text-sm text-muted-foreground">Active Agents</p><Bot className="h-4 w-4 text-muted-foreground" /></div>
-            <p className="text-2xl font-bold mt-1">{totalActiveAgents}</p>
-          </CardContent></Card>
-          <Card><CardContent className="p-4">
-            <div className="flex items-center justify-between"><p className="text-sm text-muted-foreground">Trades 24h</p><TrendingUp className="h-4 w-4 text-muted-foreground" /></div>
-            <p className="text-2xl font-bold mt-1">{totalTrades24h.toLocaleString()}</p>
-          </CardContent></Card>
-          <Card><CardContent className="p-4">
-            <div className="flex items-center justify-between"><p className="text-sm text-muted-foreground">Sentiment</p>
-              {dominantSentiment === 'Bearish' ? <TrendingDown className="h-4 w-4 text-red-500" /> : <TrendingUp className="h-4 w-4 text-green-500" />}
-            </div>
-            <p className={`text-2xl font-bold mt-1 ${dominantSentiment === 'Bullish' ? 'text-green-500' : dominantSentiment === 'Bearish' ? 'text-red-500' : ''}`}>{dominantSentiment}</p>
-            <p className="text-xs text-muted-foreground">{sentimentPct}%</p>
-          </CardContent></Card>
-          <Card><CardContent className="p-4">
-            <div className="flex items-center justify-between"><p className="text-sm text-muted-foreground">Avg Signal</p><Target className="h-4 w-4 text-muted-foreground" /></div>
-            <p className="text-2xl font-bold mt-1">{avgSignal.toFixed(1)}</p>
-          </CardContent></Card>
-        </div>
-      )}
+  // Featured token: prefer AGNT, fallback to first with most trades
+  const featured = tokens.find((t) => t.token_symbol === 'AGNT') ?? tokens[0];
 
-      <div className="flex items-center justify-between gap-3">
-        <h2 className="text-2xl font-bold">Agents Hub</h2>
+  return (
+    <div className="flex flex-col gap-5">
+      {/* Title + description */}
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Agent Hub</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Live market data and AI-driven sentiment for TON ecosystem tokens.
+          </p>
+        </div>
         <Button onClick={() => navigate('/trader/deploy')}>
           <Rocket className="h-4 w-4 mr-2" /> Deploy Agent
         </Button>
       </div>
 
+      {/* Top stats row — compact */}
+      {!loading && tokens.length > 0 && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <Card className="py-0">
+            <CardContent className="p-3">
+              <div className="flex items-center justify-between">
+                <p className="text-[11px] uppercase tracking-wider text-muted-foreground">Active Agents</p>
+                <Bot className="h-3.5 w-3.5 text-muted-foreground" />
+              </div>
+              <p className="text-xl font-bold mt-1 font-mono tabular-nums">{totalActiveAgents}</p>
+            </CardContent>
+          </Card>
+          <Card className="py-0">
+            <CardContent className="p-3">
+              <div className="flex items-center justify-between">
+                <p className="text-[11px] uppercase tracking-wider text-muted-foreground">Trades 24h</p>
+                <TrendingUp className="h-3.5 w-3.5 text-muted-foreground" />
+              </div>
+              <p className="text-xl font-bold mt-1 font-mono tabular-nums">{totalTrades24h.toLocaleString()}</p>
+            </CardContent>
+          </Card>
+          <Card className="py-0">
+            <CardContent className="p-3">
+              <div className="flex items-center justify-between">
+                <p className="text-[11px] uppercase tracking-wider text-muted-foreground">Sentiment</p>
+                {dominantSentiment === 'Bearish' ? <TrendingDown className="h-3.5 w-3.5 text-red-500" /> : <TrendingUp className="h-3.5 w-3.5 text-green-500" />}
+              </div>
+              <p className={`text-xl font-bold mt-1 ${dominantSentiment === 'Bullish' ? 'text-green-500' : dominantSentiment === 'Bearish' ? 'text-red-500' : ''}`}>
+                {dominantSentiment}
+              </p>
+              <p className="text-[10px] text-muted-foreground">{sentimentPct}% of agents</p>
+            </CardContent>
+          </Card>
+          <Card className="py-0">
+            <CardContent className="p-3">
+              <div className="flex items-center justify-between">
+                <p className="text-[11px] uppercase tracking-wider text-muted-foreground">Avg Signal</p>
+                <Target className="h-3.5 w-3.5 text-muted-foreground" />
+              </div>
+              <p className="text-xl font-bold mt-1 font-mono tabular-nums">{avgSignal.toFixed(1)}<span className="text-xs text-muted-foreground font-normal">/10</span></p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Featured token chart */}
+      {!loading && featured && (
+        <Card className="overflow-hidden">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between gap-3 mb-3">
+              <div className="flex items-center gap-3">
+                <TokenIcon symbol={featured.token_symbol} size="h-10 w-10" />
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-lg font-bold">{featured.token_symbol}</h2>
+                    <span className="text-xs text-muted-foreground">{featured.token_name}</span>
+                    <Badge variant="outline" className="text-[9px] px-1.5 h-4">Featured</Badge>
+                  </div>
+                  <div className="flex items-baseline gap-2 mt-0.5">
+                    <span className="text-xl font-bold font-mono tabular-nums">{fmtPrice(featured.price_usd ?? 0)}</span>
+                    <span className={`text-xs font-bold font-mono tabular-nums ${(featured.price_change_24h ?? 0) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                      {(featured.price_change_24h ?? 0) >= 0 ? '+' : ''}{(featured.price_change_24h ?? 0).toFixed(2)}%
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <Button variant="outline" size="sm" onClick={() => navigate(`/agent-hub/${featured.token_symbol}`)}>
+                View details
+              </Button>
+            </div>
+            <CandlestickChart
+              raceCfg={raceCfg}
+              fromSymbol="TON"
+              toSymbol={featured.token_symbol === 'TON' ? 'USDT' : featured.token_symbol}
+            />
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Token list title */}
+      <div className="flex items-center justify-between gap-3 pt-2">
+        <h2 className="text-xl font-bold">All Tokens</h2>
+        <span className="text-xs text-muted-foreground">Click any row to drill down</span>
+      </div>
+
+      {/* Token table */}
       <Card>
         <CardContent className="p-0">
           {error ? (
@@ -154,14 +225,15 @@ export function AgentHubPage() {
           ) : (
             <Table>
               <TableHeader>
-                <TableRow>
-                  <TableHead className="w-8">#</TableHead>
-                  <TableHead>Token</TableHead>
-                  <TableHead className="text-right">Price</TableHead>
-                  <TableHead className="text-right">24h</TableHead>
-                  <TableHead className="text-center">AI Consensus</TableHead>
-                  <TableHead className="text-right hidden sm:table-cell">Signal</TableHead>
-                  <TableHead className="text-right">Trades 24h</TableHead>
+                <TableRow className="border-b-border/60">
+                  <TableHead className="w-10 text-[10px] uppercase tracking-wider">#</TableHead>
+                  <TableHead className="text-[10px] uppercase tracking-wider">Token</TableHead>
+                  <TableHead className="text-right text-[10px] uppercase tracking-wider">Price</TableHead>
+                  <TableHead className="text-right text-[10px] uppercase tracking-wider">24h %</TableHead>
+                  <TableHead className="text-center text-[10px] uppercase tracking-wider">AI Consensus</TableHead>
+                  <TableHead className="text-right hidden md:table-cell text-[10px] uppercase tracking-wider">Signal</TableHead>
+                  <TableHead className="text-right hidden sm:table-cell text-[10px] uppercase tracking-wider">Agents</TableHead>
+                  <TableHead className="text-right text-[10px] uppercase tracking-wider">Trades 24h</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -173,19 +245,30 @@ export function AgentHubPage() {
                   const bullish = t.bullish_pct ?? 0;
                   const bearish = t.bearish_pct ?? 0;
                   const pct = consensusUpper === 'BULLISH' ? bullish : consensusUpper === 'BEARISH' ? bearish : Math.max(bullish, bearish);
+                  const isPositive = change24h >= 0;
 
                   return (
-                    <TableRow key={t.token_symbol} className="cursor-pointer" onClick={() => navigate(`/agent-hub/${t.token_symbol}`)}>
-                      <TableCell className="mono text-xs font-semibold tabular-nums text-muted-foreground">{i + 1}</TableCell>
+                    <TableRow
+                      key={t.token_symbol}
+                      className="cursor-pointer hover:bg-accent/40 border-b-border/30"
+                      onClick={() => navigate(`/agent-hub/${t.token_symbol}`)}
+                    >
+                      <TableCell className="font-mono text-xs tabular-nums text-muted-foreground">{i + 1}</TableCell>
                       <TableCell>
-                        <div className="flex items-baseline gap-2">
-                          <span className="mono text-xs font-bold">{t.token_symbol}</span>
-                          <span className="text-xs text-muted-foreground truncate max-w-[8rem]">{t.token_name}</span>
+                        <div className="flex items-center gap-2.5">
+                          <TokenIcon symbol={t.token_symbol} size="h-7 w-7" />
+                          <div className="flex flex-col min-w-0">
+                            <span className="text-sm font-bold leading-tight">{t.token_symbol}</span>
+                            <span className="text-[10px] text-muted-foreground leading-tight truncate max-w-[10rem]">{t.token_name}</span>
+                          </div>
                         </div>
                       </TableCell>
-                      <TableCell className="text-right mono text-xs tabular-nums">{fmtPrice(priceUsd)}</TableCell>
-                      <TableCell className={`text-right mono text-xs tabular-nums font-bold ${change24h >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                        {change24h >= 0 ? '+' : ''}{change24h.toFixed(1)}%
+                      <TableCell className="text-right font-mono text-sm tabular-nums font-medium">{fmtPrice(priceUsd)}</TableCell>
+                      <TableCell className={`text-right font-mono text-sm tabular-nums font-bold ${isPositive ? 'text-green-500' : 'text-red-500'}`}>
+                        <span className="inline-flex items-center gap-0.5 justify-end">
+                          {isPositive ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+                          {isPositive ? '+' : ''}{change24h.toFixed(2)}%
+                        </span>
                       </TableCell>
                       <TableCell className="text-center">
                         <Badge className={`gap-1 ${consensusUpper === 'BULLISH' ? 'bg-green-600 text-white border-green-600' : consensusUpper === 'BEARISH' ? 'bg-red-600 text-white border-red-600' : ''}`} variant={consensusUpper === 'BULLISH' || consensusUpper === 'BEARISH' ? undefined : 'secondary'}>
@@ -194,12 +277,21 @@ export function AgentHubPage() {
                           {consensusUpper || 'NEUTRAL'} {pct.toFixed(0)}%
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-right hidden sm:table-cell">
-                        <span className={`mono text-xs tabular-nums font-bold ${signal >= 7 ? 'text-green-500' : signal >= 4 ? 'text-yellow-500' : 'text-muted-foreground'}`}>
-                          {signal.toFixed(1)}
-                        </span>
+                      <TableCell className="text-right hidden md:table-cell">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <div className="w-12 h-1 rounded-full bg-muted overflow-hidden">
+                            <div
+                              className={`h-full rounded-full ${signal >= 7 ? 'bg-green-500' : signal >= 4 ? 'bg-yellow-500' : 'bg-muted-foreground/50'}`}
+                              style={{ width: `${Math.min(100, signal * 10)}%` }}
+                            />
+                          </div>
+                          <span className={`font-mono text-xs tabular-nums font-bold ${signal >= 7 ? 'text-green-500' : signal >= 4 ? 'text-yellow-500' : 'text-muted-foreground'}`}>
+                            {signal.toFixed(1)}
+                          </span>
+                        </div>
                       </TableCell>
-                      <TableCell className="text-right mono text-xs tabular-nums">{t.total_trades_24h}</TableCell>
+                      <TableCell className="text-right hidden sm:table-cell font-mono text-xs tabular-nums text-muted-foreground">{t.active_agents}</TableCell>
+                      <TableCell className="text-right font-mono text-xs tabular-nums">{t.total_trades_24h.toLocaleString()}</TableCell>
                     </TableRow>
                   );
                 })}
