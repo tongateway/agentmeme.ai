@@ -24,7 +24,7 @@ import {
 const AUTO_REFRESH_MS = 10_000; // 10 seconds
 
 const TOKEN_LOGOS: Record<string, string> = {
-  AGNT: '/agnt-token.png',
+  AGNT: '/agnt-token.png?v=2',
   TON: 'https://assets.dedust.io/images/ton.webp',
   NOT: 'https://assets.dedust.io/images/not.webp',
   BUILD: 'https://cdn.joincommunity.xyz/build/build_logo.png',

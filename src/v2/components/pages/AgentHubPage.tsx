@@ -20,7 +20,7 @@ import { Skeleton } from '@/v2/components/ui/skeleton';
 import { CandlestickChart } from '@/v2/components/CandlestickChart';
 
 const TOKEN_LOGOS: Record<string, string> = {
-  AGNT: '/agnt-token.png',
+  AGNT: '/agnt-token.png?v=2',
   TON: 'https://assets.dedust.io/images/ton.webp',
   NOT: 'https://assets.dedust.io/images/not.webp',
   BUILD: 'https://cdn.joincommunity.xyz/build/build_logo.png',
