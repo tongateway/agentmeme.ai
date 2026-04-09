@@ -14,6 +14,7 @@ type CandlestickChartProps = {
   raceCfg: PublicApiConfig;
   fromSymbol: string;
   toSymbol: string;
+  height?: number;
 };
 
 const INTERVALS: CandleInterval[] = ['1m', '5m', '15m', '1h', '1d'];
@@ -29,7 +30,7 @@ const PERIOD_MAP: Record<CandleInterval, string> = {
 const CHART_GREEN = '#22c55e';
 const CHART_RED = '#ef4444';
 
-export function CandlestickChart({ raceCfg, fromSymbol, toSymbol }: CandlestickChartProps) {
+export function CandlestickChart({ raceCfg, fromSymbol, toSymbol, height = 380 }: CandlestickChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const [interval, setInterval] = useState<CandleInterval>('1h');
@@ -41,7 +42,7 @@ export function CandlestickChart({ raceCfg, fromSymbol, toSymbol }: CandlestickC
 
     const chart = createChart(containerRef.current, {
       width: containerRef.current.clientWidth,
-      height: 380,
+      height,
       layout: {
         background: { color: 'transparent' },
         textColor: 'rgba(255,255,255,0.55)',
@@ -85,7 +86,7 @@ export function CandlestickChart({ raceCfg, fromSymbol, toSymbol }: CandlestickC
     });
 
     return chart;
-  }, []);
+  }, [height]);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -208,8 +209,8 @@ export function CandlestickChart({ raceCfg, fromSymbol, toSymbol }: CandlestickC
         </div>
       </div>
 
-      <div className="relative" style={{ height: 380 }}>
-        <div ref={containerRef} style={{ height: 380 }} />
+      <div className="relative" style={{ height }}>
+        <div ref={containerRef} style={{ height }} />
         {loading && (
           <div className="absolute inset-0 flex items-center justify-center">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />

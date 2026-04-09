@@ -202,6 +202,7 @@ export function AgentHubPage() {
               raceCfg={raceCfg}
               fromSymbol="TON"
               toSymbol={featured.token_symbol === 'TON' ? 'USDT' : featured.token_symbol}
+              height={220}
             />
           </CardContent>
         </Card>
