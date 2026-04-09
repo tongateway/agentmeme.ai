@@ -4,6 +4,10 @@ import { TonConnectUIProvider } from '@tonconnect/ui-react';
 import { Buffer } from 'buffer';
 import './index.css';
 import { App } from './App.tsx';
+import { hydrateTheme } from './lib/useTheme';
+
+// Apply stored theme synchronously before React mounts (avoids flash of wrong theme).
+hydrateTheme();
 
 // @ton/core (and friends) rely on Buffer in the browser.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

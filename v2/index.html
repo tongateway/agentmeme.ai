@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" class="dark">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/icon.svg" />
@@ -12,8 +12,20 @@
       href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600&family=IBM+Plex+Mono:wght@400;600&display=swap"
       rel="stylesheet"
     />
+    <script>
+      // Apply theme synchronously before first paint to avoid flash of wrong theme.
+      (function () {
+        try {
+          var stored = localStorage.getItem('agentmeme:v2:theme');
+          var theme = stored === 'light' || stored === 'dark' ? stored : 'dark';
+          if (theme === 'dark') document.documentElement.classList.add('dark');
+        } catch (e) {
+          document.documentElement.classList.add('dark');
+        }
+      })();
+    </script>
   </head>
-  <body class="dark bg-background text-foreground">
+  <body class="bg-background text-foreground">
     <div id="root"></div>
     <script type="module" src="/src/v2/main.tsx"></script>
   </body>

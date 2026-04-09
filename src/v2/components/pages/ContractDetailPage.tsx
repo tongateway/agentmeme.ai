@@ -44,7 +44,7 @@ import {
   Share2, Check, Pause, Play, Wallet, AlertTriangle, RefreshCw,
   FileText, Copy, Pencil, Save, Loader2,
   Bot, Zap, Activity, ArrowUpRight, Clock, ShieldOff, TrendingUp, TrendingDown,
-  ArrowRightLeft, ExternalLink,
+  ArrowRight, ArrowRightLeft, ExternalLink,
 } from 'lucide-react';
 
 import { ContractTabBar } from '@/v2/components/layout/ContractTabBar';
@@ -1227,32 +1227,32 @@ function ContractDetailInner({ contract, detail, raceCfg, tonConnectUI, tonAddre
     <div className="mx-auto w-full max-w-6xl px-4 py-6 flex flex-col gap-4">
       <ContractTabBar />
       {/* ===== 1. Agent Header Card ===== */}
-      <Card>
-        <CardContent className="py-4">
-          <div className="flex items-center gap-4 flex-wrap">
+      <Card className="py-0">
+        <CardContent className="p-3">
+          <div className="flex items-center gap-3 flex-wrap">
             {/* Bot icon */}
-            <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/15 shrink-0">
-              <Bot className="h-5 w-5 text-foreground" />
+            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary/15 shrink-0">
+              <Bot className="h-4 w-4 text-foreground" />
             </div>
 
             {/* Name + status */}
             <div className="flex flex-col min-w-0">
-              <div className="flex items-center gap-2">
-                <span className="text-xl font-bold truncate">{contract.name || 'Agent'}</span>
+              <div className="flex items-center gap-1.5">
+                <span className="text-base font-bold truncate">{contract.name || 'Agent'}</span>
                 {aiResponses.length === 0 && !aiLoading ? (
-                  <Badge variant="secondary" className="animate-pulse">Deploying...</Badge>
+                  <Badge variant="secondary" className="animate-pulse h-4 text-[9px] px-1.5">Deploying...</Badge>
                 ) : (
-                  <Badge variant={isActive ? 'default' : 'outline'}>
+                  <Badge variant={isActive ? 'default' : 'outline'} className="h-4 text-[9px] px-1.5">
                     {isActive ? 'Active' : 'Paused'}
                   </Badge>
                 )}
               </div>
-              <div className="flex items-center gap-1 mt-0.5">
-                <span className="font-mono text-xs text-muted-foreground">{fmtAddr(contract.address)}</span>
+              <div className="flex items-center gap-1">
+                <span className="font-mono text-[10px] text-muted-foreground">{fmtAddr(contract.address)}</span>
                 <Button
                   variant="ghost"
                   size="sm"
-                  className={`h-5 w-5 p-0 ${addrCopied ? 'text-green-500' : ''}`}
+                  className={`h-4 w-4 p-0 ${addrCopied ? 'text-green-500' : ''}`}
                   onClick={() => {
                     void navigator.clipboard.writeText(contract.address);
                     setAddrCopied(true);
@@ -1260,7 +1260,7 @@ function ContractDetailInner({ contract, detail, raceCfg, tonConnectUI, tonAddre
                   }}
                   title="Copy address"
                 >
-                  {addrCopied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+                  {addrCopied ? <Check className="h-2.5 w-2.5" /> : <Copy className="h-2.5 w-2.5" />}
                 </Button>
               </div>
             </div>
@@ -1353,84 +1353,84 @@ function ContractDetailInner({ contract, detail, raceCfg, tonConnectUI, tonAddre
       )}
 
       {/* ===== 2. Stat Cards ===== */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
         {/* Model */}
-        <Card>
-          <CardContent className="py-3 px-4 gap-1 flex flex-col">
-            <div className="flex items-center gap-1.5">
-              <Zap className="h-3.5 w-3.5 text-yellow-500" />
-              <span className="text-xs text-muted-foreground">Model</span>
+        <Card className="py-0">
+          <CardContent className="p-2.5 flex flex-col gap-0">
+            <div className="flex items-center gap-1">
+              <Zap className="h-3 w-3 text-yellow-500" />
+              <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Model</span>
             </div>
-            <div className="text-lg font-bold truncate">{modelShort}</div>
-            <div className="text-xs text-muted-foreground truncate">{modelProvider}</div>
+            <div className="text-sm font-bold truncate">{modelShort}</div>
+            <div className="text-[10px] text-muted-foreground truncate">{modelProvider}</div>
           </CardContent>
         </Card>
 
         {/* Balance */}
-        <Card>
-          <CardContent className="py-3 px-4 gap-1 flex flex-col">
-            <div className="flex items-center gap-1.5">
-              <Wallet className="h-3.5 w-3.5 text-green-500" />
-              <span className="text-xs text-muted-foreground">Balance</span>
+        <Card className="py-0">
+          <CardContent className="p-2.5 flex flex-col gap-0">
+            <div className="flex items-center gap-1">
+              <Wallet className="h-3 w-3 text-green-500" />
+              <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Balance</span>
             </div>
-            <div className="text-lg font-bold font-mono">
+            <div className="text-sm font-bold font-mono">
               {totalUsdBalance > 0 ? `$${totalUsdBalance.toFixed(2)}` : '$0.00'}
             </div>
-            <div className="text-xs text-muted-foreground">USD equiv.</div>
+            <div className="text-[10px] text-muted-foreground">USD equiv.</div>
           </CardContent>
         </Card>
 
         {/* Profit */}
-        <Card>
-          <CardContent className="py-3 px-4 gap-1 flex flex-col">
-            <div className="flex items-center gap-1.5">
+        <Card className="py-0">
+          <CardContent className="p-2.5 flex flex-col gap-0">
+            <div className="flex items-center gap-1">
               {(contract.profit_usd ?? 0) >= 0
-                ? <TrendingUp className="h-3.5 w-3.5 text-green-500" />
-                : <TrendingDown className="h-3.5 w-3.5 text-red-500" />}
-              <span className="text-xs text-muted-foreground">Profit</span>
+                ? <TrendingUp className="h-3 w-3 text-green-500" />
+                : <TrendingDown className="h-3 w-3 text-red-500" />}
+              <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Profit</span>
             </div>
-            <div className={`text-lg font-bold font-mono ${(contract.profit_usd ?? 0) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+            <div className={`text-sm font-bold font-mono ${(contract.profit_usd ?? 0) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
               {contract.profit_usd != null ? `${contract.profit_usd >= 0 ? '+' : ''}$${contract.profit_usd.toFixed(2)}` : '$0.00'}
             </div>
-            <div className="text-xs text-muted-foreground">Total P&amp;L</div>
+            <div className="text-[10px] text-muted-foreground">Total P&amp;L</div>
           </CardContent>
         </Card>
 
         {/* Decisions */}
-        <Card>
-          <CardContent className="py-3 px-4 gap-1 flex flex-col">
-            <div className="flex items-center gap-1.5">
-              <Activity className="h-3.5 w-3.5 text-blue-500" />
-              <span className="text-xs text-muted-foreground">Decisions</span>
+        <Card className="py-0">
+          <CardContent className="p-2.5 flex flex-col gap-0">
+            <div className="flex items-center gap-1">
+              <Activity className="h-3 w-3 text-blue-500" />
+              <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Decisions</span>
             </div>
-            <div className="text-lg font-bold font-mono">
+            <div className="text-sm font-bold font-mono">
               {usedDec}{maxDec > 0 ? ` / ${maxDec}` : ' / \u221E'}
             </div>
-            <div className="text-xs text-muted-foreground">{maxDec > 0 ? `${decPct}% used` : 'Unlimited'}</div>
+            <div className="text-[10px] text-muted-foreground">{maxDec > 0 ? `${decPct}% used` : 'Unlimited'}</div>
           </CardContent>
         </Card>
 
         {/* Open Orders */}
-        <Card>
-          <CardContent className="py-3 px-4 gap-1 flex flex-col">
-            <div className="flex items-center gap-1.5">
-              <ArrowUpRight className="h-3.5 w-3.5 text-foreground" />
-              <span className="text-xs text-muted-foreground">Open Orders</span>
+        <Card className="py-0">
+          <CardContent className="p-2.5 flex flex-col gap-0">
+            <div className="flex items-center gap-1">
+              <ArrowUpRight className="h-3 w-3 text-foreground" />
+              <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Open Orders</span>
             </div>
-            <div className="text-lg font-bold font-mono">{openOrders}</div>
-            <div className="text-xs text-muted-foreground">{closedOrders} closed</div>
+            <div className="text-sm font-bold font-mono">{openOrders}</div>
+            <div className="text-[10px] text-muted-foreground">{closedOrders} closed</div>
           </CardContent>
         </Card>
 
         {/* Created */}
-        <Card>
-          <CardContent className="py-3 px-4 gap-1 flex flex-col">
-            <div className="flex items-center gap-1.5">
-              <Clock className="h-3.5 w-3.5 text-muted-foreground" />
-              <span className="text-xs text-muted-foreground">Created</span>
+        <Card className="py-0">
+          <CardContent className="p-2.5 flex flex-col gap-0">
+            <div className="flex items-center gap-1">
+              <Clock className="h-3 w-3 text-muted-foreground" />
+              <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Created</span>
             </div>
-            <div className="text-lg font-bold">{createdDay}</div>
-            <div className="text-xs text-muted-foreground">{createdTime}</div>
+            <div className="text-sm font-bold">{createdDay}</div>
+            <div className="text-[10px] text-muted-foreground">{createdTime}</div>
           </CardContent>
         </Card>
       </div>
@@ -1710,6 +1710,40 @@ function ContractDetailInner({ contract, detail, raceCfg, tonConnectUI, tonAddre
                 : r.action === 'close_order' ? 'secondary'
                 : r.action === 'hold' ? 'outline'
                 : 'secondary';
+
+              // For create_order actions, show the tokens and amount
+              let orderSummary: React.ReactNode = null;
+              if (r.action === 'create_order' && pp) {
+                const fromToken = typeof pp.from_token === 'string' ? pp.from_token.toUpperCase() : '';
+                const toToken = typeof pp.to_token === 'string' ? pp.to_token.toUpperCase() : '';
+                const amountRaw = pp.amount;
+                let amountText = '';
+                if (amountRaw != null) {
+                  try {
+                    const amountNum = typeof amountRaw === 'number' ? amountRaw : Number(amountRaw);
+                    if (Number.isFinite(amountNum)) {
+                      const human = fromNanoToken(amountNum, fromToken);
+                      amountText = Number.isFinite(human) && human > 0 ? `${human.toLocaleString(undefined, { maximumFractionDigits: 6 })}` : '';
+                    }
+                  } catch { /* ignore */ }
+                }
+                if (fromToken || toToken || amountText) {
+                  orderSummary = (
+                    <div className="flex items-center gap-1.5 text-xs font-mono">
+                      {amountText && fromToken && (
+                        <span className="font-bold">{amountText} {fromToken}</span>
+                      )}
+                      {fromToken && toToken && (
+                        <>
+                          <ArrowRight className="h-3 w-3 text-muted-foreground" />
+                          <span className="font-bold text-muted-foreground">{toToken}</span>
+                        </>
+                      )}
+                    </div>
+                  );
+                }
+              }
+
               return (
                 <Card key={r.id} className="border-l-4 border-l-border">
                   <CardContent className="p-4 flex flex-col gap-2">
@@ -1719,8 +1753,9 @@ function ContractDetailInner({ contract, detail, raceCfg, tonConnectUI, tonAddre
                           <Activity className="h-4 w-4 text-muted-foreground" />
                         </div>
                         <div className="flex flex-col gap-0.5">
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <Badge variant={actionVariant} className="text-xs">{r.action}</Badge>
+                            {orderSummary}
                             <span className="font-mono text-sm font-bold">
                               {r.balance_usd != null ? `$${r.balance_usd.toFixed(2)}` : ''}
                             </span>

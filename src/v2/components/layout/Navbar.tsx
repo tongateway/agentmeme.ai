@@ -1,10 +1,11 @@
 import { Link, useLocation } from 'react-router-dom';
 import { TonConnectButton } from '@tonconnect/ui-react';
-import { Bot, BarChart3, Layers, Rocket, Menu, Activity } from 'lucide-react';
+import { Bot, BarChart3, Layers, Rocket, Menu, Activity, Sun, Moon } from 'lucide-react';
 import { Button } from '@/v2/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/v2/components/ui/sheet';
 import { Separator } from '@/v2/components/ui/separator';
 import { cn } from '@/v2/lib/utils';
+import { useTheme } from '@/v2/lib/useTheme';
 
 const NAV_LINKS = [
   { to: '/', label: 'Home', icon: Layers },
@@ -16,6 +17,7 @@ const NAV_LINKS = [
 
 export function Navbar() {
   const location = useLocation();
+  const { theme, toggle: toggleTheme } = useTheme();
 
   const isActive = (to: string) => {
     if (to === '/') return location.pathname === '/';
@@ -48,6 +50,15 @@ export function Navbar() {
         </nav>
 
         <div className="flex items-center gap-3 ml-auto">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={toggleTheme}
+            aria-label="Toggle theme"
+            title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+          >
+            {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+          </Button>
           <TonConnectButton />
 
           <Sheet>
