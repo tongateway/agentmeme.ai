@@ -1354,6 +1354,58 @@ function ContractDetailInner({ contract, detail, raceCfg, tonConnectUI, tonAddre
         </Card>
       </div>
 
+      {/* ===== Fund Agent Banner ===== */}
+      {!balancesLoading && isActive && (() => {
+        // Check if the agent has trading pair tokens but no balance
+        const pairs = (contract.trading_pairs ?? '').split(',').map((p) => p.trim()).filter(Boolean);
+        const pairTokens = new Set<string>();
+        for (const pair of pairs) {
+          for (const t of pair.split('/')) {
+            const upper = t.trim().toUpperCase();
+            if (upper && upper !== 'TON') pairTokens.add(upper);
+          }
+        }
+        const missingTokens = [...pairTokens].filter((sym) => {
+          const row = tokenBalances.find((b) => b.symbol.toUpperCase() === sym);
+          return !row || row.amount <= 0;
+        });
+        if (missingTokens.length === 0) return null;
+        return (
+          <Card className="border-yellow-500/30 bg-yellow-500/10 py-0">
+            <CardContent className="p-3 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2 min-w-0">
+                <Wallet className="h-4 w-4 text-yellow-500 shrink-0" />
+                <div className="min-w-0">
+                  <div className="text-sm font-bold">Fund your agent</div>
+                  <div className="text-xs text-muted-foreground">
+                    Send <span className="font-bold">{missingTokens.join(', ')}</span> to start trading
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                {missingTokens.map((sym) => (
+                  <Button
+                    key={sym}
+                    size="sm"
+                    variant="outline"
+                    className="gap-1 border-yellow-500/40 hover:bg-yellow-500/10"
+                    onClick={() => {
+                      setTopupToken(sym);
+                      setTopupAmount(sym === 'USDT' ? '10' : sym === 'AGNT' ? '100' : '5');
+                      // Scroll to topup section
+                      const el = document.getElementById('topup-section');
+                      if (el) el.scrollIntoView({ behavior: 'smooth' });
+                    }}
+                  >
+                    Send {sym}
+                  </Button>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })()}
+
       {/* ===== Error display ===== */}
       {error && (
         <Card className="border-red-500/30 bg-red-500/10">
@@ -1504,7 +1556,7 @@ function ContractDetailInner({ contract, detail, raceCfg, tonConnectUI, tonAddre
                   <Separator />
 
                   {/* Top Up */}
-                  <div className="flex items-center gap-2">
+                  <div id="topup-section" className="flex items-center gap-2">
                     <ArrowUpFromLine className="h-4 w-4 text-muted-foreground" />
                     <span className="text-sm text-muted-foreground">Top Up</span>
                     <div className="flex items-center gap-1.5 ml-auto">
