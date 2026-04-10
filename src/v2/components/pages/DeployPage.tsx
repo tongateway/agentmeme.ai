@@ -1022,34 +1022,8 @@ export function DeployPage() {
             maxLength={40}
           />
 
-          {/* =============================================================== */}
-          {/* Model Selector (collapsed when a model is selected)             */}
-          {/* =============================================================== */}
-          <div>
-            {/* Collapsed: show selected model as inline text */}
-            {!modelListOpen && (
-              <button
-                type="button"
-                className="flex items-center gap-1.5 text-left cursor-pointer hover:opacity-80 transition-opacity"
-                onClick={() => setModelListOpen(true)}
-              >
-                <span className="text-xs text-muted-foreground">AI service provider</span>
-                {selectedModelOption && (
-                  <span className="text-xs font-bold">
-                    ({shortModelName(selectedModelOption.name)})
-                  </span>
-                )}
-                {selectedModelOption?.pricing?.[0] && (
-                  <span className="text-[10px] text-muted-foreground font-mono">
-                    {selectedModelOption.pricing[0].price} {selectedModelOption.pricing[0].currency}/{selectedModelOption.pricing[0].cntDecisions}
-                  </span>
-                )}
-                <ChevronDown className="h-3 w-3 text-muted-foreground" />
-              </button>
-            )}
-
-            {/* Expanded: show all models */}
-            {modelListOpen && (
+          {/* Model picker grid — shown when modelListOpen is true */}
+          {modelListOpen && (
               <div>
                 <div className="flex items-center gap-2 mb-2">
                   <span className="text-xs font-semibold text-muted-foreground">AI Model</span>
@@ -1120,7 +1094,6 @@ export function DeployPage() {
                 </div>
               </div>
             )}
-          </div>
 
           {/* =============================================================== */}
           {/* Trading Pair (compact inline)                                   */}
@@ -1410,20 +1383,25 @@ export function DeployPage() {
             {/* WHERE YOUR TON GOES */}
             <div className="border-t border-border px-4 py-3 space-y-1.5">
               <div className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Where your TON goes</div>
-              <div className="flex items-center justify-between text-xs">
+              <button
+                type="button"
+                className="flex items-center justify-between text-xs w-full cursor-pointer hover:opacity-80 transition-opacity text-left"
+                onClick={() => setModelListOpen((v) => !v)}
+              >
                 <div className="flex items-center gap-1.5">
                   <span className="h-1.5 w-1.5 rounded-full bg-purple-400" />
                   <span className="text-muted-foreground">AI service provider</span>
                   {selectedModelOption && (
                     <span className="text-muted-foreground/60">({shortModelName(selectedModelOption.name)})</span>
                   )}
+                  <ChevronDown className={`h-3 w-3 text-muted-foreground transition-transform ${modelListOpen ? 'rotate-180' : ''}`} />
                 </div>
                 <span className="font-mono text-muted-foreground">
                   {selectedModelOption?.pricing?.[0]
                     ? `${selectedModelOption.pricing[0].price} ${selectedModelOption.pricing[0].currency}/${selectedModelOption.pricing[0].cntDecisions} dec`
                     : '\u2014'}
                 </span>
-              </div>
+              </button>
               <div className="flex items-center justify-between text-xs">
                 <div className="flex items-center gap-1.5">
                   <span className="h-1.5 w-1.5 rounded-full bg-orange-400" />
