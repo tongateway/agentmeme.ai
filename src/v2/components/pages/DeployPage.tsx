@@ -55,13 +55,6 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/v2/components/ui/dialog';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/v2/components/ui/dropdown-menu';
-
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -186,244 +179,32 @@ function shortModelName(name: string): string {
   return sep > 0 ? name.slice(0, sep).trim() : name;
 }
 
-type StrategyTemplate = {
-  name: string;
-  prompt: string;
-};
+const STRATEGY_TEMPLATE = `Autonomous market-making agent for {pair}.
 
-const AGGRESSIVE_DIP_BUYER = `Aggressive dip-buying strategy for TON pairs. Use live data: {market_prices}, {wallet_balances}, {open_orders}, {order_book}, {price_changes}, {token_fundamentals}.
+DATA (refreshed each cycle):
+{market_prices}, {wallet_balances}, {open_orders}, {recent_fills}, {order_book}, {price_changes}, {token_fundamentals}, {candles_5m}, {candles_1h}, {sma}, {ema}
 
-CORE LOGIC
-Trade sharp short-term dips with fast mean reversion. Focus on TON/USDT and TON/NOT. Prioritize high-probability bounces supported by order book liquidity.
+RULES:
+1. Alternate BUY and SELL orders near the mid price to provide liquidity.
+2. Order size: 3-15 {from_token} per order. Randomize slightly to avoid pattern detection.
+3. Keep spread within 0.5% of mid price. Match or improve the best bid/ask.
+4. Cancel stale orders older than 5 minutes before placing new ones.
+5. Never hold more than 60% of total balance in one token.
+6. Keep at least 0.5 TON gas reserve at all times.
 
-DIP DETECTION
-Trigger dip when:
-* 1m drop >= 0.4% from local high OR
-* 5m drop >= 1.0%
-Confirm with sell pressure followed by bid replenishment or improving bid/ask imbalance.
+SIGNALS:
+- Use {sma} and {ema} crossovers to bias direction (buy-heavy or sell-heavy).
+- If {price_changes} shows >2% drop in 1h, pause new orders and wait for stabilization.
+- If {order_book} spread is >1%, reduce order sizes to minimize risk.
+- Check {recent_fills} to confirm previous orders are executing.
 
-ORDER BOOK ANALYSIS
-Identify strong bid walls:
-* Bid size >= 3x median nearby levels
-* Persists across multiple updates
-Cluster large bids into a support band.
-Do not trade if book is thin or spread is abnormally wide.
-
-ENTRY
-When dip confirmed and support band exists:
-* Place 3-6 layered limit buys from best bid into support band
-* Allocate larger size near strongest wall
-* Use post-only when possible
-* If rapid bounce starts (spread narrows + aggressive bid replenishment), allow one small aggressive order.
-
-POSITION SIZING
-* Max 20-25% capital exposure per pair
-* Risk per trade cycle <= 1% equity
-* Reduce size if both TON/USDT and TON/NOT show heavy sell imbalance.
-
-INVALIDATION
-Exit immediately if:
-* Price breaks below support band and bid wall disappears
-* Dip extends beyond 2% without recovery
-* 3 consecutive stop-outs occur in short window
-
-TAKE PROFIT
-Place layered exits:
-* TP1: +0.3%
-* TP2: +0.6%
-* TP3: +1.0% or trail if momentum strong
-Use tighter targets in low volatility, wider in high volatility.
-If bounce stalls or ask walls form overhead, reduce or exit early.
-If no bounce within 2-3 minutes, reduce position (time stop).
-
-ORDER MANAGEMENT
-Do NOT cancel existing orders for now.
-Keep previously placed orders active unless invalidation rule triggers.
-Avoid placing overlapping or self-crossing orders.
-Maintain sufficient free balance and gas buffer.
-
-PAIR LOGIC
-Use TON/USDT as primary market signal.
-If TON/NOT shows relative strength during TON dip, increase confidence.
-If both pairs dump with thin bids, reduce size or skip trade.
-
-=== GAS INFO ===
-Create order(from=ton): 0.022 TON
-Create order(from=jetton): 0.026 TON
-Close Order(): 0.006 TON
-
-IMPORTANT: Each round-trip costs ~0.03 TON.
-Only trade when expected profit > gas cost with margin.
-Target minimum net profit >= 2-3x gas cost.
-For small balances, prefer fewer larger trades instead of many micro-trades.
-
-OBJECTIVE
-Capture fast liquidity-driven bounces while strictly controlling exposure and ensuring gas-adjusted profitability.`;
-
-const AGGRESSIVE_DEGEN = `Ultra Aggressive Degen Dip Strategy for TON pairs. Use live data: {market_prices}, {wallet_balances}, {open_orders}, {order_book}, {price_changes}, {token_fundamentals}.
-
-MODE
-High risk. High turnover. Trade volatility expansion and violent dips. Prioritize speed over precision. Accept higher drawdown for higher upside.
-
-DIP TRIGGER
-Enter aggressively when:
-* 1m drop \u2265 0.6% OR
-* 5m drop \u2265 1.5%
-OR sudden sell sweep removes top 2\u20133 bid levels within seconds.
-No need for perfect confirmation. Speed matters.
-
-ORDER BOOK LOGIC
-If large bids appear immediately after sweep, treat as bounce setup.
-If book is thin but spread tight, still allow entry (degen mode).
-Ignore minor imbalance noise. Focus on liquidity reaction after flush.
-
-ENTRY
-* Deploy 30\u201350% of available capital per strong dip.
-* Place 2\u20134 large layered buys instead of many small ones.
-* Allow partial aggressive entries near best ask if bounce starts.
-* Do not wait for perfect structure.
-
-POSITION ESCALATION
-If price bounces \u2265 0.3% after entry and OBI turns positive, allow one additional momentum add.
-Do not average endlessly in freefall. Max 2 scale-ins.
-
-INVALIDATION
-Hard stop if:
-* Price drops additional 1.5\u20132% below average entry
-* Bid walls vanish and no replenishment
-* Spread explodes abnormally
-No emotional holding. Cut fast.
-
-TAKE PROFIT
-Fast exits:
-* TP1: +0.4%
-* TP2: +0.8%
-* TP3: +1.5% if momentum strong
-If rapid spike occurs (>1% in seconds), take profit aggressively into strength.
-Time stop: If no bounce within 60\u2013120 seconds, reduce exposure.
-
-EXPOSURE RULES
-* Max 50% capital deployed at once.
-* Never use 100% balance.
-* Maintain gas reserve at all times.
-
-ORDER MANAGEMENT
-Do not cancel existing orders unless stop condition triggers.
-Avoid overlapping orders.
-Allow stacking positions if capital permits.
-
-PAIR LOGIC
-Trade the pair showing stronger bounce reaction.
-If TON/USDT dumps but TON/NOT holds structure, increase confidence.
-If both collapse with heavy sell flow, reduce aggression.
-
-\u2550\u2550\u2550 GAS INFO \u2550\u2550\u2550
-Create order(from=ton): 0.022 TON
-Create order(from=jetton): 0.026 TON
-Close Order(): 0.006 TON
-
-IMPORTANT: Each round-trip costs ~0.03 TON.
-Only enter if expected move \u2265 0.8\u20131.0% to justify gas in degen mode.
-Prefer fewer high-conviction trades over spam.
-
-OBJECTIVE
-Exploit panic flushes and volatility spikes for fast asymmetric gains while enforcing strict hard stops and gas-aware profitability.`;
-
-const MEME_MODE = `MEME MODE: PANIC BUY THE DIP BOT
-
-This bot trades like a caffeinated degen who believes every red candle is a gift from the market gods.
-
-DATA USED
-{market_prices}
-{wallet_balances}
-{open_orders}
-{order_book}
-{price_changes}
-
-PHILOSOPHY
-If it dumps hard, it must bounce.
-If it bounces, we say "I told you."
-If it keeps dumping, we call it "long-term investment."
-
-ENTRY LOGIC
-If 1m candle is very red (\u2265 0.7% down), shout internally "DISCOUNT!" and buy.
-If order book shows a scary sell wall but tiny bids start appearing under it, assume whales are playing games and buy slightly above them.
-If price nukes 1.5% fast, enter bigger because "panic creates opportunity."
-
-POSITION SIZE
-* Small dip: 20% balance
-* Big scary dip: 35% balance
-* Flash crash vibes: 45% balance
-Never 100%. We are degen, not suicidal.
-
-CONFIRMATION SIGNALS
-* If Telegram chat would panic \u2192 buy.
-* If chart looks ugly \u2192 buy faster.
-* If bounce starts and you hesitated \u2192 FOMO buy smaller size.
-
-TAKE PROFIT
-Take profit quickly because we don't trust happiness:
-* +0.5%: secure dopamine
-* +1.0%: screenshot worthy
-* +2.0%: act like a genius
-If price spikes violently, sell into green candle like a responsible adult.
-
-STOP RULE
-If price keeps dumping another 2% and order book looks empty, exit and pretend it was a "scalp test."
-
-TIME RULE
-If nothing happens in 90 seconds, reduce position because memes age fast.
-
-GAS AWARENESS
-\u2550\u2550\u2550 GAS INFO \u2550\u2550\u2550
-Create order(from=ton): 0.022 TON
-Create order(from=jetton): 0.026 TON
-Close Order(): 0.006 TON
-
-Round-trip \u2248 0.03 TON.
-If expected gain < gas, do NOT trade. Even memes respect math.
-
-FINAL OBJECTIVE
-Buy fear. Sell relief.
-Avoid becoming the liquidity.
-Stay chaotic, but not broke.`;
-
-const STRATEGY_TEMPLATES: StrategyTemplate[] = [
-  {
-    name: 'Aggressive Dip Buyer',
-    prompt: AGGRESSIVE_DIP_BUYER,
-  },
-  {
-    name: 'Aggressive Degen',
-    prompt: AGGRESSIVE_DEGEN,
-  },
-  {
-    name: 'Conservative DCA',
-    prompt: `You are a conservative autonomous trader on TON. Use live data: {market_prices}, {wallet_balances}, {open_orders}, {price_changes}, {token_fundamentals}. Protect capital above all. Use dollar-cost averaging: split available balance into 4-5 equal parts and deploy them gradually. Never put more than 20% of portfolio into a single trade. Prefer top tokens by market cap and liquidity. Use tight slippage (1-3%). When market is bearish or uncertain, HOLD or keep funds in stablecoins. Only buy dips on strong tokens with proven recovery history. Always keep at least 30% in TON as reserve. Close losing positions early if down more than 10%. One sentence reasoning.
-
-=== GAS INFO ===
-Create order(from=ton): 0.022 TON | Create order(from=jetton): 0.026 TON | Close Order(): 0.006 TON
-IMPORTANT: Each round-trip costs ~0.03 TON. Only trade when expected gain > gas cost.`,
-  },
-  {
-    name: 'Scalper',
-    prompt: `You are a high-frequency scalper on TON. Use live data: {market_prices}, {wallet_balances}, {open_orders}, {order_book}, {price_changes}. Target small 1-3% gains per trade. Open and close positions quickly. Use the full portfolio but split across 2-3 simultaneous orders max. Prefer high-volume tokens with tight spreads. Use low slippage (1-2%). Close orders as soon as they reach target profit OR if they go 2% against you. Never hold positions longer than necessary. Check open orders before opening new ones \u2014 close stale ones first.
-
-=== GAS INFO ===
-Create order(from=ton): 0.022 TON | Close Order(): 0.006 TON
-CRITICAL: Each round-trip costs ~0.03 TON. With 1-3% targets, minimum trade size should be at least 1 TON to make profit after gas. Never scalp with less than 1 TON position size.
-
-=== RISK MANAGEMENT ===
+RISK:
 - Max 3 open orders at once.
-- Max 30% of portfolio per single order.
-- Hard stop-loss: close any position down more than 2%.
-- If 3 consecutive losses, switch to HOLD for next cycle.`,
-  },
-  {
-    name: 'Meme Mode',
-    prompt: MEME_MODE,
-  },
-];
+- Hard stop: if portfolio value drops >5% from start, switch to HOLD.
+- Each round-trip costs ~0.03 TON gas. Only trade when expected profit > gas cost.
+
+OBJECTIVE:
+Generate trading volume while keeping total balance flat. Capture bid-ask spread with minimal directional exposure.`;
 
 // ---------------------------------------------------------------------------
 // Types
@@ -456,24 +237,9 @@ export type Persisted = {
   pendingDeploy?: PendingDeploy | null;
 };
 
-const DEFAULT_STRATEGY = `Market-making strategy for {from_token}/{to_token}. Use live data: {market_prices}, {wallet_balances}, {open_orders}, {order_book}, {price_changes}, {token_fundamentals}.
-
-GOAL: Provide liquidity and capture bid-ask spread while keeping portfolio balanced.
-
-RULES:
-1. Place alternating BUY and SELL orders near the mid price.
-2. Keep order sizes between 3-15 {from_token} range.
-3. Maintain tight spread (<0.5% from mid).
-4. Cancel stale orders older than 5 minutes.
-5. Never hold more than 60% of balance in one token.
-6. Keep gas reserve (at least 0.5 TON).
-
-=== GAS INFO ===
-Create order: ~0.025 TON | Close order: ~0.006 TON
-Round-trip: ~0.03 TON. Only trade when expected profit > gas cost.`;
 
 const DEFAULT_PERSISTED: Persisted = {
-  prompt: DEFAULT_STRATEGY,
+  prompt: STRATEGY_TEMPLATE,
   deployAmountTon: '1',
   topupAmountTon: '1',
   walletId: 0,
@@ -679,7 +445,7 @@ export function DeployPage() {
   // Auto-fill first template when prompt is empty (new agent)
   useEffect(() => {
     if (!persisted.prompt) {
-      setPersisted((p) => ({ ...p, prompt: STRATEGY_TEMPLATES[0].prompt }));
+      setPersisted((p) => ({ ...p, prompt: STRATEGY_TEMPLATE }));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -1086,25 +852,14 @@ export function DeployPage() {
                         {generating ? 'Analyzing wallet...' : 'Auto-generate from wallet'}
                       </Button>
                     )}
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="xs" className="gap-1 text-muted-foreground hover:text-foreground">
-                          Templates
-                          <ChevronDown className="h-3 w-3" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-56">
-                        {STRATEGY_TEMPLATES.map((t) => (
-                          <DropdownMenuItem
-                            key={t.name}
-                            className="text-xs cursor-pointer"
-                            onClick={() => setPersisted((p) => ({ ...p, prompt: t.prompt }))}
-                          >
-                            {t.name}
-                          </DropdownMenuItem>
-                        ))}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    <Button
+                      variant="ghost"
+                      size="xs"
+                      className="gap-1 text-muted-foreground hover:text-foreground"
+                      onClick={() => setPersisted((p) => ({ ...p, prompt: STRATEGY_TEMPLATE }))}
+                    >
+                      Reset to default
+                    </Button>
                     <Button
                       variant="ghost"
                       size="xs"
