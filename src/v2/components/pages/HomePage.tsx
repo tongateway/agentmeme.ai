@@ -208,65 +208,49 @@ export function HomePage() {
       {/* 3. Top Performers */}
       {!loading && top3.length > 0 && (
         <Card className="py-0 overflow-hidden">
-          <div className="flex flex-row items-center justify-between px-3 py-2 border-b border-border/40">
-            <div className="text-xs font-bold flex items-center gap-1.5">
+          <div className="flex flex-row items-center justify-between px-3 py-1.5 border-b border-border/40">
+            <div className="text-sm font-bold flex items-center gap-1.5">
               <Trophy className="h-3.5 w-3.5 text-yellow-500" />
               Top Performing Agents
             </div>
-            <Button variant="ghost" size="sm" className="h-6 text-[11px]" onClick={() => navigate('/leaderboard')}>
+            <Button variant="ghost" size="sm" className="h-6 text-xs" onClick={() => navigate('/leaderboard')}>
               View all <ChevronRight className="h-3 w-3 ml-0.5" />
             </Button>
           </div>
-          <CardContent className="p-0">
-            <div className="divide-y divide-border/30">
-              {top3.map((entry, idx) => {
-                const profitPct = entry.profit_pct ?? 0;
-                const isPositive = profitPct >= 0;
-                const shortModel = entry.ai_model.includes('/')
-                  ? entry.ai_model.split('/').pop() ?? entry.ai_model
-                  : entry.ai_model;
-                const maxAbs = Math.max(...top3.map((e) => Math.abs(e.profit_pct ?? 0)), 1);
-                const barWidth = Math.min(100, (Math.abs(profitPct) / maxAbs) * 100);
+          <div className="divide-y divide-border/30">
+            {top3.map((entry, idx) => {
+              const profitPct = entry.profit_pct ?? 0;
+              const isPositive = profitPct >= 0;
+              const shortModel = entry.ai_model.includes('/')
+                ? entry.ai_model.split('/').pop() ?? entry.ai_model
+                : entry.ai_model;
 
-                return (
-                  <button
-                    key={entry.address}
-                    type="button"
-                    className="w-full flex items-center gap-3 px-3 py-2 hover:bg-accent/30 transition-colors text-left cursor-pointer"
-                    onClick={() => navigate(`/trader/${entry.smart_contract_id}`)}
-                  >
-                    {/* Rank number */}
-                    <span className="w-4 text-center font-mono text-xs font-bold tabular-nums text-muted-foreground shrink-0">
-                      {idx + 1}
-                    </span>
+              return (
+                <button
+                  key={entry.address}
+                  type="button"
+                  className="w-full flex items-center gap-3 px-3 py-1.5 hover:bg-accent/30 transition-colors text-left cursor-pointer"
+                  onClick={() => navigate(`/trader/${entry.smart_contract_id}`)}
+                >
+                  <span className="w-4 text-center font-mono text-sm font-bold tabular-nums text-muted-foreground shrink-0">
+                    {idx + 1}
+                  </span>
 
-                    {/* Name + model inline */}
-                    <div className="min-w-0 flex-1 flex items-center gap-2">
-                      <span className="mono text-xs font-bold truncate">{entry.name || fmtAddr(entry.address)}</span>
-                      <span className="text-[10px] text-muted-foreground truncate hidden sm:inline">{shortModel}</span>
-                      <span className="text-[10px] text-muted-foreground shrink-0">· {entry.completed_orders ?? 0} trades</span>
-                    </div>
+                  <div className="min-w-0 flex-1 flex items-center gap-2">
+                    <span className="mono text-sm font-bold truncate">{entry.name || fmtAddr(entry.address)}</span>
+                    <span className="text-xs text-muted-foreground truncate hidden sm:inline">{shortModel}</span>
+                    <span className="text-xs text-muted-foreground shrink-0">· {entry.completed_orders ?? 0} trades</span>
+                  </div>
 
-                    {/* Profit with bar */}
-                    <div className="shrink-0 flex items-center gap-2">
-                      <span className="text-[9px] uppercase text-muted-foreground hidden sm:inline">P&L</span>
-                      <div className="h-1 w-16 rounded-full bg-muted overflow-hidden hidden sm:block">
-                        <div
-                          className={`h-full rounded-full ${isPositive ? 'bg-green-500' : 'bg-red-500'}`}
-                          style={{ width: `${barWidth}%` }}
-                        />
-                      </div>
-                      <span className={`mono text-sm font-bold tabular-nums ${isPositive ? 'text-green-500' : 'text-red-500'}`}>
-                        {isPositive ? '+' : ''}{profitPct.toFixed(1)}%
-                      </span>
-                    </div>
+                  <span className={`mono text-sm font-bold tabular-nums shrink-0 ${isPositive ? 'text-green-500' : 'text-red-500'}`}>
+                    {isPositive ? '+' : ''}{profitPct.toFixed(1)}%
+                  </span>
 
-                    <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/40 shrink-0" />
-                  </button>
-                );
-              })}
-            </div>
-          </CardContent>
+                  <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/40 shrink-0" />
+                </button>
+              );
+            })}
+          </div>
         </Card>
       )}
 
