@@ -1294,7 +1294,7 @@ export function DeployPage() {
                       return (
                         <button key={`${mp || 'p'}:${m.id}`} type="button"
                           className={`flex items-center gap-2 w-full text-left text-xs py-1.5 px-2 rounded transition-colors cursor-pointer ${
-                            isSelected ? 'bg-green-500/20 font-bold ring-1 ring-green-500/40' : 'hover:bg-muted/60'
+                            isSelected ? 'bg-green-600 text-white font-bold' : 'hover:bg-muted/60'
                           }`}
                           onClick={() => { setPersisted((p) => ({ ...p, aiModel: m.id, aiProvider: mp || undefined })); setModelListOpen(false); }}
                         >
