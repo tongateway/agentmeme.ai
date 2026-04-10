@@ -658,7 +658,7 @@ export function DeployPage() {
   const [err, setErr] = useState<string | null>(null);
   const [aiModelGroups, setAiModelGroups] = useState<AiModelsByProvider[]>([]);
   const [modelsLoading, setModelsLoading] = useState(false);
-  const [modelListOpen, setModelListOpen] = useState(!persisted.aiModel);
+  const [modelListOpen, setModelListOpen] = useState(false);
   const [pickingSide, setPickingSide] = useState<'base' | 'quote' | null>(persisted.quoteToken ? null : 'quote');
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [promptVars, setPromptVars] = useState<PromptVariable[]>([]);
@@ -1019,38 +1019,25 @@ export function DeployPage() {
           {/* Model Selector (collapsed when a model is selected)             */}
           {/* =============================================================== */}
           <div>
-            {/* Collapsed: show selected model */}
-            {!modelListOpen && selectedModelOption && (
+            {/* Collapsed: show selected model as inline text */}
+            {!modelListOpen && (
               <button
                 type="button"
-                className="flex items-center gap-2 w-full text-left cursor-pointer rounded-lg border border-border/50 hover:border-border bg-muted/30 px-3 py-2"
+                className="flex items-center gap-1.5 text-left cursor-pointer hover:opacity-80 transition-opacity"
                 onClick={() => setModelListOpen(true)}
               >
-                <ProviderIcon provider={selectedModelOption.provider?.trim() || ''} />
-                <span className="text-[10px] font-medium text-muted-foreground capitalize truncate">
-                  {selectedModelOption.provider?.trim() || 'Unknown'}
-                </span>
-                <span className="text-xs font-bold truncate">
-                  {shortModelName(selectedModelOption.name)}
-                </span>
-                <Badge
-                  variant="secondary"
-                  className={`ml-auto shrink-0 ${
-                    selectedModelOption.isThinking
-                      ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300'
-                      : selectedModelOption.isThinking === false
-                        ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300'
-                        : 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300'
-                  }`}
-                >
-                  {selectedModelOption.isThinking ? 'Thinking' : selectedModelOption.isThinking === false ? 'Fast' : 'Balanced'}
-                </Badge>
-                {selectedModelOption.pricing?.[0] && (
-                  <span className="flex-shrink-0 text-[10px] text-muted-foreground font-mono">
-                    {selectedModelOption.pricing[0].price} {selectedModelOption.pricing[0].currency}/{selectedModelOption.pricing[0].cntDecisions} dec
+                <span className="text-xs text-muted-foreground">AI service provider</span>
+                {selectedModelOption && (
+                  <span className="text-xs font-bold">
+                    ({shortModelName(selectedModelOption.name)})
                   </span>
                 )}
-                <ChevronDown className="flex-shrink-0 h-3.5 w-3.5 text-muted-foreground" />
+                {selectedModelOption?.pricing?.[0] && (
+                  <span className="text-[10px] text-muted-foreground font-mono">
+                    {selectedModelOption.pricing[0].price} {selectedModelOption.pricing[0].currency}/{selectedModelOption.pricing[0].cntDecisions}
+                  </span>
+                )}
+                <ChevronDown className="h-3 w-3 text-muted-foreground" />
               </button>
             )}
 
