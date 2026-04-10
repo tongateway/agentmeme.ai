@@ -1193,106 +1193,19 @@ export function DeployPage() {
           {/* Fund Section                                                    */}
           {/* =============================================================== */}
           <div className="rounded-lg border border-border overflow-hidden">
-            {/* Extra TON */}
-            <div className="flex items-center justify-between px-4 py-3">
-              <div className="flex items-center gap-2">
-                <TokenIcon symbol="TON" size="h-5 w-5" />
-                <span className="text-sm font-semibold">Extra TON</span>
-                <span className="text-[10px] text-muted-foreground">gas & fees</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <Button variant="ghost" size="icon-xs" type="button" onClick={() => {
-                  const cur = parseFloat(persisted.deployAmountTon || '0');
-                  if (cur > 0) setPersisted((p) => ({ ...p, deployAmountTon: String(Math.max(0, cur - 1)) }));
-                }}>
-                  <Minus className="h-3 w-3" />
-                </Button>
-                <Input
-                  type="text"
-                  className="w-16 text-center font-mono font-semibold h-8"
-                  value={persisted.deployAmountTon}
-                  onChange={(e) => setPersisted((p) => ({ ...p, deployAmountTon: e.target.value }))}
-                  inputMode="decimal"
-                />
-                <Button variant="ghost" size="icon-xs" type="button" onClick={() => {
-                  const cur = parseFloat(persisted.deployAmountTon || '0');
-                  setPersisted((p) => ({ ...p, deployAmountTon: String(cur + 1) }));
-                }}>
-                  <Plus className="h-3 w-3" />
-                </Button>
-              </div>
+            {/* Block title */}
+            <div className="px-4 py-2.5 border-b border-border">
+              <span className="text-sm font-semibold">Agent configuration</span>
             </div>
 
-            {/* WHERE YOUR TON GOES */}
-            <div className="border-t border-border px-4 py-3 space-y-1.5">
-              <div className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Where your TON goes</div>
-              <button
-                type="button"
-                className="flex items-center justify-between text-xs w-full cursor-pointer hover:opacity-80 transition-opacity text-left"
-                onClick={() => setModelListOpen((v) => !v)}
-              >
-                <div className="flex items-center gap-1.5">
-                  <span className="h-1.5 w-1.5 rounded-full bg-purple-400" />
-                  <span className="text-muted-foreground">AI service provider</span>
-                  {selectedModelOption && (
-                    <span className="text-muted-foreground/60">({shortModelName(selectedModelOption.name)})</span>
-                  )}
-                  <ChevronDown className={`h-3 w-3 text-muted-foreground transition-transform ${modelListOpen ? 'rotate-180' : ''}`} />
-                </div>
-                <span className="font-mono text-muted-foreground">
-                  {selectedModelOption?.pricing?.[0]
-                    ? `${selectedModelOption.pricing[0].price} ${selectedModelOption.pricing[0].currency}/${selectedModelOption.pricing[0].cntDecisions} dec`
-                    : '\u2014'}
-                </span>
-              </button>
-              {/* Model picker list — compact rows */}
-              {modelListOpen && (
-                <div className="ml-3 mt-1 mb-1 border-l-2 border-purple-400/30 pl-3 space-y-0.5">
-                  {modelsLoading && <Skeleton className="h-4 w-32" />}
-                  {displayGroups.flatMap((group) =>
-                    group.models.map((m) => {
-                      const mp = m.provider?.trim() ?? '';
-                      const isSelected = selectedModel === m.id && (selectedProvider ?? '') === mp;
-                      const tier = m.pricing?.[0];
-                      return (
-                        <button
-                          key={`${mp || 'p'}:${m.id}`}
-                          type="button"
-                          className={`flex items-center gap-2 w-full text-left text-xs py-1 px-2 rounded transition-colors cursor-pointer ${
-                            isSelected ? 'bg-green-500/10 font-bold' : 'hover:bg-muted/60'
-                          }`}
-                          onClick={() => {
-                            setPersisted((p) => ({ ...p, aiModel: m.id, aiProvider: mp || undefined }));
-                            setModelListOpen(false);
-                          }}
-                        >
-                          <ProviderIcon provider={mp} />
-                          <span className="font-semibold capitalize min-w-0 truncate">{mp}</span>
-                          <span className="font-bold truncate">{shortModelName(m.name)}</span>
-                          {m.isThinking != null && (
-                            <Badge variant="secondary" className="h-4 px-1 text-[9px] shrink-0">
-                              {m.isThinking ? 'Thinking' : 'Fast'}
-                            </Badge>
-                          )}
-                          {tier && (
-                            <span className="ml-auto shrink-0 font-mono text-[10px] text-muted-foreground">
-                              {tier.price} {tier.currency}/{tier.cntDecisions}
-                            </span>
-                          )}
-                          {isSelected && <Check className="h-3 w-3 text-green-500 shrink-0" />}
-                        </button>
-                      );
-                    })
-                  )}
-                </div>
-              )}
-              {/* Trading Pair inline */}
-              <div className="flex items-center gap-2 text-xs py-0.5">
+            {/* Configuration rows */}
+            <div className="px-4 py-3 space-y-2">
+              {/* Trading Pair — first */}
+              <div className="flex items-center gap-2 text-xs">
                 <span className="h-1.5 w-1.5 rounded-full bg-green-400 shrink-0" />
                 <span className="text-muted-foreground shrink-0">Trading pair</span>
                 <div className="relative">
-                  <button
-                    type="button"
+                  <button type="button"
                     className={`inline-flex items-center gap-1 rounded-full pl-1.5 pr-1.5 py-0.5 text-xs font-bold cursor-pointer bg-muted/60 hover:bg-muted ${pickingSide === 'base' ? 'ring-1 ring-primary/50' : ''}`}
                     onClick={() => setPickingSide(pickingSide === 'base' ? null : 'base')}
                   >
@@ -1324,8 +1237,7 @@ export function DeployPage() {
                 </div>
                 <span className="text-muted-foreground font-bold">/</span>
                 <div className="relative">
-                  <button
-                    type="button"
+                  <button type="button"
                     className={`inline-flex items-center gap-1 rounded-full pl-1.5 pr-1.5 py-0.5 text-xs font-bold cursor-pointer bg-muted/60 hover:bg-muted ${pickingSide === 'quote' ? 'ring-1 ring-primary/50' : ''}`}
                     onClick={() => setPickingSide(pickingSide === 'quote' ? null : 'quote')}
                   >
@@ -1351,6 +1263,59 @@ export function DeployPage() {
                   )}
                 </div>
               </div>
+
+              {/* AI service provider */}
+              <button type="button"
+                className="flex items-center justify-between text-xs w-full cursor-pointer hover:opacity-80 transition-opacity text-left"
+                onClick={() => setModelListOpen((v) => !v)}
+              >
+                <div className="flex items-center gap-1.5">
+                  <span className="h-1.5 w-1.5 rounded-full bg-purple-400" />
+                  <span className="text-muted-foreground">AI service provider</span>
+                  {selectedModelOption && (
+                    <span className="text-muted-foreground/60">({shortModelName(selectedModelOption.name)})</span>
+                  )}
+                  <ChevronDown className={`h-3 w-3 text-muted-foreground transition-transform ${modelListOpen ? 'rotate-180' : ''}`} />
+                </div>
+                <span className="font-mono text-muted-foreground">
+                  {selectedModelOption?.pricing?.[0]
+                    ? `${selectedModelOption.pricing[0].price} ${selectedModelOption.pricing[0].currency}/${selectedModelOption.pricing[0].cntDecisions} dec`
+                    : '\u2014'}
+                </span>
+              </button>
+              {modelListOpen && (
+                <div className="ml-3 mt-1 mb-1 border-l-2 border-purple-400/30 pl-3 space-y-0.5">
+                  {modelsLoading && <Skeleton className="h-4 w-32" />}
+                  {displayGroups.flatMap((group) =>
+                    group.models.map((m) => {
+                      const mp = m.provider?.trim() ?? '';
+                      const isSelected = selectedModel === m.id && (selectedProvider ?? '') === mp;
+                      const tier = m.pricing?.[0];
+                      return (
+                        <button key={`${mp || 'p'}:${m.id}`} type="button"
+                          className={`flex items-center gap-2 w-full text-left text-xs py-1 px-2 rounded transition-colors cursor-pointer ${
+                            isSelected ? 'bg-green-500/10 font-bold' : 'hover:bg-muted/60'
+                          }`}
+                          onClick={() => { setPersisted((p) => ({ ...p, aiModel: m.id, aiProvider: mp || undefined })); setModelListOpen(false); }}
+                        >
+                          <ProviderIcon provider={mp} />
+                          <span className="font-semibold capitalize min-w-0 truncate">{mp}</span>
+                          <span className="font-bold truncate">{shortModelName(m.name)}</span>
+                          {m.isThinking != null && (
+                            <Badge variant="secondary" className="h-4 px-1 text-[9px] shrink-0">
+                              {m.isThinking ? 'Thinking' : 'Fast'}
+                            </Badge>
+                          )}
+                          {tier && <span className="ml-auto shrink-0 font-mono text-[10px] text-muted-foreground">{tier.price} {tier.currency}/{tier.cntDecisions}</span>}
+                          {isSelected && <Check className="h-3 w-3 text-green-500 shrink-0" />}
+                        </button>
+                      );
+                    })
+                  )}
+                </div>
+              )}
+
+              {/* Service fee */}
               <div className="flex items-center justify-between text-xs">
                 <div className="flex items-center gap-1.5">
                   <span className="h-1.5 w-1.5 rounded-full bg-orange-400" />
@@ -1358,13 +1323,36 @@ export function DeployPage() {
                 </div>
                 <span className="font-mono text-muted-foreground">~0.6 TON</span>
               </div>
+
+              {/* Gas — with inline +/- input */}
               <div className="flex items-center justify-between text-xs">
                 <div className="flex items-center gap-1.5">
                   <span className="h-1.5 w-1.5 rounded-full bg-blue-400" />
                   <span className="text-muted-foreground">Gas</span>
-                  <span className="text-muted-foreground/50">(stays on agent wallet for orders)</span>
+                  <span className="text-muted-foreground/50">(stays on agent wallet)</span>
                 </div>
-                <span className="font-mono text-muted-foreground">{persisted.deployAmountTon || '0'} TON</span>
+                <div className="flex items-center gap-1">
+                  <Button variant="ghost" size="icon-xs" type="button" className="h-5 w-5" onClick={() => {
+                    const cur = parseFloat(persisted.deployAmountTon || '0');
+                    if (cur > 0) setPersisted((p) => ({ ...p, deployAmountTon: String(Math.max(0, cur - 1)) }));
+                  }}>
+                    <Minus className="h-2.5 w-2.5" />
+                  </Button>
+                  <Input
+                    type="text"
+                    className="w-10 text-center font-mono text-xs font-semibold h-6 px-1"
+                    value={persisted.deployAmountTon}
+                    onChange={(e) => setPersisted((p) => ({ ...p, deployAmountTon: e.target.value }))}
+                    inputMode="decimal"
+                  />
+                  <Button variant="ghost" size="icon-xs" type="button" className="h-5 w-5" onClick={() => {
+                    const cur = parseFloat(persisted.deployAmountTon || '0');
+                    setPersisted((p) => ({ ...p, deployAmountTon: String(cur + 1) }));
+                  }}>
+                    <Plus className="h-2.5 w-2.5" />
+                  </Button>
+                  <span className="font-mono text-muted-foreground ml-0.5">TON</span>
+                </div>
               </div>
             </div>
 
