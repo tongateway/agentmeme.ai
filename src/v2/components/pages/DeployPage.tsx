@@ -954,7 +954,10 @@ export function DeployPage() {
   const busyLabel = busy === 'deploy' ? 'Deploying contract...' : busy === 'register' ? 'Registering agent...' : busy === 'topup' ? 'Sending TON...' : null;
   const canRetryRegisterOnly = !!persisted.contractAddress && !persisted.raceContractId;
 
-  const totalDeployTon = (0.6 + parseFloat(persisted.deployAmountTon || '0')).toFixed(1);
+  const modelPriceTon = selectedModelOption?.pricing?.[0]?.currency?.toUpperCase() === 'TON'
+    ? Number(selectedModelOption.pricing[0].price) || 0
+    : 0;
+  const totalDeployTon = (modelPriceTon + 0.6 + parseFloat(persisted.deployAmountTon || '0')).toFixed(1);
   const hasName = !!(persisted.agentName?.trim());
   const hasPair = !!(persisted.quoteToken);
   const hasStrategy = !!(persisted.prompt?.trim());
@@ -1423,7 +1426,9 @@ export function DeployPage() {
 
               {/* Total */}
               <div className="border-t border-border px-4 py-2.5 flex items-center justify-between">
-                <span className="text-xs text-muted-foreground">Deploy ~0.6 TON &nbsp;+ {persisted.deployAmountTon || '0'} TON gas</span>
+                <span className="text-xs text-muted-foreground">
+                  {modelPriceTon > 0 && `${modelPriceTon} TON model + `}~0.6 TON deploy + {persisted.deployAmountTon || '0'} TON gas
+                </span>
                 <span className="text-sm font-bold font-mono">Total: {totalDeployTon} TON</span>
               </div>
             </div>
