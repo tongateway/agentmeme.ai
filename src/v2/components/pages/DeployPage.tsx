@@ -1265,24 +1265,26 @@ export function DeployPage() {
               </div>
 
               {/* AI service provider */}
-              <button type="button"
-                className="flex items-center justify-between text-xs w-full cursor-pointer hover:opacity-80 transition-opacity text-left"
-                onClick={() => setModelListOpen((v) => !v)}
-              >
-                <div className="flex items-center gap-1.5">
-                  <span className="h-1.5 w-1.5 rounded-full bg-purple-400" />
-                  <span className="text-muted-foreground">AI service provider</span>
-                  {selectedModelOption && (
-                    <span className="text-muted-foreground/60">({shortModelName(selectedModelOption.name)})</span>
-                  )}
-                  <ChevronDown className={`h-3 w-3 text-muted-foreground transition-transform ${modelListOpen ? 'rotate-180' : ''}`} />
-                </div>
-                <span className="font-mono text-muted-foreground">
+              <div className="flex items-center gap-2 text-xs">
+                <span className="h-1.5 w-1.5 rounded-full bg-purple-400 shrink-0" />
+                <span className="text-muted-foreground shrink-0">AI model</span>
+                {selectedModelOption && (
+                  <button
+                    type="button"
+                    className="inline-flex items-center gap-1 rounded-full pl-1.5 pr-1.5 py-0.5 text-xs font-bold cursor-pointer bg-muted/60 hover:bg-muted"
+                    onClick={() => setModelListOpen((v) => !v)}
+                  >
+                    <ProviderIcon provider={selectedModelOption.provider?.trim() || ''} />
+                    {shortModelName(selectedModelOption.name)}
+                    <ChevronDown className={`h-2.5 w-2.5 text-muted-foreground transition-transform ${modelListOpen ? 'rotate-180' : ''}`} />
+                  </button>
+                )}
+                <span className="ml-auto font-mono text-muted-foreground shrink-0">
                   {selectedModelOption?.pricing?.[0]
                     ? `${selectedModelOption.pricing[0].price} ${selectedModelOption.pricing[0].currency}/${selectedModelOption.pricing[0].cntDecisions} dec`
                     : '\u2014'}
                 </span>
-              </button>
+              </div>
               {modelListOpen && (
                 <div className="ml-3 mt-1 mb-1 border-l-2 border-purple-400/30 pl-3 space-y-0.5">
                   {modelsLoading && <Skeleton className="h-4 w-32" />}
