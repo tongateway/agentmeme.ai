@@ -315,11 +315,19 @@ function fmtPriceDetail(n: number): string {
 
 const TOKEN_DECIMALS: Record<string, number> = { USDT: 6, USDC: 6 };
 
-function fmtNano(nano: string, token?: string): string {
+/** Format an amount from parsed_params — auto-detect if nano or human-readable.
+ *  If the raw value is large (> 1000), assume nano and divide by 10^decimals.
+ *  Otherwise, treat it as already human-readable. */
+function fmtAmount(raw: string, token?: string): string {
+  const num = Number(raw);
+  if (!Number.isFinite(num) || num === 0) return '0';
   const decimals = TOKEN_DECIMALS[(token ?? '').toUpperCase()] ?? 9;
-  const n = Number(nano) / 10 ** decimals;
+  // If the number is large enough to be a nano value, convert it
+  const threshold = 10 ** Math.max(decimals - 2, 3);
+  const n = num >= threshold ? num / 10 ** decimals : num;
   if (n >= 1000) return n.toLocaleString(undefined, { maximumFractionDigits: 2 });
-  if (n >= 1) return n.toFixed(4);
+  if (n >= 1) return n.toFixed(2);
+  if (n >= 0.01) return n.toFixed(4);
   return n.toFixed(6);
 }
 
@@ -535,7 +543,7 @@ function TokenDetailView({ symbol, raceCfg, onBack }: { symbol: string; raceCfg:
                 const isBuy = toToken?.toUpperCase() === symbol;
                 const title = shortReason || humanOpinion || reasoning || '';
                 const body = (shortReason && (humanOpinion || reasoning)) ? (humanOpinion || reasoning) : '';
-                const amountText = amount && amount !== '0' && fromToken ? `${fmtNano(amount, fromToken)} ${fromToken}` : '';
+                const amountText = amount && amount !== '0' && fromToken ? `${fmtAmount(amount, fromToken)} ${fromToken}` : '';
 
                 return (
                   <div

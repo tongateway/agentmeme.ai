@@ -634,7 +634,9 @@ export function DeployPage() {
     [raceCfg, jwtToken],
   );
 
-  const [persisted, setPersisted] = useLocalStorageState<Persisted>('deploy-panel:v2', DEFAULT_PERSISTED);
+  const [rawPersisted, setPersisted] = useLocalStorageState<Persisted>('deploy-panel:v2', DEFAULT_PERSISTED);
+  // Merge defaults for fields added after initial storage (e.g. baseToken/quoteToken)
+  const persisted = { ...DEFAULT_PERSISTED, ...rawPersisted };
 
   const [busy, setBusy] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
