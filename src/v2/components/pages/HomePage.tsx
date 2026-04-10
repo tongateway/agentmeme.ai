@@ -208,8 +208,8 @@ export function HomePage() {
       {/* 3. Top Performers */}
       {!loading && top3.length > 0 && (
         <Card className="py-0 overflow-hidden">
-          <div className="flex flex-row items-center justify-between px-3 py-1.5 border-b border-border/40">
-            <div className="text-sm font-bold flex items-center gap-1.5">
+          <div className="flex flex-row items-center justify-between px-4 py-1.5">
+            <div className="text-base font-bold flex items-center gap-1.5">
               <Trophy className="h-3.5 w-3.5 text-yellow-500" />
               Top Performing Agents
             </div>
@@ -229,7 +229,7 @@ export function HomePage() {
                 <button
                   key={entry.address}
                   type="button"
-                  className="w-full flex items-center gap-3 px-3 py-1.5 hover:bg-accent/30 transition-colors text-left cursor-pointer"
+                  className="w-full flex items-center gap-3 px-4 py-1.5 hover:bg-accent/30 transition-colors text-left cursor-pointer"
                   onClick={() => navigate(`/trader/${entry.smart_contract_id}`)}
                 >
                   <span className="w-4 text-center font-mono text-sm font-bold tabular-nums text-muted-foreground shrink-0">
@@ -256,22 +256,21 @@ export function HomePage() {
 
       {/* 4. Activity Feed */}
       {!loading && feedItems.length > 0 && (
-        <section>
-          <div className="flex items-center justify-between mb-2">
+        <Card className="py-0 overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-1.5">
             <div className="flex items-center gap-2">
               <TrendingUp className="h-3.5 w-3.5 text-muted-foreground" />
-              <span className="font-semibold text-sm">Agent Activity Feed</span>
+              <span className="font-bold text-base">Agent Activity Feed</span>
               <Badge variant="outline" className="gap-1 h-5 text-[10px] px-1.5">
                 <span className="live-dot" /> Live
               </Badge>
             </div>
-            <Button variant="ghost" size="sm" className="h-6 text-[11px]" onClick={() => navigate('/leaderboard')}>
+            <Button variant="ghost" size="sm" className="h-6 text-xs" onClick={() => navigate('/leaderboard')}>
               View all <ChevronRight className="h-3 w-3 ml-0.5" />
             </Button>
           </div>
-          <Card className="py-0 overflow-hidden">
-            <div className="divide-y divide-border/30">
-              {feedItems.map((r) => {
+          <div className="divide-y divide-border/30">
+            {feedItems.map((r) => {
                 const pp = r.parsed_params as Record<string, unknown>;
                 const humanOpinion = typeof pp.human_opinion === 'string' ? pp.human_opinion : '';
                 const reasoning = typeof pp.reasoning === 'string' ? pp.reasoning : '';
@@ -284,7 +283,7 @@ export function HomePage() {
                 const model = agent?.model ? agent.model.split('/').pop() ?? agent.model : '';
 
                 return (
-                  <div key={r.id} className="px-3 py-2 hover:bg-accent/20 transition-colors">
+                  <div key={r.id} className="px-4 py-2 hover:bg-accent/20 transition-colors">
                     <div className="flex items-center justify-between gap-2 mb-1">
                       <div className="flex items-center gap-2 min-w-0">
                         <Bot className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
@@ -305,12 +304,11 @@ export function HomePage() {
               })}
             </div>
           </Card>
-        </section>
       )}
 
       {/* 5. Token Table */}
       <section className="flex flex-col gap-2">
-        <h2 className="text-2xl font-bold">Agents Hub</h2>
+        <h2 className="text-base font-bold">Agents Hub</h2>
         <Card className="py-0">
           <CardContent className="p-0">
             {loading ? (

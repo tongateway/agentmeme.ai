@@ -40,45 +40,52 @@ export function CandlestickChart({ raceCfg, fromSymbol, toSymbol, height = 380 }
   const buildChart = useCallback(() => {
     if (!containerRef.current) return null;
 
+    const isDark = document.documentElement.classList.contains('dark');
+    const textColor = isDark ? 'rgba(255,255,255,0.55)' : 'rgba(0,0,0,0.55)';
+    const gridColor = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.06)';
+    const borderColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.1)';
+    const crosshairColor = isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.25)';
+    const labelBg = isDark ? '#1a1a1a' : '#ffffff';
+
     const chart = createChart(containerRef.current, {
       width: containerRef.current.clientWidth,
       height,
       layout: {
         background: { color: 'transparent' },
-        textColor: 'rgba(255,255,255,0.55)',
+        textColor,
         fontSize: 11,
-        fontFamily: '"IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+        fontFamily: '"JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
       },
       grid: {
-        vertLines: { color: 'rgba(255,255,255,0.04)' },
-        horzLines: { color: 'rgba(255,255,255,0.04)' },
+        vertLines: { color: gridColor },
+        horzLines: { color: gridColor },
       },
       timeScale: {
         timeVisible: true,
         secondsVisible: false,
-        borderColor: 'rgba(255,255,255,0.08)',
+        borderColor,
         rightOffset: 6,
         barSpacing: 8,
         fixLeftEdge: false,
         lockVisibleTimeRangeOnResize: true,
       },
       rightPriceScale: {
-        borderColor: 'rgba(255,255,255,0.08)',
+        borderColor,
         scaleMargins: { top: 0.08, bottom: 0.25 },
       },
       crosshair: {
         mode: 1,
         vertLine: {
-          color: 'rgba(255,255,255,0.25)',
+          color: crosshairColor,
           width: 1,
           style: 2,
-          labelBackgroundColor: '#1a1a1a',
+          labelBackgroundColor: labelBg,
         },
         horzLine: {
-          color: 'rgba(255,255,255,0.25)',
+          color: crosshairColor,
           width: 1,
           style: 2,
-          labelBackgroundColor: '#1a1a1a',
+          labelBackgroundColor: labelBg,
         },
       },
       handleScroll: { mouseWheel: true, pressedMouseMove: true },
