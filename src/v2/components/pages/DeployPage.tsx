@@ -10,7 +10,6 @@ import {
   ExternalLink,
   Minus,
   Plus,
-  FileText,
   Zap,
   Check,
   ArrowRight,
@@ -55,13 +54,6 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/v2/components/ui/dialog';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/v2/components/ui/dropdown-menu';
-
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -456,8 +448,24 @@ export type Persisted = {
   pendingDeploy?: PendingDeploy | null;
 };
 
+const DEFAULT_STRATEGY = `Market-making strategy for {from_token}/{to_token}. Use live data: {market_prices}, {wallet_balances}, {open_orders}, {order_book}, {price_changes}, {token_fundamentals}.
+
+GOAL: Provide liquidity and capture bid-ask spread while keeping portfolio balanced.
+
+RULES:
+1. Place alternating BUY and SELL orders near the mid price.
+2. Keep order sizes between 3-15 {from_token} range.
+3. Maintain tight spread (<0.5% from mid).
+4. Cancel stale orders older than 5 minutes.
+5. Never hold more than 60% of balance in one token.
+6. Keep gas reserve (at least 0.5 TON).
+
+=== GAS INFO ===
+Create order: ~0.025 TON | Close order: ~0.006 TON
+Round-trip: ~0.03 TON. Only trade when expected profit > gas cost.`;
+
 const DEFAULT_PERSISTED: Persisted = {
-  prompt: '',
+  prompt: DEFAULT_STRATEGY,
   deployAmountTon: '1',
   topupAmountTon: '1',
   walletId: 0,
@@ -1242,28 +1250,6 @@ export function DeployPage() {
                 </Button>
               )}
 
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="xs" className="gap-1 text-muted-foreground hover:text-foreground">
-                    <FileText className="h-3 w-3" />
-                    Use template
-                    <ChevronDown className="h-3 w-3" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
-                  {STRATEGY_TEMPLATES.map((t) => (
-                    <DropdownMenuItem
-                      key={t.name}
-                      className="text-xs cursor-pointer"
-                      onClick={() => {
-                        setPersisted((p) => ({ ...p, prompt: t.prompt }));
-                      }}
-                    >
-                      {t.name}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
             </div>
             <Textarea
               ref={promptRef}

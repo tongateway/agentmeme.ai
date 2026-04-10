@@ -44,7 +44,7 @@ import {
   Share2, Check, Pause, Play, Wallet, AlertTriangle, RefreshCw,
   FileText, Copy, Pencil, Save, Loader2,
   Bot, Zap, Activity, ArrowUpRight, Clock, ShieldOff, TrendingUp, TrendingDown,
-  ArrowRight, ArrowRightLeft, ExternalLink,
+  ArrowRightLeft, ExternalLink,
 } from 'lucide-react';
 
 import { ContractTabBar } from '@/v2/components/layout/ContractTabBar';
@@ -1701,92 +1701,68 @@ function ContractDetailInner({ contract, detail, raceCfg, tonConnectUI, tonAddre
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
           ) : (
-            aiResponses.map((r) => {
-              const pp = r.parsed_params as Record<string, unknown> | null;
-              const reason = pp?.reasoning as string | undefined;
-              const shareUrl = reason ? buildShareUrl(r.id) : null;
-              const actionVariant: 'default' | 'secondary' | 'destructive' | 'outline' =
-                r.action === 'create_order' ? 'default'
-                : r.action === 'close_order' ? 'secondary'
-                : r.action === 'hold' ? 'outline'
-                : 'secondary';
+            <Card className="py-0 overflow-hidden">
+              <div className="divide-y divide-border/30">
+                {aiResponses.map((r) => {
+                  const pp = r.parsed_params as Record<string, unknown> | null;
+                  const reason = pp?.reasoning as string | undefined;
+                  const humanOpinion = pp?.human_opinion as string | undefined;
+                  const text = humanOpinion || reason || '';
+                  const shareUrl = text ? buildShareUrl(r.id) : null;
+                  const actionColor =
+                    r.action === 'create_order' ? 'text-green-500'
+                    : r.action === 'close_order' ? 'text-yellow-500'
+                    : r.action === 'stop' ? 'text-red-500'
+                    : 'text-muted-foreground';
 
-              // For create_order actions, show the tokens and amount
-              let orderSummary: React.ReactNode = null;
-              if (r.action === 'create_order' && pp) {
-                const fromToken = typeof pp.from_token === 'string' ? pp.from_token.toUpperCase() : '';
-                const toToken = typeof pp.to_token === 'string' ? pp.to_token.toUpperCase() : '';
-                const amountRaw = pp.amount;
-                let amountText = '';
-                if (amountRaw != null) {
-                  try {
-                    const amountNum = typeof amountRaw === 'number' ? amountRaw : Number(amountRaw);
-                    if (Number.isFinite(amountNum)) {
-                      const human = fromNanoToken(amountNum, fromToken);
-                      amountText = Number.isFinite(human) && human > 0 ? `${human.toLocaleString(undefined, { maximumFractionDigits: 6 })}` : '';
-                    }
-                  } catch { /* ignore */ }
-                }
-                if (fromToken || toToken || amountText) {
-                  orderSummary = (
-                    <div className="flex items-center gap-1.5 text-xs font-mono">
-                      {amountText && fromToken && (
-                        <span className="font-bold">{amountText} {fromToken}</span>
-                      )}
-                      {fromToken && toToken && (
-                        <>
-                          <ArrowRight className="h-3 w-3 text-muted-foreground" />
-                          <span className="font-bold text-muted-foreground">{toToken}</span>
-                        </>
+                  // For create_order: show tokens + amount
+                  let orderInfo = '';
+                  if (r.action === 'create_order' && pp) {
+                    const from = typeof pp.from_token === 'string' ? pp.from_token.toUpperCase() : '';
+                    const to = typeof pp.to_token === 'string' ? pp.to_token.toUpperCase() : '';
+                    if (from && to) orderInfo = `${from}\u2192${to}`;
+                  }
+
+                  return (
+                    <div key={r.id} className="px-3 py-2 hover:bg-accent/20 transition-colors">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <Badge variant="outline" className={`h-5 px-1.5 text-[10px] font-mono ${actionColor} border-current/30`}>
+                          {r.action}
+                        </Badge>
+                        {orderInfo && (
+                          <span className="text-[10px] font-mono text-muted-foreground">{orderInfo}</span>
+                        )}
+                        {r.balance_usd != null && (
+                          <span className="font-mono text-sm font-bold">${r.balance_usd.toFixed(2)}</span>
+                        )}
+                        <span className="ml-auto flex items-center gap-1 text-[10px] text-muted-foreground shrink-0">
+                          <Clock className="h-2.5 w-2.5" />
+                          {new Date(r.created_at).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                        {shareUrl && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className={`h-5 w-5 p-0 shrink-0 ${copiedId === r.id ? 'text-green-500' : 'text-muted-foreground'}`}
+                            title="Copy share link"
+                            onClick={() => {
+                              void navigator.clipboard.writeText(shareUrl);
+                              setCopiedId(r.id);
+                              setTimeout(() => setCopiedId(null), 2000);
+                            }}
+                          >
+                            {copiedId === r.id ? <Check className="h-3 w-3" /> : <Share2 className="h-3 w-3" />}
+                          </Button>
+                        )}
+                      </div>
+                      {text && (
+                        <p className="text-sm leading-snug text-muted-foreground mt-1 line-clamp-2">{text}</p>
                       )}
                     </div>
                   );
-                }
-              }
-
-              return (
-                <Card key={r.id} className="border-l-4 border-l-border">
-                  <CardContent className="p-4 flex flex-col gap-2">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex items-start gap-3">
-                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted mt-0.5">
-                          <Activity className="h-4 w-4 text-muted-foreground" />
-                        </div>
-                        <div className="flex flex-col gap-0.5">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <Badge variant={actionVariant} className="text-xs">{r.action}</Badge>
-                            {orderSummary}
-                            <span className="font-mono text-sm font-bold">
-                              {r.balance_usd != null ? `$${r.balance_usd.toFixed(2)}` : ''}
-                            </span>
-                          </div>
-                          <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
-                            <Clock className="h-3 w-3" />
-                            {new Date(r.created_at).toLocaleString()}
-                          </span>
-                        </div>
-                      </div>
-                      {shareUrl && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className={`h-6 w-6 p-0 ${copiedId === r.id ? 'text-green-500' : 'text-muted-foreground'}`}
-                          title="Copy share link"
-                          onClick={() => {
-                            void navigator.clipboard.writeText(shareUrl);
-                            setCopiedId(r.id);
-                            setTimeout(() => setCopiedId(null), 2000);
-                          }}
-                        >
-                          {copiedId === r.id ? <Check className="h-3.5 w-3.5" /> : <Share2 className="h-3.5 w-3.5" />}
-                        </Button>
-                      )}
-                    </div>
-                    {reason && <p className="text-xs leading-relaxed text-muted-foreground mt-1">{reason}</p>}
-                  </CardContent>
-                </Card>
-              );
-            })
+                })}
+              </div>
+            </Card>
           )}
         </TabsContent>
       </Tabs>

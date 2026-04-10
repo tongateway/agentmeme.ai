@@ -249,6 +249,7 @@ export function HomePage() {
 
                     {/* Profit with bar */}
                     <div className="shrink-0 flex items-center gap-2">
+                      <span className="text-[9px] uppercase text-muted-foreground hidden sm:inline">P&L</span>
                       <div className="h-1 w-16 rounded-full bg-muted overflow-hidden hidden sm:block">
                         <div
                           className={`h-full rounded-full ${isPositive ? 'bg-green-500' : 'bg-red-500'}`}
