@@ -1025,92 +1025,6 @@ export function DeployPage() {
           {/* Model picker list — rendered inline in WHERE YOUR TON GOES when toggled */}
 
           {/* =============================================================== */}
-          {/* Trading Pair (compact inline)                                   */}
-          {/* =============================================================== */}
-          <div className="flex items-center gap-2">
-            {/* Base token dropdown */}
-            <div className="relative">
-              <button
-                type="button"
-                className={`inline-flex items-center gap-1.5 rounded-full pl-2.5 pr-2 py-1 text-sm font-bold transition-all cursor-pointer bg-muted ${pickingSide === 'base' ? 'ring-2 ring-primary/50' : 'hover:ring-2 hover:ring-primary/20'}`}
-                onClick={() => setPickingSide(pickingSide === 'base' ? null : 'base')}
-              >
-                <TokenIcon symbol={persisted.baseToken ?? 'AGNT'} size="h-4 w-4" />
-                {persisted.baseToken ?? 'AGNT'}
-                <ChevronDown className="h-3 w-3 text-muted-foreground" />
-              </button>
-              {pickingSide === 'base' && (
-                <div className="absolute top-full left-0 mt-1 z-20 rounded-lg bg-popover border border-border shadow-lg py-1 min-w-[120px]">
-                  {BASE_TOKENS.map((token) => {
-                    const isSelected = token === (persisted.baseToken ?? 'AGNT');
-                    return (
-                      <button
-                        key={token}
-                        type="button"
-                        className={`flex items-center gap-2 w-full px-3 py-2 text-sm hover:bg-muted transition-colors ${isSelected ? 'font-bold' : ''}`}
-                        onClick={() => {
-                          const curQuote = persisted.quoteToken;
-                          const newQuotes = quotesForBase(token);
-                          const keepQuote = curQuote && newQuotes.includes(curQuote) ? curQuote : newQuotes[0];
-                          setPersisted((p) => ({ ...p, baseToken: token, quoteToken: keepQuote }));
-                          setPickingSide(null);
-                        }}
-                      >
-                        <TokenIcon symbol={token} size="h-5 w-5" />
-                        {token}
-                        {isSelected && <Check className="h-3.5 w-3.5 ml-auto text-green-500" />}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-
-            <span className="text-muted-foreground text-sm font-bold">/</span>
-
-            {/* Quote token dropdown */}
-            <div className="relative">
-              {persisted.quoteToken ? (
-                <button
-                  type="button"
-                  className={`inline-flex items-center gap-1.5 rounded-full pl-2.5 pr-2 py-1 text-sm font-bold transition-all cursor-pointer bg-muted ${pickingSide === 'quote' ? 'ring-2 ring-primary/50' : 'hover:ring-2 hover:ring-primary/20'}`}
-                  onClick={() => setPickingSide(pickingSide === 'quote' ? null : 'quote')}
-                >
-                  <TokenIcon symbol={persisted.quoteToken} size="h-4 w-4" />
-                  {persisted.quoteToken}
-                  <ChevronDown className="h-3 w-3 text-muted-foreground" />
-                </button>
-              ) : (
-                <Button size="sm" className="rounded-full gap-1 px-3" onClick={() => setPickingSide('quote')}>
-                  pick <ArrowRight className="h-3 w-3" />
-                </Button>
-              )}
-              {pickingSide === 'quote' && (
-                <div className="absolute top-full left-0 mt-1 z-20 rounded-lg bg-popover border border-border shadow-lg py-1 min-w-[120px]">
-                  {quotesForBase(persisted.baseToken ?? 'AGNT').map((token) => {
-                    const isSelected = token === persisted.quoteToken;
-                    return (
-                      <button
-                        key={token}
-                        type="button"
-                        className={`flex items-center gap-2 w-full px-3 py-2 text-sm hover:bg-muted transition-colors ${isSelected ? 'font-bold' : ''}`}
-                        onClick={() => {
-                          setPersisted((p) => ({ ...p, quoteToken: token }));
-                          setPickingSide(null);
-                        }}
-                      >
-                        <TokenIcon symbol={token} size="h-5 w-5" />
-                        {token}
-                        {isSelected && <Check className="h-3.5 w-3.5 ml-auto text-green-500" />}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* =============================================================== */}
           {/* Strategy (collapsed by default)                                 */}
           {/* =============================================================== */}
           <div>
@@ -1372,6 +1286,71 @@ export function DeployPage() {
                   )}
                 </div>
               )}
+              {/* Trading Pair inline */}
+              <div className="flex items-center gap-2 text-xs py-0.5">
+                <span className="h-1.5 w-1.5 rounded-full bg-green-400 shrink-0" />
+                <span className="text-muted-foreground shrink-0">Trading pair</span>
+                <div className="relative">
+                  <button
+                    type="button"
+                    className={`inline-flex items-center gap-1 rounded-full pl-1.5 pr-1.5 py-0.5 text-xs font-bold cursor-pointer bg-muted/60 hover:bg-muted ${pickingSide === 'base' ? 'ring-1 ring-primary/50' : ''}`}
+                    onClick={() => setPickingSide(pickingSide === 'base' ? null : 'base')}
+                  >
+                    <TokenIcon symbol={persisted.baseToken ?? 'AGNT'} size="h-3.5 w-3.5" />
+                    {persisted.baseToken ?? 'AGNT'}
+                    <ChevronDown className="h-2.5 w-2.5 text-muted-foreground" />
+                  </button>
+                  {pickingSide === 'base' && (
+                    <div className="absolute top-full left-0 mt-1 z-20 rounded-lg bg-popover border border-border shadow-lg py-1 min-w-[110px]">
+                      {BASE_TOKENS.map((token) => {
+                        const isSel = token === (persisted.baseToken ?? 'AGNT');
+                        return (
+                          <button key={token} type="button"
+                            className={`flex items-center gap-2 w-full px-3 py-1.5 text-xs hover:bg-muted ${isSel ? 'font-bold' : ''}`}
+                            onClick={() => {
+                              const cq = persisted.quoteToken;
+                              const nq = quotesForBase(token);
+                              setPersisted((p) => ({ ...p, baseToken: token, quoteToken: cq && nq.includes(cq) ? cq : nq[0] }));
+                              setPickingSide(null);
+                            }}
+                          >
+                            <TokenIcon symbol={token} size="h-4 w-4" /> {token}
+                            {isSel && <Check className="h-3 w-3 ml-auto text-green-500" />}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+                <span className="text-muted-foreground font-bold">/</span>
+                <div className="relative">
+                  <button
+                    type="button"
+                    className={`inline-flex items-center gap-1 rounded-full pl-1.5 pr-1.5 py-0.5 text-xs font-bold cursor-pointer bg-muted/60 hover:bg-muted ${pickingSide === 'quote' ? 'ring-1 ring-primary/50' : ''}`}
+                    onClick={() => setPickingSide(pickingSide === 'quote' ? null : 'quote')}
+                  >
+                    <TokenIcon symbol={persisted.quoteToken ?? 'USDT'} size="h-3.5 w-3.5" />
+                    {persisted.quoteToken ?? 'USDT'}
+                    <ChevronDown className="h-2.5 w-2.5 text-muted-foreground" />
+                  </button>
+                  {pickingSide === 'quote' && (
+                    <div className="absolute top-full left-0 mt-1 z-20 rounded-lg bg-popover border border-border shadow-lg py-1 min-w-[110px]">
+                      {quotesForBase(persisted.baseToken ?? 'AGNT').map((token) => {
+                        const isSel = token === persisted.quoteToken;
+                        return (
+                          <button key={token} type="button"
+                            className={`flex items-center gap-2 w-full px-3 py-1.5 text-xs hover:bg-muted ${isSel ? 'font-bold' : ''}`}
+                            onClick={() => { setPersisted((p) => ({ ...p, quoteToken: token })); setPickingSide(null); }}
+                          >
+                            <TokenIcon symbol={token} size="h-4 w-4" /> {token}
+                            {isSel && <Check className="h-3 w-3 ml-auto text-green-500" />}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
               <div className="flex items-center justify-between text-xs">
                 <div className="flex items-center gap-1.5">
                   <span className="h-1.5 w-1.5 rounded-full bg-orange-400" />
