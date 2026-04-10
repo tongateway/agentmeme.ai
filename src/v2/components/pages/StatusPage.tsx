@@ -91,28 +91,26 @@ function ProviderCard({ stat }: { stat: ProviderStat }) {
   return (
     <Card className="py-0">
       <div
-        className="px-3 py-2 cursor-pointer flex items-center justify-between gap-3"
+        className="px-3 py-2 cursor-pointer flex flex-col items-center text-center gap-1"
         onClick={() => setExpanded((e) => !e)}
       >
-        <div className="flex items-center gap-2 min-w-0">
+        <div className="flex items-center gap-2">
           <Icon className={`h-3.5 w-3.5 shrink-0 ${meta.colorClass}`} />
-          <span className="font-bold text-sm capitalize truncate">{stat.provider}</span>
-          <span className="text-[10px] text-muted-foreground shrink-0">{stat.total_requests.toLocaleString()} req</span>
-        </div>
-        <div className="flex items-center gap-3 shrink-0 text-xs">
-          <div className="hidden sm:flex items-center gap-3">
-            <span>
-              <span className="text-[9px] uppercase text-muted-foreground mr-1">Success</span>
-              <span className={`font-bold font-mono ${stat.success_rate >= 80 ? 'text-green-500' : stat.success_rate >= 50 ? 'text-yellow-500' : 'text-red-500'}`}>
-                {stat.success_rate.toFixed(1)}%
-              </span>
-            </span>
-            <span>
-              <span className="text-[9px] uppercase text-muted-foreground mr-1">Lat</span>
-              <span className="font-bold font-mono">{fmtMs(stat.avg_elapsed_ms)}</span>
-            </span>
-          </div>
+          <span className="font-bold text-sm capitalize">{stat.provider}</span>
+          <span className="text-[10px] text-muted-foreground">{stat.total_requests.toLocaleString()} req</span>
           <Badge variant={meta.variant} className="text-[10px] px-1.5 py-0 h-5">{meta.label}</Badge>
+        </div>
+        <div className="flex items-center gap-3 text-xs">
+          <span>
+            <span className="text-[9px] uppercase text-muted-foreground mr-1">Success</span>
+            <span className={`font-bold font-mono ${stat.success_rate >= 80 ? 'text-green-500' : stat.success_rate >= 50 ? 'text-yellow-500' : 'text-red-500'}`}>
+              {stat.success_rate.toFixed(1)}%
+            </span>
+          </span>
+          <span>
+            <span className="text-[9px] uppercase text-muted-foreground mr-1">Latency</span>
+            <span className="font-bold font-mono">{fmtMs(stat.avg_elapsed_ms)}</span>
+          </span>
         </div>
       </div>
 
