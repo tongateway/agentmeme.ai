@@ -15,6 +15,7 @@ import {
   ArrowRight,
   Info,
   Loader2,
+  Pencil,
 } from 'lucide-react';
 import { nanoFromTon } from '@/lib/ton/agentWalletV5';
 import {
@@ -657,6 +658,7 @@ export function DeployPage() {
   const [generating, setGenerating] = useState(false);
   const promptRef = useRef<HTMLTextAreaElement>(null);
   const [varsHelpOpen, setVarsHelpOpen] = useState(false);
+  const [strategyOpen, setStrategyOpen] = useState(false);
 
   const isConnected = !!wallet && !!tonAddress;
 
@@ -970,8 +972,11 @@ export function DeployPage() {
   const hasPair = !!(persisted.quoteToken);
   const hasStrategy = !!(persisted.prompt?.trim());
 
-  // Suppress unused-var lint for rawAddr — it is used implicitly via TonConnect
+  // Suppress unused-var lint — these are used implicitly or kept for future use
   void rawAddr;
+  void hasName;
+  void hasPair;
+  void hasStrategy;
 
   return (
     <div className="flex flex-col gap-4">
@@ -990,449 +995,445 @@ export function DeployPage() {
           </div>
         </div>
 
-        <CardContent className="py-6 space-y-6">
+        <CardContent className="py-5 space-y-4">
           {/* =============================================================== */}
-          {/* Section 1: Choose AI Model                                      */}
+          {/* Model Selector (collapsed when a model is selected)             */}
           {/* =============================================================== */}
           <div>
-            <div className="flex items-center gap-2 mb-3">
-              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-green-500/20 text-[11px] font-bold text-green-500">1</div>
-              <span className="text-base font-bold">Choose AI Model</span>
-              {modelsLoading && <Skeleton className="ml-1 h-4 w-16 inline-block" />}
-            </div>
-
             {/* Collapsed: show selected model */}
             {!modelListOpen && selectedModelOption && (
               <button
                 type="button"
-                className="flex items-center w-full text-left cursor-pointer rounded-lg border-2 border-green-600 bg-green-500/[0.08] px-3 py-2.5"
+                className="flex items-center gap-2 w-full text-left cursor-pointer rounded-lg border border-border/50 hover:border-border bg-muted/30 px-3 py-2"
                 onClick={() => setModelListOpen(true)}
               >
                 <ProviderIcon provider={selectedModelOption.provider?.trim() || ''} />
-                <div className="flex flex-col min-w-0 flex-1">
-                  <span className="text-[10px] font-medium leading-tight text-muted-foreground capitalize truncate">
-                    {selectedModelOption.provider?.trim() || 'Unknown'}
-                  </span>
-                  <span className="text-xs font-bold leading-tight truncate">
-                    {shortModelName(selectedModelOption.name)}
-                  </span>
-                </div>
+                <span className="text-[10px] font-medium text-muted-foreground capitalize truncate">
+                  {selectedModelOption.provider?.trim() || 'Unknown'}
+                </span>
+                <span className="text-xs font-bold truncate">
+                  {shortModelName(selectedModelOption.name)}
+                </span>
                 <Badge
                   variant="secondary"
-                  className={
+                  className={`ml-auto shrink-0 ${
                     selectedModelOption.isThinking
                       ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300'
                       : selectedModelOption.isThinking === false
                         ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300'
                         : 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300'
-                  }
+                  }`}
                 >
                   {selectedModelOption.isThinking ? 'Thinking' : selectedModelOption.isThinking === false ? 'Fast' : 'Balanced'}
                 </Badge>
                 {selectedModelOption.pricing?.[0] && (
-                  <span className="flex-shrink-0 text-[11px] text-muted-foreground ml-2 font-mono">
+                  <span className="flex-shrink-0 text-[10px] text-muted-foreground font-mono">
                     {selectedModelOption.pricing[0].price} {selectedModelOption.pricing[0].currency}/{selectedModelOption.pricing[0].cntDecisions} dec
                   </span>
                 )}
-                <ChevronDown className="flex-shrink-0 ml-2 h-3.5 w-3.5 text-muted-foreground" />
+                <ChevronDown className="flex-shrink-0 h-3.5 w-3.5 text-muted-foreground" />
               </button>
             )}
 
             {/* Expanded: show all models */}
             {modelListOpen && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-                {displayGroups.flatMap((group) =>
-                  group.models.map((m) => {
-                    const modelProvider = m.provider?.trim() ?? '';
-                    const isSelected =
-                      selectedModel === m.id &&
-                      (selectedProvider ?? '') === modelProvider;
-                    const lowestTier = m.pricing?.[0];
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-xs font-semibold text-muted-foreground">AI Model</span>
+                  {modelsLoading && <Skeleton className="h-3 w-14 inline-block" />}
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                  {displayGroups.flatMap((group) =>
+                    group.models.map((m) => {
+                      const modelProvider = m.provider?.trim() ?? '';
+                      const isSelected =
+                        selectedModel === m.id &&
+                        (selectedProvider ?? '') === modelProvider;
+                      const lowestTier = m.pricing?.[0];
+                      return (
+                        <button
+                          key={`${modelProvider || 'p'}:${m.id}`}
+                          type="button"
+                          className={`flex items-center text-left cursor-pointer rounded-lg px-3 py-2.5 transition-colors ${
+                            isSelected
+                              ? 'border-2 border-green-600 bg-green-500/[0.08]'
+                              : 'border border-border/50 hover:border-border'
+                          }`}
+                          onClick={() => {
+                            setPersisted((p) => ({
+                              ...p,
+                              aiModel: m.id,
+                              aiProvider: m.provider?.trim() || undefined,
+                            }));
+                            setModelListOpen(false);
+                          }}
+                          title={m.description ?? undefined}
+                        >
+                          <ProviderIcon provider={modelProvider} />
+                          <div className="flex flex-col min-w-0 flex-1">
+                            <span className="text-[10px] font-medium leading-tight text-muted-foreground capitalize truncate">
+                              {modelProvider || 'Unknown'}
+                            </span>
+                            <span className="text-xs font-bold leading-tight truncate">
+                              {shortModelName(m.name)}
+                            </span>
+                          </div>
+                          {m.isThinking != null && (
+                            <Badge
+                              variant="secondary"
+                              className={
+                                m.isThinking
+                                  ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300'
+                                  : 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300'
+                              }
+                            >
+                              {m.isThinking ? 'Thinking' : 'Fast'}
+                            </Badge>
+                          )}
+                          {lowestTier && (
+                            <span className="flex-shrink-0 text-[10px] text-muted-foreground ml-2 font-mono">
+                              {lowestTier.price} {lowestTier.currency}/{lowestTier.cntDecisions}
+                            </span>
+                          )}
+                          {isSelected && (
+                            <div className="flex-shrink-0 ml-2 h-4 w-4 rounded-full bg-green-600 flex items-center justify-center">
+                              <Check className="h-2.5 w-2.5 text-white" />
+                            </div>
+                          )}
+                        </button>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* =============================================================== */}
+          {/* Trading Pair (compact inline)                                   */}
+          {/* =============================================================== */}
+          <div className="flex items-center gap-2">
+            {/* Base token dropdown */}
+            <div className="relative">
+              <button
+                type="button"
+                className={`inline-flex items-center gap-1.5 rounded-full pl-2.5 pr-2 py-1 text-sm font-bold transition-all cursor-pointer bg-muted ${pickingSide === 'base' ? 'ring-2 ring-primary/50' : 'hover:ring-2 hover:ring-primary/20'}`}
+                onClick={() => setPickingSide(pickingSide === 'base' ? null : 'base')}
+              >
+                <TokenIcon symbol={persisted.baseToken ?? 'AGNT'} size="h-4 w-4" />
+                {persisted.baseToken ?? 'AGNT'}
+                <ChevronDown className="h-3 w-3 text-muted-foreground" />
+              </button>
+              {pickingSide === 'base' && (
+                <div className="absolute top-full left-0 mt-1 z-20 rounded-lg bg-popover border border-border shadow-lg py-1 min-w-[120px]">
+                  {BASE_TOKENS.map((token) => {
+                    const isSelected = token === (persisted.baseToken ?? 'AGNT');
                     return (
                       <button
-                        key={`${modelProvider || 'p'}:${m.id}`}
+                        key={token}
                         type="button"
-                        className={`flex items-center text-left cursor-pointer rounded-lg px-3 py-2.5 transition-colors ${
-                          isSelected
-                            ? 'border-2 border-green-600 bg-green-500/[0.08]'
-                            : 'border border-border/50 hover:border-border'
-                        }`}
+                        className={`flex items-center gap-2 w-full px-3 py-2 text-sm hover:bg-muted transition-colors ${isSelected ? 'font-bold' : ''}`}
                         onClick={() => {
-                          setPersisted((p) => ({
-                            ...p,
-                            aiModel: m.id,
-                            aiProvider: m.provider?.trim() || undefined,
-                          }));
-                          setModelListOpen(false);
+                          const curQuote = persisted.quoteToken;
+                          const newQuotes = quotesForBase(token);
+                          const keepQuote = curQuote && newQuotes.includes(curQuote) ? curQuote : newQuotes[0];
+                          setPersisted((p) => ({ ...p, baseToken: token, quoteToken: keepQuote }));
+                          setPickingSide(null);
                         }}
-                        title={m.description ?? undefined}
                       >
-                        <ProviderIcon provider={modelProvider} />
-                        <div className="flex flex-col min-w-0 flex-1">
-                          <span className="text-[10px] font-medium leading-tight text-muted-foreground capitalize truncate">
-                            {modelProvider || 'Unknown'}
-                          </span>
-                          <span className="text-xs font-bold leading-tight truncate">
-                            {shortModelName(m.name)}
-                          </span>
-                        </div>
-                        {m.isThinking != null && (
-                          <Badge
-                            variant="secondary"
-                            className={
-                              m.isThinking
-                                ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300'
-                                : 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300'
-                            }
-                          >
-                            {m.isThinking ? 'Thinking' : 'Fast'}
-                          </Badge>
-                        )}
-                        {lowestTier && (
-                          <span className="flex-shrink-0 text-[10px] text-muted-foreground ml-2 font-mono">
-                            {lowestTier.price} {lowestTier.currency}/{lowestTier.cntDecisions}
-                          </span>
-                        )}
-                        {isSelected && (
-                          <div className="flex-shrink-0 ml-2 h-4 w-4 rounded-full bg-green-600 flex items-center justify-center">
-                            <Check className="h-2.5 w-2.5 text-white" />
-                          </div>
-                        )}
+                        <TokenIcon symbol={token} size="h-5 w-5" />
+                        {token}
+                        {isSelected && <Check className="h-3.5 w-3.5 ml-auto text-green-500" />}
                       </button>
                     );
-                  })
-                )}
-              </div>
-            )}
-          </div>
-
-          <div className="my-2" />
-
-          {/* =============================================================== */}
-          {/* Section 2: Trading Pair                                         */}
-          {/* =============================================================== */}
-          <div>
-            <div className="flex items-center gap-2 mb-2">
-              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-green-500/20 text-[11px] font-bold text-green-500">2</div>
-              <span className="text-base font-bold">Trading Pair</span>
-              <span className="text-[10px] text-muted-foreground ml-1">(1 pair per agent)</span>
+                  })}
+                </div>
+              )}
             </div>
 
-            <div className="flex items-center gap-2">
-              {/* Base token dropdown */}
-              <div className="relative">
+            <span className="text-muted-foreground text-sm font-bold">/</span>
+
+            {/* Quote token dropdown */}
+            <div className="relative">
+              {persisted.quoteToken ? (
                 <button
                   type="button"
-                  className={`inline-flex items-center gap-1.5 rounded-full pl-3 pr-2.5 py-1.5 text-sm font-bold transition-all cursor-pointer bg-muted ${pickingSide === 'base' ? 'ring-2 ring-primary/50' : 'hover:ring-2 hover:ring-primary/20'}`}
-                  onClick={() => setPickingSide(pickingSide === 'base' ? null : 'base')}
+                  className={`inline-flex items-center gap-1.5 rounded-full pl-2.5 pr-2 py-1 text-sm font-bold transition-all cursor-pointer bg-muted ${pickingSide === 'quote' ? 'ring-2 ring-primary/50' : 'hover:ring-2 hover:ring-primary/20'}`}
+                  onClick={() => setPickingSide(pickingSide === 'quote' ? null : 'quote')}
                 >
-                  <TokenIcon symbol={persisted.baseToken ?? 'AGNT'} size="h-5 w-5" />
-                  {persisted.baseToken ?? 'AGNT'}
+                  <TokenIcon symbol={persisted.quoteToken} size="h-4 w-4" />
+                  {persisted.quoteToken}
                   <ChevronDown className="h-3 w-3 text-muted-foreground" />
                 </button>
-                {pickingSide === 'base' && (
-                  <div className="absolute top-full left-0 mt-1 z-20 rounded-lg bg-popover border border-border shadow-lg py-1 min-w-[120px]">
-                    {BASE_TOKENS.map((token) => {
-                      const isSelected = token === (persisted.baseToken ?? 'AGNT');
-                      return (
-                        <button
-                          key={token}
-                          type="button"
-                          className={`flex items-center gap-2 w-full px-3 py-2 text-sm hover:bg-muted transition-colors ${isSelected ? 'font-bold' : ''}`}
-                          onClick={() => {
-                            const curQuote = persisted.quoteToken;
-                            const newQuotes = quotesForBase(token);
-                            const keepQuote = curQuote && newQuotes.includes(curQuote) ? curQuote : newQuotes[0];
-                            setPersisted((p) => ({ ...p, baseToken: token, quoteToken: keepQuote }));
-                            setPickingSide(null);
-                          }}
-                        >
-                          <TokenIcon symbol={token} size="h-5 w-5" />
-                          {token}
-                          {isSelected && <Check className="h-3.5 w-3.5 ml-auto text-green-500" />}
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-
-              <span className="text-muted-foreground text-sm font-bold">/</span>
-
-              {/* Quote token dropdown */}
-              <div className="relative">
-                {persisted.quoteToken ? (
-                  <button
-                    type="button"
-                    className={`inline-flex items-center gap-1.5 rounded-full pl-3 pr-2.5 py-1.5 text-sm font-bold transition-all cursor-pointer bg-muted ${pickingSide === 'quote' ? 'ring-2 ring-primary/50' : 'hover:ring-2 hover:ring-primary/20'}`}
-                    onClick={() => setPickingSide(pickingSide === 'quote' ? null : 'quote')}
-                  >
-                    <TokenIcon symbol={persisted.quoteToken} size="h-5 w-5" />
-                    {persisted.quoteToken}
-                    <ChevronDown className="h-3 w-3 text-muted-foreground" />
-                  </button>
-                ) : (
-                  <Button size="sm" className="rounded-full gap-1 px-3" onClick={() => setPickingSide('quote')}>
-                    pick <ArrowRight className="h-3 w-3" />
-                  </Button>
-                )}
-                {pickingSide === 'quote' && (
-                  <div className="absolute top-full left-0 mt-1 z-20 rounded-lg bg-popover border border-border shadow-lg py-1 min-w-[120px]">
-                    {quotesForBase(persisted.baseToken ?? 'AGNT').map((token) => {
-                      const isSelected = token === persisted.quoteToken;
-                      return (
-                        <button
-                          key={token}
-                          type="button"
-                          className={`flex items-center gap-2 w-full px-3 py-2 text-sm hover:bg-muted transition-colors ${isSelected ? 'font-bold' : ''}`}
-                          onClick={() => {
-                            setPersisted((p) => ({ ...p, quoteToken: token }));
-                            setPickingSide(null);
-                          }}
-                        >
-                          <TokenIcon symbol={token} size="h-5 w-5" />
-                          {token}
-                          {isSelected && <Check className="h-3.5 w-3.5 ml-auto text-green-500" />}
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
+              ) : (
+                <Button size="sm" className="rounded-full gap-1 px-3" onClick={() => setPickingSide('quote')}>
+                  pick <ArrowRight className="h-3 w-3" />
+                </Button>
+              )}
+              {pickingSide === 'quote' && (
+                <div className="absolute top-full left-0 mt-1 z-20 rounded-lg bg-popover border border-border shadow-lg py-1 min-w-[120px]">
+                  {quotesForBase(persisted.baseToken ?? 'AGNT').map((token) => {
+                    const isSelected = token === persisted.quoteToken;
+                    return (
+                      <button
+                        key={token}
+                        type="button"
+                        className={`flex items-center gap-2 w-full px-3 py-2 text-sm hover:bg-muted transition-colors ${isSelected ? 'font-bold' : ''}`}
+                        onClick={() => {
+                          setPersisted((p) => ({ ...p, quoteToken: token }));
+                          setPickingSide(null);
+                        }}
+                      >
+                        <TokenIcon symbol={token} size="h-5 w-5" />
+                        {token}
+                        {isSelected && <Check className="h-3.5 w-3.5 ml-auto text-green-500" />}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
 
-          <div className="my-2" />
-
           {/* =============================================================== */}
-          {/* Section 3: Trading Strategy                                     */}
+          {/* Strategy (collapsed by default)                                 */}
           {/* =============================================================== */}
           <div>
-            <div className="flex items-center gap-2 mb-3">
-              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-green-500/20 text-[11px] font-bold text-green-500">3</div>
-              <span className="text-base font-bold">Trading Strategy</span>
-            </div>
-            <div className="flex items-center justify-end gap-1.5 mb-1.5">
-              {isConnected && (
-                <Button
-                  variant="ghost"
-                  size="xs"
-                  className="gap-1 text-muted-foreground hover:text-foreground"
-                  disabled={generating}
-                  onClick={async () => {
-                    if (!ownerAddressRaw) return;
-                    setGenerating(true);
-                    setErr(null);
-                    try {
-                      const result = await generateStrategy(authedCfg, ownerAddressRaw);
-                      setPersisted((p) => ({
-                        ...p,
-                        prompt: result.prompt,
-                        ...(result.suggested_pairs ? (() => {
-                          const tokens = parseSuggestedTokens(result.suggested_pairs);
-                          const quote = tokens.find((t) => t !== 'AGNT') ?? 'NOT';
-                          return { quoteToken: quote };
-                        })() : {}),
-                      }));
-                    } catch (e) {
-                      setErr(e instanceof Error ? e.message : 'Failed to generate strategy');
-                    } finally {
-                      setGenerating(false);
-                    }
-                  }}
-                >
-                  {generating ? (
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                  ) : (
-                    <Rocket className="h-3 w-3" />
-                  )}
-                  {generating ? 'Analyzing wallet...' : 'Auto-generate from wallet'}
-                </Button>
-              )}
-
-            </div>
-            <Textarea
-              ref={promptRef}
-              id="prompt"
-              className={`w-full text-sm leading-relaxed ${persisted.prompt.length > 5000 ? 'border-red-500 focus-visible:border-red-500 focus-visible:ring-red-500/50' : ''}`}
-              value={persisted.prompt}
-              onChange={(e) => setPersisted((p) => ({ ...p, prompt: e.target.value }))}
-              placeholder="Describe your trading strategy..."
-              rows={6}
-              maxLength={5000}
-            />
-            <div className="flex justify-end mt-1">
-              <span className={`font-mono text-[10px] ${persisted.prompt.length > 4800 ? (persisted.prompt.length > 5000 ? 'text-red-500' : 'text-yellow-500') : 'text-muted-foreground/50'}`}>
-                {persisted.prompt.length} / 5000
-              </span>
-            </div>
-
-            {/* Prompt Variables */}
-            {promptVars.length > 0 && (
-              <div className="mt-2 rounded-lg bg-muted/50 border border-border/50 px-3 py-2.5">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                    Available variables <span className="normal-case text-muted-foreground/70">(click to insert)</span>
+            {!strategyOpen ? (
+              /* Collapsed: preview line + edit button */
+              <button
+                type="button"
+                className="flex items-center gap-2 w-full text-left cursor-pointer rounded-lg border border-border/50 hover:border-border bg-muted/30 px-3 py-2"
+                onClick={() => setStrategyOpen(true)}
+              >
+                <span className="text-xs font-semibold text-muted-foreground shrink-0">Strategy</span>
+                <span className="text-xs text-muted-foreground/70 truncate flex-1">
+                  {persisted.prompt.trim() ? persisted.prompt.trim().split('\n')[0].slice(0, 80) : 'No strategy set'}
+                </span>
+                <span className="inline-flex items-center gap-1 text-[10px] text-primary shrink-0">
+                  <Pencil className="h-3 w-3" />
+                  Edit
+                </span>
+              </button>
+            ) : (
+              /* Expanded: full textarea + variables */
+              <div className="rounded-lg border border-border/50 p-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-muted-foreground">Strategy</span>
+                  <div className="flex items-center gap-1.5">
+                    {isConnected && (
+                      <Button
+                        variant="ghost"
+                        size="xs"
+                        className="gap-1 text-muted-foreground hover:text-foreground"
+                        disabled={generating}
+                        onClick={async () => {
+                          if (!ownerAddressRaw) return;
+                          setGenerating(true);
+                          setErr(null);
+                          try {
+                            const result = await generateStrategy(authedCfg, ownerAddressRaw);
+                            setPersisted((p) => ({
+                              ...p,
+                              prompt: result.prompt,
+                              ...(result.suggested_pairs ? (() => {
+                                const tokens = parseSuggestedTokens(result.suggested_pairs);
+                                const quote = tokens.find((t) => t !== 'AGNT') ?? 'NOT';
+                                return { quoteToken: quote };
+                              })() : {}),
+                            }));
+                          } catch (e) {
+                            setErr(e instanceof Error ? e.message : 'Failed to generate strategy');
+                          } finally {
+                            setGenerating(false);
+                          }
+                        }}
+                      >
+                        {generating ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : (
+                          <Rocket className="h-3 w-3" />
+                        )}
+                        {generating ? 'Analyzing wallet...' : 'Auto-generate from wallet'}
+                      </Button>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="xs"
+                      className="text-muted-foreground hover:text-foreground"
+                      onClick={() => setStrategyOpen(false)}
+                    >
+                      <ChevronUp className="h-3.5 w-3.5" />
+                    </Button>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="xs"
-                    className="gap-1 text-muted-foreground hover:text-foreground"
-                    onClick={() => setVarsHelpOpen(true)}
-                  >
-                    <Info className="h-3 w-3" />
-                    <span className="text-[10px]">Help</span>
-                  </Button>
                 </div>
-                <TooltipProvider>
-                  <div className="flex flex-wrap gap-1.5">
-                    {promptVars.map((v) => {
-                      const inPrompt = persisted.prompt.includes(`{${v.key}}`);
-                      return (
-                        <Tooltip key={v.key}>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant={inPrompt ? 'default' : 'ghost'}
-                              size="xs"
-                              className={`gap-1 font-mono ${
-                                inPrompt
-                                  ? ''
-                                  : 'border border-border/50 hover:border-primary/40 hover:bg-primary/10'
-                              }`}
-                              onClick={() => insertPromptVar(v)}
-                            >
-                              <span className={inPrompt ? '' : 'text-primary/80'}>{`{${v.key}}`}</span>
-                              {inPrompt && <Check className="h-3 w-3" />}
-                            </Button>
-                          </TooltipTrigger>
-                          {v.description && (
-                            <TooltipContent>
-                              {v.description}
-                            </TooltipContent>
-                          )}
-                        </Tooltip>
-                      );
-                    })}
+                <Textarea
+                  ref={promptRef}
+                  id="prompt"
+                  className={`w-full text-sm leading-relaxed ${persisted.prompt.length > 5000 ? 'border-red-500 focus-visible:border-red-500 focus-visible:ring-red-500/50' : ''}`}
+                  value={persisted.prompt}
+                  onChange={(e) => setPersisted((p) => ({ ...p, prompt: e.target.value }))}
+                  placeholder="Describe your trading strategy..."
+                  rows={6}
+                  maxLength={5000}
+                />
+                <div className="flex justify-end">
+                  <span className={`font-mono text-[10px] ${persisted.prompt.length > 4800 ? (persisted.prompt.length > 5000 ? 'text-red-500' : 'text-yellow-500') : 'text-muted-foreground/50'}`}>
+                    {persisted.prompt.length} / 5000
+                  </span>
+                </div>
+
+                {/* Prompt Variables */}
+                {promptVars.length > 0 && (
+                  <div className="rounded-lg bg-muted/50 border border-border/50 px-3 py-2.5">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                        Available variables <span className="normal-case text-muted-foreground/70">(click to insert)</span>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="xs"
+                        className="gap-1 text-muted-foreground hover:text-foreground"
+                        onClick={() => setVarsHelpOpen(true)}
+                      >
+                        <Info className="h-3 w-3" />
+                        <span className="text-[10px]">Help</span>
+                      </Button>
+                    </div>
+                    <TooltipProvider>
+                      <div className="flex flex-wrap gap-1.5">
+                        {promptVars.map((v) => {
+                          const inPrompt = persisted.prompt.includes(`{${v.key}}`);
+                          return (
+                            <Tooltip key={v.key}>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant={inPrompt ? 'default' : 'ghost'}
+                                  size="xs"
+                                  className={`gap-1 font-mono ${
+                                    inPrompt
+                                      ? ''
+                                      : 'border border-border/50 hover:border-primary/40 hover:bg-primary/10'
+                                  }`}
+                                  onClick={() => insertPromptVar(v)}
+                                >
+                                  <span className={inPrompt ? '' : 'text-primary/80'}>{`{${v.key}}`}</span>
+                                  {inPrompt && <Check className="h-3 w-3" />}
+                                </Button>
+                              </TooltipTrigger>
+                              {v.description && (
+                                <TooltipContent>
+                                  {v.description}
+                                </TooltipContent>
+                              )}
+                            </Tooltip>
+                          );
+                        })}
+                      </div>
+                    </TooltipProvider>
+                    <div className="mt-1.5 text-[10px] text-muted-foreground/50 flex items-center gap-1.5">
+                      <span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse shrink-0" />
+                      Variables are replaced with live data before each AI decision -- prices sync every 10s
+                    </div>
                   </div>
-                </TooltipProvider>
-                <div className="mt-1.5 text-[10px] text-muted-foreground/50 flex items-center gap-1.5">
-                  <span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse shrink-0" />
-                  Variables are replaced with live data before each AI decision -- prices sync every 10s
-                </div>
+                )}
               </div>
             )}
           </div>
 
-          <div className="my-2" />
+          {/* =============================================================== */}
+          {/* Name Input                                                      */}
+          {/* =============================================================== */}
+          <Input
+            id="agentName"
+            type="text"
+            value={persisted.agentName ?? ''}
+            onChange={(e) => setPersisted((p) => ({ ...p, agentName: e.target.value }))}
+            placeholder="Agent name, e.g. Moon Hunter"
+            maxLength={40}
+          />
 
           {/* =============================================================== */}
-          {/* Section 4: Name & Fund                                         */}
+          {/* Fund Section                                                    */}
           {/* =============================================================== */}
-          <div className="space-y-3">
-            <div className="flex items-center gap-2 mb-3">
-              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-green-500/20 text-[11px] font-bold text-green-500">4</div>
-              <span className="text-base font-bold">Name & Fund</span>
+          <div className="rounded-lg border border-border overflow-hidden">
+            {/* Extra TON */}
+            <div className="flex items-center justify-between px-4 py-3">
+              <div className="flex items-center gap-2">
+                <TokenIcon symbol="TON" size="h-5 w-5" />
+                <span className="text-sm font-semibold">Extra TON</span>
+                <span className="text-[10px] text-muted-foreground">gas & fees</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <Button variant="ghost" size="icon-xs" type="button" onClick={() => {
+                  const cur = parseFloat(persisted.deployAmountTon || '0');
+                  if (cur > 0) setPersisted((p) => ({ ...p, deployAmountTon: String(Math.max(0, cur - 1)) }));
+                }}>
+                  <Minus className="h-3 w-3" />
+                </Button>
+                <Input
+                  type="text"
+                  className="w-16 text-center font-mono font-semibold h-8"
+                  value={persisted.deployAmountTon}
+                  onChange={(e) => setPersisted((p) => ({ ...p, deployAmountTon: e.target.value }))}
+                  inputMode="decimal"
+                />
+                <Button variant="ghost" size="icon-xs" type="button" onClick={() => {
+                  const cur = parseFloat(persisted.deployAmountTon || '0');
+                  setPersisted((p) => ({ ...p, deployAmountTon: String(cur + 1) }));
+                }}>
+                  <Plus className="h-3 w-3" />
+                </Button>
+              </div>
             </div>
 
-            {/* Agent Name */}
-            <Input
-              id="agentName"
-              type="text"
-              value={persisted.agentName ?? ''}
-              onChange={(e) => setPersisted((p) => ({ ...p, agentName: e.target.value }))}
-              placeholder="Agent name, e.g. Moon Hunter"
-              maxLength={40}
-            />
-
-            {/* Fund rows */}
-            <div className="rounded-lg border border-border overflow-hidden">
-              {/* Extra TON */}
-              <div className="flex items-center justify-between px-4 py-3">
-                <div className="flex items-center gap-2">
-                  <TokenIcon symbol="TON" size="h-5 w-5" />
-                  <span className="text-sm font-semibold">Extra TON</span>
-                  <span className="text-[10px] text-muted-foreground">gas & fees</span>
-                </div>
+            {/* WHERE YOUR TON GOES */}
+            <div className="border-t border-border px-4 py-3 space-y-1.5">
+              <div className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Where your TON goes</div>
+              <div className="flex items-center justify-between text-xs">
                 <div className="flex items-center gap-1.5">
-                  <Button variant="ghost" size="icon-xs" type="button" onClick={() => {
-                    const cur = parseFloat(persisted.deployAmountTon || '0');
-                    if (cur > 0) setPersisted((p) => ({ ...p, deployAmountTon: String(Math.max(0, cur - 1)) }));
-                  }}>
-                    <Minus className="h-3 w-3" />
-                  </Button>
-                  <Input
-                    type="text"
-                    className="w-16 text-center font-mono font-semibold h-8"
-                    value={persisted.deployAmountTon}
-                    onChange={(e) => setPersisted((p) => ({ ...p, deployAmountTon: e.target.value }))}
-                    inputMode="decimal"
-                  />
-                  <Button variant="ghost" size="icon-xs" type="button" onClick={() => {
-                    const cur = parseFloat(persisted.deployAmountTon || '0');
-                    setPersisted((p) => ({ ...p, deployAmountTon: String(cur + 1) }));
-                  }}>
-                    <Plus className="h-3 w-3" />
-                  </Button>
+                  <span className="h-1.5 w-1.5 rounded-full bg-purple-400" />
+                  <span className="text-muted-foreground">AI service provider</span>
+                  {selectedModelOption && (
+                    <span className="text-muted-foreground/60">({shortModelName(selectedModelOption.name)})</span>
+                  )}
                 </div>
-              </div>
-
-              {/* WHERE YOUR TON GOES */}
-              <div className="border-t border-border px-4 py-3 space-y-1.5">
-                <div className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Where your TON goes</div>
-                <div className="flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-1.5">
-                    <span className="h-1.5 w-1.5 rounded-full bg-purple-400" />
-                    <span className="text-muted-foreground">AI service provider</span>
-                    {selectedModelOption && (
-                      <span className="text-muted-foreground/60">({shortModelName(selectedModelOption.name)})</span>
-                    )}
-                  </div>
-                  <span className="font-mono text-muted-foreground">
-                    {selectedModelOption?.pricing?.[0]
-                      ? `${selectedModelOption.pricing[0].price} ${selectedModelOption.pricing[0].currency}/${selectedModelOption.pricing[0].cntDecisions} dec`
-                      : '\u2014'}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-1.5">
-                    <span className="h-1.5 w-1.5 rounded-full bg-orange-400" />
-                    <span className="text-muted-foreground">Service fee for deploying agent</span>
-                  </div>
-                  <span className="font-mono text-muted-foreground">~0.6 TON</span>
-                </div>
-                <div className="flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-1.5">
-                    <span className="h-1.5 w-1.5 rounded-full bg-blue-400" />
-                    <span className="text-muted-foreground">Gas</span>
-                    <span className="text-muted-foreground/50">(stays on agent wallet for orders)</span>
-                  </div>
-                  <span className="font-mono text-muted-foreground">{persisted.deployAmountTon || '0'} TON</span>
-                </div>
-              </div>
-
-              {/* Total */}
-              <div className="border-t border-border px-4 py-2.5 flex items-center justify-between">
-                <span className="text-xs text-muted-foreground">
-                  {modelPriceTon > 0 && `${modelPriceTon} TON model + `}~0.6 TON deploy + {persisted.deployAmountTon || '0'} TON gas
+                <span className="font-mono text-muted-foreground">
+                  {selectedModelOption?.pricing?.[0]
+                    ? `${selectedModelOption.pricing[0].price} ${selectedModelOption.pricing[0].currency}/${selectedModelOption.pricing[0].cntDecisions} dec`
+                    : '\u2014'}
                 </span>
-                <span className="text-sm font-bold font-mono">Total: {totalDeployTon} TON</span>
+              </div>
+              <div className="flex items-center justify-between text-xs">
+                <div className="flex items-center gap-1.5">
+                  <span className="h-1.5 w-1.5 rounded-full bg-orange-400" />
+                  <span className="text-muted-foreground">Service fee for deploying agent</span>
+                </div>
+                <span className="font-mono text-muted-foreground">~0.6 TON</span>
+              </div>
+              <div className="flex items-center justify-between text-xs">
+                <div className="flex items-center gap-1.5">
+                  <span className="h-1.5 w-1.5 rounded-full bg-blue-400" />
+                  <span className="text-muted-foreground">Gas</span>
+                  <span className="text-muted-foreground/50">(stays on agent wallet for orders)</span>
+                </div>
+                <span className="font-mono text-muted-foreground">{persisted.deployAmountTon || '0'} TON</span>
               </div>
             </div>
 
-            {/* Footer note */}
-            <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-              <Info className="h-3 w-3 shrink-0" />
-              TON is used for gas fees. Fund tokens after deploy. Signed via TonConnect.
+            {/* Total */}
+            <div className="border-t border-border px-4 py-2.5 flex items-center justify-between">
+              <span className="text-xs text-muted-foreground">
+                {modelPriceTon > 0 && `${modelPriceTon} TON model + `}~0.6 TON deploy + {persisted.deployAmountTon || '0'} TON gas
+              </span>
+              <span className="text-sm font-bold font-mono">Total: {totalDeployTon} TON</span>
             </div>
+          </div>
 
-            {/* Validation checklist */}
-            <div className="flex items-center gap-3 text-xs">
-              <span className={hasName ? 'text-foreground/80' : 'text-muted-foreground/40'}>&middot; Name</span>
-              <span className={hasPair ? 'text-foreground/80' : 'text-muted-foreground/40'}>&middot; Pair</span>
-              <span className={hasStrategy ? 'text-foreground/80' : 'text-muted-foreground/40'}>&middot; Strategy</span>
-            </div>
-
-            {/* Deploy button */}
+          {/* =============================================================== */}
+          {/* Deploy Button                                                   */}
+          {/* =============================================================== */}
+          <div className="space-y-2">
             <Button
               size="lg"
               className="w-full gap-2 text-base font-semibold shadow-md bg-green-600 hover:bg-green-700 text-white"
