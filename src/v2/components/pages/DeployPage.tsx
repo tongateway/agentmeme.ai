@@ -1022,78 +1022,7 @@ export function DeployPage() {
             maxLength={40}
           />
 
-          {/* Model picker grid — shown when modelListOpen is true */}
-          {modelListOpen && (
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="text-xs font-semibold text-muted-foreground">AI Model</span>
-                  {modelsLoading && <Skeleton className="h-3 w-14 inline-block" />}
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-                  {displayGroups.flatMap((group) =>
-                    group.models.map((m) => {
-                      const modelProvider = m.provider?.trim() ?? '';
-                      const isSelected =
-                        selectedModel === m.id &&
-                        (selectedProvider ?? '') === modelProvider;
-                      const lowestTier = m.pricing?.[0];
-                      return (
-                        <button
-                          key={`${modelProvider || 'p'}:${m.id}`}
-                          type="button"
-                          className={`flex items-center text-left cursor-pointer rounded-lg px-3 py-2.5 transition-colors ${
-                            isSelected
-                              ? 'border-2 border-green-600 bg-green-500/[0.08]'
-                              : 'border border-border/50 hover:border-border'
-                          }`}
-                          onClick={() => {
-                            setPersisted((p) => ({
-                              ...p,
-                              aiModel: m.id,
-                              aiProvider: m.provider?.trim() || undefined,
-                            }));
-                            setModelListOpen(false);
-                          }}
-                          title={m.description ?? undefined}
-                        >
-                          <ProviderIcon provider={modelProvider} />
-                          <div className="flex flex-col min-w-0 flex-1">
-                            <span className="text-[10px] font-medium leading-tight text-muted-foreground capitalize truncate">
-                              {modelProvider || 'Unknown'}
-                            </span>
-                            <span className="text-xs font-bold leading-tight truncate">
-                              {shortModelName(m.name)}
-                            </span>
-                          </div>
-                          {m.isThinking != null && (
-                            <Badge
-                              variant="secondary"
-                              className={
-                                m.isThinking
-                                  ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300'
-                                  : 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300'
-                              }
-                            >
-                              {m.isThinking ? 'Thinking' : 'Fast'}
-                            </Badge>
-                          )}
-                          {lowestTier && (
-                            <span className="flex-shrink-0 text-[10px] text-muted-foreground ml-2 font-mono">
-                              {lowestTier.price} {lowestTier.currency}/{lowestTier.cntDecisions}
-                            </span>
-                          )}
-                          {isSelected && (
-                            <div className="flex-shrink-0 ml-2 h-4 w-4 rounded-full bg-green-600 flex items-center justify-center">
-                              <Check className="h-2.5 w-2.5 text-white" />
-                            </div>
-                          )}
-                        </button>
-                      );
-                    })
-                  )}
-                </div>
-              </div>
-            )}
+          {/* Model picker list — rendered inline in WHERE YOUR TON GOES when toggled */}
 
           {/* =============================================================== */}
           {/* Trading Pair (compact inline)                                   */}
@@ -1402,6 +1331,47 @@ export function DeployPage() {
                     : '\u2014'}
                 </span>
               </button>
+              {/* Model picker list — compact rows */}
+              {modelListOpen && (
+                <div className="ml-3 mt-1 mb-1 border-l-2 border-purple-400/30 pl-3 space-y-0.5">
+                  {modelsLoading && <Skeleton className="h-4 w-32" />}
+                  {displayGroups.flatMap((group) =>
+                    group.models.map((m) => {
+                      const mp = m.provider?.trim() ?? '';
+                      const isSelected = selectedModel === m.id && (selectedProvider ?? '') === mp;
+                      const tier = m.pricing?.[0];
+                      return (
+                        <button
+                          key={`${mp || 'p'}:${m.id}`}
+                          type="button"
+                          className={`flex items-center gap-2 w-full text-left text-xs py-1 px-2 rounded transition-colors cursor-pointer ${
+                            isSelected ? 'bg-green-500/10 font-bold' : 'hover:bg-muted/60'
+                          }`}
+                          onClick={() => {
+                            setPersisted((p) => ({ ...p, aiModel: m.id, aiProvider: mp || undefined }));
+                            setModelListOpen(false);
+                          }}
+                        >
+                          <ProviderIcon provider={mp} />
+                          <span className="text-muted-foreground capitalize min-w-0 truncate">{mp}</span>
+                          <span className="font-bold truncate">{shortModelName(m.name)}</span>
+                          {m.isThinking != null && (
+                            <Badge variant="secondary" className="h-4 px-1 text-[9px] shrink-0">
+                              {m.isThinking ? 'Thinking' : 'Fast'}
+                            </Badge>
+                          )}
+                          {tier && (
+                            <span className="ml-auto shrink-0 font-mono text-[10px] text-muted-foreground">
+                              {tier.price} {tier.currency}/{tier.cntDecisions}
+                            </span>
+                          )}
+                          {isSelected && <Check className="h-3 w-3 text-green-500 shrink-0" />}
+                        </button>
+                      );
+                    })
+                  )}
+                </div>
+              )}
               <div className="flex items-center justify-between text-xs">
                 <div className="flex items-center gap-1.5">
                   <span className="h-1.5 w-1.5 rounded-full bg-orange-400" />
