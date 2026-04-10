@@ -1353,7 +1353,7 @@ export function DeployPage() {
                           }}
                         >
                           <ProviderIcon provider={mp} />
-                          <span className="text-muted-foreground capitalize min-w-0 truncate">{mp}</span>
+                          <span className="font-semibold capitalize min-w-0 truncate">{mp}</span>
                           <span className="font-bold truncate">{shortModelName(m.name)}</span>
                           {m.isThinking != null && (
                             <Badge variant="secondary" className="h-4 px-1 text-[9px] shrink-0">
