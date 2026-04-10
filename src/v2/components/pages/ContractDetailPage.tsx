@@ -182,7 +182,6 @@ function explorerOrderLink(rawAddr: string): string {
 /* ------------------------------------------------------------------ */
 
 const CHART_GREEN = '#00C389';
-const CHART_RED = '#FF5470';
 
 const TIME_RANGES: { key: TimeRange; label: string; ms: number }[] = [
   { key: '1h', label: '1h', ms: 60 * 60 * 1000 },
@@ -195,44 +194,20 @@ const TIME_RANGES: { key: TimeRange; label: string; ms: number }[] = [
 /*  Sub-components: Charts                                            */
 /* ------------------------------------------------------------------ */
 
-function PerformanceChart({
-  balancePoints,
-  profitPoints,
-}: {
-  balancePoints: ChartPoint[];
-  profitPoints: ChartPoint[];
-}) {
+function BalanceChart({ points }: { points: ChartPoint[] }) {
   const [range, setRange] = useState<TimeRange>('24h');
-
-  // Merge the two series by timestamp into a single sorted dataset.
-  const merged = useMemo(() => {
-    const byTime = new Map<number, { time: number; balance: number | null; profit: number | null }>();
-    for (const p of balancePoints) {
-      byTime.set(p.time, { time: p.time, balance: p.value, profit: null });
-    }
-    for (const p of profitPoints) {
-      const existing = byTime.get(p.time);
-      if (existing) existing.profit = p.value;
-      else byTime.set(p.time, { time: p.time, balance: null, profit: p.value });
-    }
-    return Array.from(byTime.values()).sort((a, b) => a.time - b.time);
-  }, [balancePoints, profitPoints]);
 
   const filtered = useMemo(() => {
     const rangeMs = TIME_RANGES.find((r) => r.key === range)?.ms ?? 24 * 60 * 60 * 1000;
     const cutoff = Date.now() - rangeMs;
-    const result = merged.filter((p) => p.time >= cutoff);
-    return result.length > 0 ? result : merged.slice(-20);
-  }, [merged, range]);
+    const result = points.filter((p) => p.time >= cutoff);
+    return result.length > 0 ? result : points.slice(-20);
+  }, [points, range]);
 
-  // Latest values for the header
-  const lastBalance = [...filtered].reverse().find((p) => p.balance != null)?.balance ?? 0;
-  const firstBalance = filtered.find((p) => p.balance != null)?.balance ?? lastBalance;
-  const balanceChangePct = firstBalance > 0 ? ((lastBalance - firstBalance) / firstBalance) * 100 : 0;
-  const balanceUp = balanceChangePct >= 0;
-
-  const lastProfit = [...filtered].reverse().find((p) => p.profit != null)?.profit ?? 0;
-  const profitUp = lastProfit >= 0;
+  const currentBalance = filtered.length > 0 ? filtered[filtered.length - 1].value : 0;
+  const startBalance = filtered.length > 0 ? filtered[0].value : 0;
+  const changePct = startBalance > 0 ? ((currentBalance - startBalance) / startBalance) * 100 : 0;
+  const changePositive = changePct >= 0;
 
   const fmtTime = (ts: number) => {
     const d = new Date(ts);
@@ -240,36 +215,18 @@ function PerformanceChart({
     return d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
   };
 
-  const profitColor = profitUp ? CHART_GREEN : CHART_RED;
-
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="flex flex-wrap items-baseline gap-6">
-          <div>
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <span className="h-2 w-2 rounded-full" style={{ background: CHART_GREEN }} />
-              Balance (USD)
-            </div>
-            <div className="flex items-baseline gap-2">
-              <span className="text-2xl font-bold font-mono tabular-nums">
-                ${lastBalance.toFixed(2)}
-              </span>
-              <span className={`text-xs font-bold font-mono tabular-nums ${balanceUp ? 'text-green-500' : 'text-red-500'}`}>
-                {balanceUp ? '+' : ''}{balanceChangePct.toFixed(2)}%
-              </span>
-            </div>
-          </div>
-          <div>
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <span className="h-2 w-2 rounded-full" style={{ background: profitColor }} />
-              Profit (USD)
-            </div>
-            <div className="flex items-baseline gap-2">
-              <span className={`text-2xl font-bold font-mono tabular-nums ${profitUp ? 'text-green-500' : 'text-red-500'}`}>
-                {profitUp ? '+' : ''}{lastProfit.toFixed(2)}
-              </span>
-            </div>
+        <div>
+          <div className="text-xs text-muted-foreground">Balance (USD)</div>
+          <div className="flex items-baseline gap-2">
+            <span className="text-2xl font-bold font-mono tabular-nums">
+              ${currentBalance.toFixed(2)}
+            </span>
+            <span className={`text-xs font-bold font-mono tabular-nums ${changePositive ? 'text-green-500' : 'text-red-500'}`}>
+              {changePositive ? '+' : ''}{changePct.toFixed(2)}%
+            </span>
           </div>
         </div>
         <div className="flex gap-0.5 bg-muted rounded-lg p-0.5">
@@ -288,20 +245,16 @@ function PerformanceChart({
       </div>
 
       {filtered.length === 0 ? (
-        <div className="flex items-center justify-center" style={{ height: 300 }}>
-          <span className="text-sm text-muted-foreground">No performance data yet.</span>
+        <div className="flex items-center justify-center" style={{ height: 250 }}>
+          <span className="text-sm text-muted-foreground">No balance data yet.</span>
         </div>
       ) : (
-        <ResponsiveContainer width="100%" height={300}>
+        <ResponsiveContainer width="100%" height={250}>
           <AreaChart data={filtered} margin={{ top: 5, right: 5, left: 0, bottom: 0 }}>
             <defs>
               <linearGradient id="balanceGradient" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor={CHART_GREEN} stopOpacity={0.3} />
                 <stop offset="100%" stopColor={CHART_GREEN} stopOpacity={0.02} />
-              </linearGradient>
-              <linearGradient id="profitGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={profitColor} stopOpacity={0.25} />
-                <stop offset="100%" stopColor={profitColor} stopOpacity={0.02} />
               </linearGradient>
             </defs>
             <XAxis
@@ -313,21 +266,9 @@ function PerformanceChart({
               minTickGap={40}
             />
             <YAxis
-              yAxisId="balance"
-              orientation="left"
               domain={['auto', 'auto']}
               tickFormatter={(v: number) => `$${v.toFixed(2)}`}
-              tick={{ fontSize: 11, fill: CHART_GREEN, opacity: 0.6 }}
-              axisLine={false}
-              tickLine={false}
-              width={65}
-            />
-            <YAxis
-              yAxisId="profit"
-              orientation="right"
-              domain={['auto', 'auto']}
-              tickFormatter={(v: number) => `$${v.toFixed(2)}`}
-              tick={{ fontSize: 11, fill: profitColor, opacity: 0.6 }}
+              tick={{ fontSize: 11, fill: 'currentColor', opacity: 0.4 }}
               axisLine={false}
               tickLine={false}
               width={65}
@@ -341,31 +282,16 @@ function PerformanceChart({
                 padding: '6px 10px',
               }}
               labelFormatter={(ts) => new Date(ts as number).toLocaleString()}
-              formatter={(value, name) => [`$${Number(value).toFixed(2)}`, name === 'balance' ? 'Balance' : 'Profit']}
+              formatter={(value) => [`$${Number(value).toFixed(2)}`, 'Balance']}
             />
             <Area
-              yAxisId="balance"
               type="monotone"
-              dataKey="balance"
-              name="balance"
+              dataKey="value"
               stroke={CHART_GREEN}
               strokeWidth={2.5}
               fill="url(#balanceGradient)"
               dot={false}
-              connectNulls
               activeDot={{ r: 4, fill: CHART_GREEN, strokeWidth: 0 }}
-            />
-            <Area
-              yAxisId="profit"
-              type="monotone"
-              dataKey="profit"
-              name="profit"
-              stroke={profitColor}
-              strokeWidth={2.5}
-              fill="url(#profitGradient)"
-              dot={false}
-              connectNulls
-              activeDot={{ r: 4, fill: profitColor, strokeWidth: 0 }}
             />
           </AreaChart>
         </ResponsiveContainer>
@@ -1191,13 +1117,6 @@ function ContractDetailInner({ contract, detail, raceCfg, tonConnectUI, tonAddre
       .sort((a, b) => a.time - b.time);
   }, [aiResponses]);
 
-  const profitPoints = useMemo<ChartPoint[]>(() => {
-    return aiResponses
-      .filter((r) => r.profit_usd != null)
-      .map((r) => ({ time: new Date(r.created_at).getTime(), value: r.profit_usd! }))
-      .sort((a, b) => a.time - b.time);
-  }, [aiResponses]);
-
   // Check if agent was stopped by AI (action=stop)
   const stopResponse = useMemo(() => {
     return aiResponses.find((r) => r.action === 'stop') ?? null;
@@ -1454,10 +1373,10 @@ function ContractDetailInner({ contract, detail, raceCfg, tonConnectUI, tonAddre
 
         {/* --- Overview Tab --- */}
         <TabsContent value="overview" className="flex flex-col gap-4 mt-4">
-          {/* Combined Balance + Profit Chart */}
+          {/* Balance Chart */}
           <Card className="overflow-hidden">
             <CardContent className="pt-6">
-              <PerformanceChart balancePoints={chartPoints} profitPoints={profitPoints} />
+              <BalanceChart points={chartPoints} />
             </CardContent>
           </Card>
 
