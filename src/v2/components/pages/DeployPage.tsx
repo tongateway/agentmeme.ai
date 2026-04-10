@@ -644,8 +644,15 @@ export function DeployPage() {
   );
 
   const [rawPersisted, setPersisted] = useLocalStorageState<Persisted>('deploy-panel:v2', DEFAULT_PERSISTED);
-  // Merge defaults for fields added after initial storage (e.g. baseToken/quoteToken)
-  const persisted = { ...DEFAULT_PERSISTED, ...rawPersisted };
+  // Merge defaults for fields added after initial storage (e.g. baseToken/quoteToken).
+  // Filter out undefined/null values from stored data so defaults take effect.
+  const persisted = useMemo(() => {
+    const cleaned: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(rawPersisted)) {
+      if (v !== undefined && v !== null && v !== '') cleaned[k] = v;
+    }
+    return { ...DEFAULT_PERSISTED, ...cleaned } as Persisted;
+  }, [rawPersisted]);
 
   const [busy, setBusy] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
