@@ -92,12 +92,12 @@
   }
   body {
     @apply bg-background text-foreground;
-    font-family: "Space Grotesk", sans-serif;
+    font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   }
 }
 
 @utility mono {
-  font-family: "IBM Plex Mono", monospace;
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
 @utility scrollbar-none {
