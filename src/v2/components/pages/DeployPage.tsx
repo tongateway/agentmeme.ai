@@ -1055,8 +1055,12 @@ export function DeployPage() {
                           }`}
                           onClick={() => { setPersisted((p) => ({ ...p, aiModel: m.id, aiProvider: mp || undefined })); setModelListOpen(false); }}
                         >
-                          <ProviderIcon provider={mp} />
-                          <span className="font-semibold capitalize min-w-0 truncate">{mp}</span>
+                          <Badge variant="outline" className={`h-4 px-1.5 text-[9px] font-semibold capitalize shrink-0 ${
+                            mp.toLowerCase() === 'cocoon' ? 'bg-blue-500/15 text-blue-600 border-blue-500/30 dark:text-blue-400' :
+                            mp.toLowerCase() === 'gonka' ? 'bg-orange-500/15 text-orange-600 border-orange-500/30 dark:text-orange-400' :
+                            mp.toLowerCase() === 'openrouter' ? 'bg-purple-500/15 text-purple-600 border-purple-500/30 dark:text-purple-400' :
+                            ''
+                          }`}>{mp}</Badge>
                           <span className="font-bold truncate">{shortModelName(m.name)}</span>
                           {m.isThinking != null && (
                             <Badge variant="secondary" className="h-4 px-1 text-[9px] shrink-0">
