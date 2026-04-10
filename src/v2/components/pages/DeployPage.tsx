@@ -113,7 +113,7 @@ function explorerLink(addr: string): string {
 
 const TRADABLE_TOKENS = ['AGNT', 'TON', 'NOT', 'BUILD', 'USDT'];
 
-const SUPPORTED_PAIRS: [string, string][] = [['AGNT', 'USDT'], ['USDT', 'NOT'], ['USDT', 'BUILD']];
+const SUPPORTED_PAIRS: [string, string][] = [['AGNT', 'USDT'], ['USDT', 'AGNT'], ['USDT', 'NOT'], ['USDT', 'BUILD']];
 const BASE_TOKENS = [...new Set(SUPPORTED_PAIRS.map(([b]) => b))];
 
 function quotesForBase(base: string): string[] {
@@ -997,19 +997,19 @@ export function DeployPage() {
       <ContractTabBar />
       <Card className="overflow-hidden mx-auto w-full max-w-2xl">
         {/* Header */}
-        <div className="border-b border-border/50 px-6 py-5">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-500/20">
-              <Zap className="h-5 w-5 text-green-500" />
+        <div className="border-b border-border/50 px-6 py-3">
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-green-500/20">
+              <Zap className="h-4 w-4 text-green-500" />
             </div>
             <div>
-              <h2 className="text-xl font-bold tracking-tight">Deploy New Agent</h2>
-              <p className="text-xs text-muted-foreground mt-0.5">Configure, deploy on-chain, and enter the Trading Race</p>
+              <h2 className="text-lg font-bold tracking-tight">Deploy New Agent</h2>
+              <p className="text-[11px] text-muted-foreground">Configure, deploy on-chain, and enter the Trading Race</p>
             </div>
           </div>
         </div>
 
-        <CardContent className="py-5 space-y-4">
+        <CardContent className="py-4 space-y-4">
           {/* =============================================================== */}
           {/* Name Input (at top)                                             */}
           {/* =============================================================== */}
@@ -1293,8 +1293,8 @@ export function DeployPage() {
                       const tier = m.pricing?.[0];
                       return (
                         <button key={`${mp || 'p'}:${m.id}`} type="button"
-                          className={`flex items-center gap-2 w-full text-left text-xs py-1 px-2 rounded transition-colors cursor-pointer ${
-                            isSelected ? 'bg-green-500/10 font-bold' : 'hover:bg-muted/60'
+                          className={`flex items-center gap-2 w-full text-left text-xs py-1.5 px-2 rounded transition-colors cursor-pointer ${
+                            isSelected ? 'bg-green-500/20 font-bold ring-1 ring-green-500/40' : 'hover:bg-muted/60'
                           }`}
                           onClick={() => { setPersisted((p) => ({ ...p, aiModel: m.id, aiProvider: mp || undefined })); setModelListOpen(false); }}
                         >
