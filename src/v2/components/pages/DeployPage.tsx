@@ -55,6 +55,13 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/v2/components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/v2/components/ui/dropdown-menu';
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -1263,6 +1270,25 @@ export function DeployPage() {
                         {generating ? 'Analyzing wallet...' : 'Auto-generate from wallet'}
                       </Button>
                     )}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="xs" className="gap-1 text-muted-foreground hover:text-foreground">
+                          Templates
+                          <ChevronDown className="h-3 w-3" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-56">
+                        {STRATEGY_TEMPLATES.map((t) => (
+                          <DropdownMenuItem
+                            key={t.name}
+                            className="text-xs cursor-pointer"
+                            onClick={() => setPersisted((p) => ({ ...p, prompt: t.prompt }))}
+                          >
+                            {t.name}
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                     <Button
                       variant="ghost"
                       size="xs"

@@ -309,9 +309,9 @@ export function HomePage() {
       )}
 
       {/* 5. Token Table */}
-      <section className="flex flex-col gap-3">
+      <section className="flex flex-col gap-2">
         <h2 className="text-2xl font-bold">Agents Hub</h2>
-        <Card>
+        <Card className="py-0">
           <CardContent className="p-0">
             {loading ? (
               <div className="p-6"><Skeleton className="h-40 w-full" /></div>
