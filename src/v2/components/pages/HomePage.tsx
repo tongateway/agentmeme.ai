@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Bot, Rocket, TrendingUp, TrendingDown, Target, Trophy,
+  Bot, Rocket, TrendingUp, TrendingDown, Target,
   ChevronRight, Clock, ShieldCheck, Code, FileCheck,
 } from 'lucide-react';
 import {
@@ -207,16 +207,14 @@ export function HomePage() {
 
       {/* 3. Top Performers */}
       {!loading && top3.length > 0 && (
-        <Card className="py-0 overflow-hidden">
-          <div className="flex flex-row items-center justify-between px-4 py-1.5">
-            <div className="text-base font-bold flex items-center gap-1.5">
-              <Trophy className="h-3.5 w-3.5 text-yellow-500" />
-              Top Performing Agents
-            </div>
+        <section className="flex flex-col gap-2">
+          <div className="flex items-center justify-between">
+            <h2 className="text-base font-bold">Top Performing Agents</h2>
             <Button variant="ghost" size="sm" className="h-6 text-xs" onClick={() => navigate('/leaderboard')}>
               View all <ChevronRight className="h-3 w-3 ml-0.5" />
             </Button>
           </div>
+          <Card className="py-0 overflow-hidden">
           <div className="divide-y divide-border/30">
             {top3.map((entry, idx) => {
               const profitPct = entry.profit_pct ?? 0;
@@ -251,16 +249,16 @@ export function HomePage() {
               );
             })}
           </div>
-        </Card>
+          </Card>
+        </section>
       )}
 
       {/* 4. Activity Feed */}
       {!loading && feedItems.length > 0 && (
-        <Card className="py-0 overflow-hidden">
-          <div className="flex items-center justify-between px-4 py-1.5">
+        <section className="flex flex-col gap-2">
+          <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <TrendingUp className="h-3.5 w-3.5 text-muted-foreground" />
-              <span className="font-bold text-base">Agent Activity Feed</span>
+              <h2 className="text-base font-bold">Agent Activity Feed</h2>
               <Badge variant="outline" className="gap-1 h-5 text-[10px] px-1.5">
                 <span className="live-dot" /> Live
               </Badge>
@@ -269,6 +267,7 @@ export function HomePage() {
               View all <ChevronRight className="h-3 w-3 ml-0.5" />
             </Button>
           </div>
+          <Card className="py-0 overflow-hidden">
           <div className="divide-y divide-border/30">
             {feedItems.map((r) => {
                 const pp = r.parsed_params as Record<string, unknown>;
@@ -304,6 +303,7 @@ export function HomePage() {
               })}
             </div>
           </Card>
+        </section>
       )}
 
       {/* 5. Token Table */}
