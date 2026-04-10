@@ -1004,6 +1004,18 @@ export function DeployPage() {
 
         <CardContent className="py-5 space-y-4">
           {/* =============================================================== */}
+          {/* Name Input (at top)                                             */}
+          {/* =============================================================== */}
+          <Input
+            id="agentName"
+            type="text"
+            value={persisted.agentName ?? ''}
+            onChange={(e) => setPersisted((p) => ({ ...p, agentName: e.target.value }))}
+            placeholder="Agent name, e.g. Moon Hunter"
+            maxLength={40}
+          />
+
+          {/* =============================================================== */}
           {/* Model Selector (collapsed when a model is selected)             */}
           {/* =============================================================== */}
           <div>
@@ -1347,18 +1359,6 @@ export function DeployPage() {
               </div>
             )}
           </div>
-
-          {/* =============================================================== */}
-          {/* Name Input                                                      */}
-          {/* =============================================================== */}
-          <Input
-            id="agentName"
-            type="text"
-            value={persisted.agentName ?? ''}
-            onChange={(e) => setPersisted((p) => ({ ...p, agentName: e.target.value }))}
-            placeholder="Agent name, e.g. Moon Hunter"
-            maxLength={40}
-          />
 
           {/* =============================================================== */}
           {/* Fund Section                                                    */}
