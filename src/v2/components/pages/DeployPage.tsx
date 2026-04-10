@@ -763,19 +763,19 @@ export function DeployPage() {
       <ContractTabBar />
       <Card className="overflow-hidden mx-auto w-full max-w-2xl">
         {/* Header */}
-        <div className="border-b border-border/50 px-6 py-3">
-          <div className="flex items-center gap-2.5">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-green-500/20">
-              <Zap className="h-4 w-4 text-green-500" />
+        <div className="border-b border-border/50 px-6 py-2">
+          <div className="flex items-center gap-2">
+            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-green-500/20">
+              <Zap className="h-3.5 w-3.5 text-green-500" />
             </div>
             <div>
-              <h2 className="text-lg font-bold tracking-tight">Deploy New Agent</h2>
-              <p className="text-[11px] text-muted-foreground">Configure, deploy on-chain, and enter the Trading Race</p>
+              <h2 className="text-base font-bold tracking-tight leading-tight">Deploy New Agent</h2>
+              <p className="text-[10px] text-muted-foreground">Configure, deploy on-chain, and enter the Trading Race</p>
             </div>
           </div>
         </div>
 
-        <CardContent className="py-4 space-y-4">
+        <CardContent className="py-3 space-y-3">
           {/* =============================================================== */}
           {/* Name Input (at top)                                             */}
           {/* =============================================================== */}
@@ -1051,7 +1051,7 @@ export function DeployPage() {
                       return (
                         <button key={`${mp || 'p'}:${m.id}`} type="button"
                           className={`flex items-center gap-2 w-full text-left text-xs py-1.5 px-2 rounded transition-colors cursor-pointer ${
-                            isSelected ? 'bg-green-600 text-white font-bold' : 'hover:bg-muted/60'
+                            isSelected ? 'bg-muted font-bold' : 'hover:bg-muted/60'
                           }`}
                           onClick={() => { setPersisted((p) => ({ ...p, aiModel: m.id, aiProvider: mp || undefined })); setModelListOpen(false); }}
                         >
