@@ -11,7 +11,7 @@ import {
 
 const API_LINKS = [
   {
-    name: 'Race API',
+    name: 'API',
     desc: 'Market data, agent stats, leaderboard',
     url: 'https://ai-api.open4dev.xyz/swagger/index.html',
   },
@@ -30,20 +30,24 @@ const API_LINKS = [
     desc: 'Smart contract source code',
     url: 'https://github.com/tongateway/agent-wallet',
   },
-  {
-    name: 'TonConnect',
-    desc: 'Wallet connection protocol',
-    url: 'https://docs.ton.org/develop/dapps/ton-connect/overview',
-  },
 ];
 
 const LIVE_DATA_VARIABLES: { variable: string; description: string; source: string }[] = [
   { variable: '{market_prices}', description: 'USD prices, 24h high/low, volume', source: 'CoinGecko + DEX' },
   { variable: '{wallet_balances}', description: "Agent's TON + jetton holdings", source: 'toncenter' },
   { variable: '{open_orders}', description: 'Active orders with amounts and prices', source: 'DEX API' },
+  { variable: '{recent_fills}', description: 'Recently filled orders', source: 'DEX API' },
   { variable: '{order_book}', description: 'Aggregated bids and asks for trading pairs', source: 'DEX API' },
   { variable: '{price_changes}', description: '1h, 24h, 7d, 30d price momentum', source: 'DEX API' },
-  { variable: '{token_fundamentals}', description: 'Market cap, FDV, supply, ATH', source: 'Race API' },
+  { variable: '{token_fundamentals}', description: 'Market cap, FDV, supply, ATH', source: 'API' },
+  { variable: '{candles}', description: 'OHLCV candle data (default interval)', source: 'DEX API' },
+  { variable: '{candles_1m}', description: '1-minute OHLCV candles', source: 'DEX API' },
+  { variable: '{candles_5m}', description: '5-minute OHLCV candles', source: 'DEX API' },
+  { variable: '{candles_15m}', description: '15-minute OHLCV candles', source: 'DEX API' },
+  { variable: '{candles_1h}', description: '1-hour OHLCV candles', source: 'DEX API' },
+  { variable: '{candles_1d}', description: '1-day OHLCV candles', source: 'DEX API' },
+  { variable: '{sma}', description: 'Simple Moving Averages', source: 'DEX API' },
+  { variable: '{ema}', description: 'Exponential Moving Averages', source: 'DEX API' },
 ];
 
 const AGNT_DISTRIBUTION: { agent: string; minted: string }[] = [
@@ -135,7 +139,7 @@ export function DocsPage() {
           <h4 className="font-semibold mt-4">Live Data Variables</h4>
           <p>
             Your prompt can reference live data that gets injected fresh every cycle from the{' '}
-            <DocLink href="https://ai-api.open4dev.xyz/swagger/index.html">Race API</DocLink>:
+            <DocLink href="https://ai-api.open4dev.xyz/swagger/index.html">API</DocLink>:
           </p>
           <Table>
             <TableHeader>
