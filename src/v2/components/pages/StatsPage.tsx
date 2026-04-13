@@ -449,30 +449,47 @@ type ActivityWindowData = {
   completionPct: number;
 };
 
+/** Quote vault token decimals for converting scanner volume_usd from nano. */
+const QUOTE_DECIMALS: Record<string, number> = { USDT: 6, USDC: 6, TON: 9 };
+
 function computeWindowData(
   label: string,
   data: ScannerStatsWindow,
   volumeUsdOverride: number | null | undefined,
   tradingPeriod: DexTradingStatsPeriod | null | undefined,
+  quoteSymbol?: string,
+  quotePriceUsd?: number | null,
 ): ActivityWindowData {
   const openOrders = (data.open_orders > 0 ? data.open_orders : tradingPeriod?.by_status?.['open']?.count) ?? data.open_orders;
   const filledOrders = (data.completed_orders > 0 ? data.completed_orders : tradingPeriod?.by_status?.['completed']?.count) ?? data.completed_orders;
   const total = openOrders + filledOrders;
   const completionPct = total > 0 ? (filledOrders / total) * 100 : 0;
-  const rawVolume =
-    volumeUsdOverride ??
-    Number(String(data.volume_usd ?? '0').replaceAll(',', '').trim());
+
+  let rawVolume: number;
+  if (volumeUsdOverride != null && volumeUsdOverride > 0) {
+    rawVolume = volumeUsdOverride;
+  } else {
+    // Scanner volume_usd is in quote vault nano units — convert to human then to USD
+    const rawNano = Number(String(data.volume_usd ?? '0').replaceAll(',', '').trim());
+    const decimals = QUOTE_DECIMALS[(quoteSymbol ?? '').toUpperCase()] ?? 9;
+    const humanAmount = rawNano / (10 ** decimals);
+    const pricePerUnit = quotePriceUsd ?? 1; // default to $1 for USDT
+    rawVolume = humanAmount * pricePerUnit;
+  }
+
   const volume = Number.isFinite(rawVolume) && rawVolume > 0 && rawVolume < 1_000_000_000 ? rawVolume : 0;
   const volumeText = volume > 0 ? fmtUsd(volume) : '$0.00';
   return { label, openOrders, filledOrders, volume, volumeText, completionPct };
 }
 
-function PairActivityRow({ stats, fromSymbol, toSymbol, volumeUsdByWindow, tradingPeriods }: {
+function PairActivityRow({ stats, fromSymbol, toSymbol, volumeUsdByWindow, tradingPeriods, quoteSymbol, quotePriceUsd }: {
   stats: ScannerStatsResponse;
   fromSymbol: string;
   toSymbol: string;
   volumeUsdByWindow?: ActivityVolumeUsdByWindow | null;
   tradingPeriods?: TradingPeriodsState | null;
+  quoteSymbol?: string;
+  quotePriceUsd?: number | null;
 }) {
   // Merge bid+ask trading periods into combined order counts per time window
   const mergePeriod = (period: string): DexTradingStatsPeriod | null => {
@@ -503,9 +520,9 @@ function PairActivityRow({ stats, fromSymbol, toSymbol, volumeUsdByWindow, tradi
   const tp30d = mergePeriod('30d') ?? mergePeriod('7d');
 
   const rows: ActivityWindowData[] = [
-    computeWindowData('1H', stats.windows['1h'], volumeUsdByWindow?.['1h'] ?? null, tp1h),
-    computeWindowData('24H', stats.windows['24h'], volumeUsdByWindow?.['24h'] ?? null, tp24h),
-    computeWindowData('30D', stats.windows.all_time, volumeUsdByWindow?.max ?? null, tp30d),
+    computeWindowData('1H', stats.windows['1h'], volumeUsdByWindow?.['1h'] ?? null, tp1h, quoteSymbol, quotePriceUsd),
+    computeWindowData('24H', stats.windows['24h'], volumeUsdByWindow?.['24h'] ?? null, tp24h, quoteSymbol, quotePriceUsd),
+    computeWindowData('30D', stats.windows.all_time, volumeUsdByWindow?.max ?? null, tp30d, quoteSymbol, quotePriceUsd),
   ];
 
   return (
@@ -880,6 +897,8 @@ export function StatsPage() {
           toSymbol={toUpper}
           volumeUsdByWindow={activityVolumeUsd}
           tradingPeriods={tradingPeriods}
+          quoteSymbol="USDT"
+          quotePriceUsd={priceOf('USDT')}
         />
       ) : (
         <Card className="py-0">
