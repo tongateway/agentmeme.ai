@@ -238,7 +238,7 @@ export function AgentHubPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {tokens.map((t, i) => {
+                {tokens.filter((t) => t.token_symbol.toUpperCase() !== 'USDT').map((t, i) => {
                   const signal = computeSignalStrength(t, maxAgents, maxTrades);
                   const change24h = t.price_change_24h ?? 0;
                   const priceUsd = t.price_usd != null && t.price_usd < 1_000_000 ? t.price_usd : 0;

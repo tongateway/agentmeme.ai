@@ -330,8 +330,8 @@ function OrderBookTable({
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Bids panel */}
-        <Card className="overflow-hidden">
-          <CardContent className="p-0">
+        <Card className="overflow-hidden flex flex-col">
+          <CardContent className="p-0 flex-1">
             <div className="flex items-center justify-between px-3 py-2 border-b border-border">
               <div className="flex items-center gap-1.5">
                 <ArrowUp className="h-3.5 w-3.5 text-green-500" />
@@ -379,22 +379,22 @@ function OrderBookTable({
                 })}
               </div>
             )}
-            {/* Totals row */}
-            {normalized.bids.length > 0 && (
-              <div className="flex items-center gap-2 px-3 py-1.5 text-xs font-mono border-t border-border bg-muted/30">
-                <span className="w-24 sm:w-32 text-right font-bold text-muted-foreground">Total</span>
-                <span className="flex-1 text-right font-bold">{fmtAmount(totalBidAmount)} {bidAmtLabel}</span>
-                <span className="w-24 text-right hidden sm:block" />
-                <span className="w-16 text-right hidden sm:block font-bold text-muted-foreground">{totalBidUsd != null ? fmtUsd(totalBidUsd) : ''}</span>
-                <span className="w-8 text-right font-bold text-muted-foreground">{totalBidOrders}</span>
-              </div>
-            )}
           </CardContent>
+          {/* Sticky total at bottom */}
+          {normalized.bids.length > 0 && (
+            <div className="sticky bottom-0 flex items-center gap-2 px-3 py-1.5 text-xs font-mono border-t border-border bg-card">
+              <span className="w-24 sm:w-32 text-right font-bold text-muted-foreground">Total</span>
+              <span className="flex-1 text-right font-bold">{fmtAmount(totalBidAmount)} {bidAmtLabel}</span>
+              <span className="w-24 text-right hidden sm:block" />
+              <span className="w-16 text-right hidden sm:block font-bold text-muted-foreground">{totalBidUsd != null ? fmtUsd(totalBidUsd) : ''}</span>
+              <span className="w-8 text-right font-bold text-muted-foreground">{totalBidOrders}</span>
+            </div>
+          )}
         </Card>
 
         {/* Asks panel */}
-        <Card className="overflow-hidden">
-          <CardContent className="p-0">
+        <Card className="overflow-hidden flex flex-col">
+          <CardContent className="p-0 flex-1">
             <div className="flex items-center justify-between px-3 py-2 border-b border-border">
               <div className="flex items-center gap-1.5">
                 <ArrowDown className="h-3.5 w-3.5 text-red-500" />
@@ -442,17 +442,17 @@ function OrderBookTable({
                 })}
               </div>
             )}
-            {/* Totals row */}
-            {asksReversed.length > 0 && (
-              <div className="flex items-center gap-2 px-3 py-1.5 text-xs font-mono border-t border-border bg-muted/30">
-                <span className="w-24 sm:w-32 text-right font-bold text-muted-foreground">Total</span>
-                <span className="flex-1 text-right font-bold">{fmtAmount(totalAskAmount)} {askAmtLabel}</span>
-                <span className="w-24 text-right hidden sm:block" />
-                <span className="w-16 text-right hidden sm:block font-bold text-muted-foreground">{totalAskUsd != null ? fmtUsd(totalAskUsd) : ''}</span>
-                <span className="w-8 text-right font-bold text-muted-foreground">{totalAskOrders}</span>
-              </div>
-            )}
           </CardContent>
+          {/* Sticky total at bottom */}
+          {asksReversed.length > 0 && (
+            <div className="sticky bottom-0 flex items-center gap-2 px-3 py-1.5 text-xs font-mono border-t border-border bg-card">
+              <span className="w-24 sm:w-32 text-right font-bold text-muted-foreground">Total</span>
+              <span className="flex-1 text-right font-bold">{fmtAmount(totalAskAmount)} {askAmtLabel}</span>
+              <span className="w-24 text-right hidden sm:block" />
+              <span className="w-16 text-right hidden sm:block font-bold text-muted-foreground">{totalAskUsd != null ? fmtUsd(totalAskUsd) : ''}</span>
+              <span className="w-8 text-right font-bold text-muted-foreground">{totalAskOrders}</span>
+            </div>
+          )}
         </Card>
       </div>
 
