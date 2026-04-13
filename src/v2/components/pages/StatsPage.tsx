@@ -212,6 +212,8 @@ type BookStats = {
   bestBid: number | null;
   spread: number | null;
   spreadPct: number | null;
+  crossedBidCount: number;
+  crossedAskCount: number;
 };
 
 type RealPairStats24h = {
@@ -246,6 +248,13 @@ function computeStats(normalized: NormalizedBook): BookStats {
     spread != null && bestBid != null && bestBid > 0
       ? (spread / (((bestAsk as number) + bestBid) / 2)) * 100
       : null;
+  // Count orders in the crossed zone (bids above best ask, asks below best bid)
+  const crossedBidCount = bestAsk != null
+    ? normalized.bids.filter((b) => b.price >= bestAsk).reduce((s, b) => s + b.orderCount, 0)
+    : 0;
+  const crossedAskCount = bestBid != null
+    ? normalized.asks.filter((a) => a.price <= bestBid).reduce((s, a) => s + a.orderCount, 0)
+    : 0;
   return {
     totalAskOrders,
     totalBidOrders,
@@ -255,6 +264,8 @@ function computeStats(normalized: NormalizedBook): BookStats {
     bestBid,
     spread,
     spreadPct,
+    crossedBidCount,
+    crossedAskCount,
   };
 }
 
@@ -319,7 +330,9 @@ function OrderBookTable({
             <span className="flex items-center gap-1.5">
               <span className="text-[10px] text-muted-foreground">Spread</span>
               <span className={`font-bold ${stats.spreadPct < 0 ? 'text-yellow-500' : ''}`}>
-                {stats.spreadPct < 0 ? 'Crossed' : `${stats.spreadPct.toFixed(2)}%`}
+                {stats.spreadPct < 0
+                  ? `Crossed (${stats.crossedBidCount + stats.crossedAskCount} matchable)`
+                  : `${stats.spreadPct.toFixed(2)}%`}
               </span>
             </span>
             <span className="h-3 w-px bg-border" />
