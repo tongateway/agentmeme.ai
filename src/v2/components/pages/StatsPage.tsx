@@ -563,7 +563,6 @@ function PairActivityRow({ stats, fromSymbol, toSymbol, volumeUsdByWindow, tradi
             <TableHead className="text-right text-[10px] uppercase tracking-wider">Open</TableHead>
             <TableHead className="text-right text-[10px] uppercase tracking-wider">Filled</TableHead>
             <TableHead className="text-right text-[10px] uppercase tracking-wider">Volume</TableHead>
-            <TableHead className="text-right text-[10px] uppercase tracking-wider hidden sm:table-cell">Fill Rate</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -580,19 +579,6 @@ function PairActivityRow({ stats, fromSymbol, toSymbol, volumeUsdByWindow, tradi
               </TableCell>
               <TableCell className="text-right font-mono text-sm tabular-nums font-semibold">
                 {row.volumeText}
-              </TableCell>
-              <TableCell className="text-right hidden sm:table-cell">
-                <div className="flex items-center justify-end gap-2">
-                  <div className="w-16 h-1 rounded-full bg-muted overflow-hidden">
-                    <div
-                      className="h-full rounded-full bg-green-500"
-                      style={{ width: `${row.completionPct}%` }}
-                    />
-                  </div>
-                  <span className="font-mono text-xs tabular-nums text-muted-foreground w-9 text-right">
-                    {row.completionPct.toFixed(0)}%
-                  </span>
-                </div>
               </TableCell>
             </TableRow>
           ))}
