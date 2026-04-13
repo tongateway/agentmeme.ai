@@ -185,6 +185,19 @@ function normalizeOpen4DevBook(book: DexOrderBookResponse): NormalizedBook {
   asks.sort((a, b) => a.price - b.price);
   bids.sort((a, b) => b.price - a.price);
 
+  // Filter out obviously broken prices: if we have enough data points, remove
+  // outliers that are >100x away from the median price (likely normalization errors).
+  const allPrices = [...asks.map((a) => a.price), ...bids.map((b) => b.price)].filter((p) => p > 0);
+  if (allPrices.length >= 3) {
+    allPrices.sort((a, b) => a - b);
+    const median = allPrices[Math.floor(allPrices.length / 2)];
+    const lo = median / 100;
+    const hi = median * 100;
+    const validAsks = asks.filter((a) => a.price >= lo && a.price <= hi);
+    const validBids = bids.filter((b) => b.price >= lo && b.price <= hi);
+    return { asks: validAsks, bids: validBids, inverted: shouldInvert };
+  }
+
   return { asks, bids, inverted: shouldInvert };
 }
 
