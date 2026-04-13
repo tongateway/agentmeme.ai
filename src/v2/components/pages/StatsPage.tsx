@@ -755,49 +755,42 @@ export function StatsPage() {
   const amountPriceUsd = rawAmountPrice != null && rawAmountPrice <= 1000 ? rawAmountPrice : null;
   const fromUpper = effectivePair.fromSymbol;
   const toUpper = effectivePair.toSymbol;
+  // Trading stats volumes are already converted to human units of the quote token (e.g. USDT).
+  // Since the quote is a stablecoin (~$1), volume ≈ USD directly.
+  // We use a single direction (bid = ask = same periods), so no doubling needed.
   const activityVolumeUsd = useMemo<ActivityVolumeUsdByWindow | null>(() => {
     if (!tradingPeriods) return null;
 
-    const getPeriod = (periods: DexTradingStatsPeriod[], period: string) =>
-      periods.find((p) => p.period === period) ?? null;
-    const getMaxPeriod = (periods: DexTradingStatsPeriod[]) =>
-      periods.find((p) => p.period === '30d') ?? periods[periods.length - 1] ?? null;
+    const periods = tradingPeriods.bid; // bid and ask are the same (single direction fetch)
+    const getPeriod = (period: string) => periods.find((p) => p.period === period) ?? null;
+    const getMaxPeriod = () => periods.find((p) => p.period === '30d') ?? periods[periods.length - 1] ?? null;
 
-    const toUsd = (volume: number | null, price: number | null): number | null => {
-      if (volume == null || price == null || price > 1000) return null; // skip broken prices
-      const usd = volume * price;
-      return usd < 1_000_000_000 ? usd : null; // cap at $1B
+    // Quote price (USDT ≈ $1, but use actual price if available)
+    const qPrice = amountPriceUsd ?? fromPriceUsd ?? 1;
+
+    const vol = (p: DexTradingStatsPeriod | null): number | null => {
+      if (!p || p.total_volume <= 0) return null;
+      // total_volume is already in human quote-token units (divided by to_decimals in API layer)
+      const usd = p.total_volume * qPrice;
+      return usd < 1_000_000_000 ? usd : null;
     };
-    const sumUsd = (a: number | null, b: number | null): number | null => {
-      if (a == null && b == null) return null;
-      return (a ?? 0) + (b ?? 0);
-    };
 
-    const bid1h = getPeriod(tradingPeriods.bid, '1h');
-    const ask1h = getPeriod(tradingPeriods.ask, '1h');
-    const bid24h = getPeriod(tradingPeriods.bid, '24h');
-    const ask24h = getPeriod(tradingPeriods.ask, '24h');
-    const bidMax = getMaxPeriod(tradingPeriods.bid);
-    const askMax = getMaxPeriod(tradingPeriods.ask);
+    const vol1h = vol(getPeriod('1h'));
+    const vol24h = vol(getPeriod('24h'));
+    const volMax = vol(getMaxPeriod());
 
-    const vol1h = sumUsd(toUsd(bid1h?.total_volume ?? null, fromPriceUsd), toUsd(ask1h?.total_volume ?? null, amountPriceUsd));
-    const vol24h = sumUsd(toUsd(bid24h?.total_volume ?? null, fromPriceUsd), toUsd(ask24h?.total_volume ?? null, amountPriceUsd));
-    const volMax = sumUsd(toUsd(bidMax?.total_volume ?? null, fromPriceUsd), toUsd(askMax?.total_volume ?? null, amountPriceUsd));
-
-    // When a period has no volume data from trading stats (API only returns 7d/30d
-    // granularity for some pairs), estimate proportionally using scanner order counts.
-    const scanner1h = pairStats?.windows?.['1h']?.completed_orders ?? 0;
-    const scanner24h = pairStats?.windows?.['24h']?.completed_orders ?? 0;
+    // Estimate smaller windows from max if they're missing
     const scannerMax = pairStats?.windows?.all_time?.completed_orders ?? 0;
-
-    const estimateFromMax = (windowCompleted: number, maxVol: number | null): number | null => {
+    const estimate = (windowCompleted: number, maxVol: number | null): number | null => {
       if (maxVol == null || maxVol <= 0 || scannerMax <= 0 || windowCompleted <= 0) return null;
       return maxVol * (windowCompleted / scannerMax);
     };
+    const scanner1h = pairStats?.windows?.['1h']?.completed_orders ?? 0;
+    const scanner24h = pairStats?.windows?.['24h']?.completed_orders ?? 0;
 
     return {
-      '1h': (vol1h != null && vol1h > 0) ? vol1h : estimateFromMax(scanner1h, volMax),
-      '24h': (vol24h != null && vol24h > 0) ? vol24h : estimateFromMax(scanner24h, volMax),
+      '1h': vol1h ?? estimate(scanner1h, volMax),
+      '24h': vol24h ?? estimate(scanner24h, volMax),
       max: volMax,
     };
   }, [tradingPeriods, fromPriceUsd, amountPriceUsd, pairStats]);

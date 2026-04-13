@@ -1439,7 +1439,8 @@ export async function getDexTradingStats(fromSymbol: string, toSymbol: string): 
   const res = await fetch(`${OPEN4DEV_BASE}/orders/trading-stats?${params}`);
   const data = (await res.json()) as Record<string, unknown>;
 
-  const volFactor = 10 ** Number(data.from_decimals ?? 9); // volumes are in from_symbol nano
+  // Volumes in the API response are denominated in the quote (to) token's nano units
+  const volFactor = 10 ** Number(data.to_decimals ?? 6);
   const periodsRaw = Array.isArray(data.periods) ? data.periods as Record<string, unknown>[] : [];
   const periods = periodsRaw.map((p) => {
     const byStatusRaw = p.by_status;
