@@ -351,56 +351,6 @@ function OrderBookTable({
               <span className="font-bold text-green-500">{filled30d}</span>
             </span>
           </CardContent>
-
-          {/* Crossed orders detail */}
-          {stats.spreadPct < 0 && stats.bestAsk != null && stats.bestBid != null && (() => {
-            const crossedBids = normalized.bids.filter((b) => b.price >= stats.bestAsk!);
-            const crossedAsks = normalized.asks.filter((a) => a.price <= stats.bestBid!);
-            if (crossedBids.length === 0 && crossedAsks.length === 0) return null;
-            return (
-              <div className="border-t border-yellow-500/30 bg-yellow-500/5 px-3 py-2 space-y-2">
-                <div className="text-[10px] uppercase tracking-wider font-bold text-yellow-600 dark:text-yellow-400">
-                  Matchable orders (bid ≥ best ask or ask ≤ best bid)
-                </div>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                  {/* Crossed bids */}
-                  {crossedBids.length > 0 && (
-                    <div>
-                      <div className="text-[10px] text-muted-foreground mb-1">
-                        Bids above best ask ({fmtRate(stats.bestAsk!)})
-                      </div>
-                      <div className="space-y-0.5">
-                        {crossedBids.map((b, i) => (
-                          <div key={`cb-${i}`} className="flex items-center gap-2 text-xs font-mono bg-green-500/10 rounded px-2 py-0.5">
-                            <span className="text-green-500 font-bold w-28 text-right">{fmtRate(b.price)}</span>
-                            <span className="flex-1">{fmtAmount(b.amount)} {toUpper}</span>
-                            <span className="text-muted-foreground">{b.orderCount} order{b.orderCount > 1 ? 's' : ''}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  {/* Crossed asks */}
-                  {crossedAsks.length > 0 && (
-                    <div>
-                      <div className="text-[10px] text-muted-foreground mb-1">
-                        Asks below best bid ({fmtRate(stats.bestBid!)})
-                      </div>
-                      <div className="space-y-0.5">
-                        {crossedAsks.map((a, i) => (
-                          <div key={`ca-${i}`} className="flex items-center gap-2 text-xs font-mono bg-red-500/10 rounded px-2 py-0.5">
-                            <span className="text-red-500 font-bold w-28 text-right">{fmtRate(a.price)}</span>
-                            <span className="flex-1">{fmtAmount(a.amount)} {fromUpper}</span>
-                            <span className="text-muted-foreground">{a.orderCount} order{a.orderCount > 1 ? 's' : ''}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            );
-          })()}
         </Card>
       )}
 
