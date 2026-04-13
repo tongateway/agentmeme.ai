@@ -262,6 +262,8 @@ type OrderBookTableProps = {
   refreshTick: number;
   sourceLabel?: string;
   realStats24h?: RealPairStats24h | null;
+  volMax30d?: string;
+  filled30d?: string;
 };
 
 function OrderBookTable({
@@ -274,6 +276,8 @@ function OrderBookTable({
   refreshTick,
   sourceLabel,
   realStats24h: _realStats24h,
+  volMax30d = '—',
+  filled30d = '—',
 }: OrderBookTableProps) {
   const maxBidAmount = useMemo(() => Math.max(...normalized.bids.map((b) => b.amount), 0), [normalized]);
   const totalBidAmount = useMemo(() => normalized.bids.reduce((s, b) => s + b.amount, 0), [normalized]);
@@ -295,12 +299,12 @@ function OrderBookTable({
 
   return (
     <div className="space-y-3">
-      {/* Spread summary bar — compact single-row at top of orderbook */}
+      {/* Top stats bar — Best Bid / Spread / Best Ask + Volume + Filled */}
       {stats.bestBid != null && stats.bestAsk != null && stats.spreadPct != null && (
         <Card className="py-0">
-          <CardContent className="px-3 py-1.5 flex flex-row items-center justify-center gap-4 text-xs font-mono">
+          <CardContent className="px-3 py-1.5 flex flex-row items-center justify-center gap-3 text-xs font-mono flex-wrap">
             <span className="flex items-center gap-1.5">
-              <span className="text-[10px] text-muted-foreground">Best Bid</span>
+              <span className="text-[10px] text-muted-foreground">Bid</span>
               <span className="font-bold text-green-500">{fmtRate(stats.bestBid)}</span>
             </span>
             <span className="h-3 w-px bg-border" />
@@ -312,8 +316,18 @@ function OrderBookTable({
             </span>
             <span className="h-3 w-px bg-border" />
             <span className="flex items-center gap-1.5">
-              <span className="text-[10px] text-muted-foreground">Best Ask</span>
+              <span className="text-[10px] text-muted-foreground">Ask</span>
               <span className="font-bold text-red-500">{fmtRate(stats.bestAsk)}</span>
+            </span>
+            <span className="h-3 w-px bg-border" />
+            <span className="flex items-center gap-1.5">
+              <span className="text-[10px] text-muted-foreground">Vol 30d</span>
+              <span className="font-bold">{volMax30d}</span>
+            </span>
+            <span className="h-3 w-px bg-border" />
+            <span className="flex items-center gap-1.5">
+              <span className="text-[10px] text-muted-foreground">Filled 30d</span>
+              <span className="font-bold text-green-500">{filled30d}</span>
             </span>
           </CardContent>
         </Card>
@@ -464,129 +478,7 @@ function OrderBookTable({
   );
 }
 
-/* ---------- activity row ---------- */
-
-type ActivityWindowData = {
-  label: string;
-  openOrders: number;
-  filledOrders: number;
-  volume: number;
-  volumeText: string;
-  completionPct: number;
-};
-
-function computeWindowData(
-  label: string,
-  data: ScannerStatsWindow,
-  volumeUsdOverride: number | null | undefined,
-  tradingPeriod: DexTradingStatsPeriod | null | undefined,
-): ActivityWindowData {
-  // Scanner uses open_orders/completed_orders. Trading-stats uses by_status with keys: open, filled, closed.
-  const tsOpen = tradingPeriod?.by_status?.['open']?.count ?? 0;
-  const tsFilled = (tradingPeriod?.by_status?.['filled']?.count ?? 0)
-    + (tradingPeriod?.by_status?.['completed']?.count ?? 0)
-    + (tradingPeriod?.by_status?.['closed']?.count ?? 0);
-  const openOrders = data.open_orders > 0 ? data.open_orders : (tsOpen > 0 ? tsOpen : data.open_orders);
-  const filledOrders = data.completed_orders > 0 ? data.completed_orders : (tsFilled > 0 ? tsFilled : data.completed_orders);
-  const total = openOrders + filledOrders;
-  const completionPct = total > 0 ? (filledOrders / total) * 100 : 0;
-
-  // Prefer trading-stats volume (already converted to USD), fall back to scanner's volume_usd
-  const rawVolume = (volumeUsdOverride != null && volumeUsdOverride > 0)
-    ? volumeUsdOverride
-    : Number(String(data.volume_usd ?? '0').replaceAll(',', '').trim());
-
-  const volume = Number.isFinite(rawVolume) && rawVolume > 0 && rawVolume < 1_000_000_000 ? rawVolume : 0;
-  const volumeText = volume > 0 ? fmtUsd(volume) : '$0.00';
-  return { label, openOrders, filledOrders, volume, volumeText, completionPct };
-}
-
-function PairActivityRow({ stats, fromSymbol, toSymbol, volumeUsdByWindow, tradingPeriods }: {
-  stats: ScannerStatsResponse;
-  fromSymbol: string;
-  toSymbol: string;
-  volumeUsdByWindow?: ActivityVolumeUsdByWindow | null;
-  tradingPeriods?: TradingPeriodsState | null;
-}) {
-  // Merge bid+ask trading periods into combined order counts per time window
-  const mergePeriod = (period: string): DexTradingStatsPeriod | null => {
-    if (!tradingPeriods) return null;
-    const bid = tradingPeriods.bid.find((p) => p.period === period);
-    const ask = tradingPeriods.ask.find((p) => p.period === period);
-    if (!bid && !ask) return null;
-    const mergeStatus = (key: string) => ({
-      count: (bid?.by_status?.[key]?.count ?? 0) + (ask?.by_status?.[key]?.count ?? 0),
-      volume: (bid?.by_status?.[key]?.volume ?? 0) + (ask?.by_status?.[key]?.volume ?? 0),
-    });
-    const allKeys = new Set([
-      ...Object.keys(bid?.by_status ?? {}),
-      ...Object.keys(ask?.by_status ?? {}),
-    ]);
-    const by_status: Record<string, { count: number; volume: number }> = {};
-    for (const k of allKeys) by_status[k] = mergeStatus(k);
-    return {
-      period,
-      total_orders: (bid?.total_orders ?? 0) + (ask?.total_orders ?? 0),
-      total_volume: (bid?.total_volume ?? 0) + (ask?.total_volume ?? 0),
-      by_status,
-    };
-  };
-
-  const tp1h = mergePeriod('1h');
-  const tp24h = mergePeriod('24h');
-  const tp30d = mergePeriod('30d') ?? mergePeriod('7d');
-
-  const rows: ActivityWindowData[] = [
-    computeWindowData('1H', stats.windows['1h'], volumeUsdByWindow?.['1h'] ?? null, tp1h),
-    computeWindowData('24H', stats.windows['24h'], volumeUsdByWindow?.['24h'] ?? null, tp24h),
-    computeWindowData('30D', stats.windows.all_time, volumeUsdByWindow?.max ?? null, tp30d),
-  ];
-
-  return (
-    <Card className="py-0 overflow-hidden">
-      <div className="flex items-center justify-between px-4 py-2.5 border-b border-border/40">
-        <div className="flex items-center gap-2">
-          <div className="w-1 h-3.5 rounded-full bg-blue-400" />
-          <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-            {fromSymbol}/{toSymbol} Order Stats
-          </span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <div className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
-          <span className="text-[10px] text-muted-foreground">Live</span>
-        </div>
-      </div>
-      <Table>
-        <TableHeader>
-          <TableRow className="border-b-border/40 hover:bg-transparent">
-            <TableHead className="w-16 text-[10px] uppercase tracking-wider">Period</TableHead>
-            <TableHead className="text-right text-[10px] uppercase tracking-wider">Open</TableHead>
-            <TableHead className="text-right text-[10px] uppercase tracking-wider">Filled</TableHead>
-            <TableHead className="text-right text-[10px] uppercase tracking-wider">Volume</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {rows.map((row) => (
-            <TableRow key={row.label} className="border-b-border/20 last:border-0 hover:bg-accent/20">
-              <TableCell>
-                <Badge variant="outline" className="text-[10px] font-bold px-2 py-0">{row.label}</Badge>
-              </TableCell>
-              <TableCell className="text-right font-mono text-sm tabular-nums font-semibold text-blue-400">
-                {row.openOrders.toLocaleString()}
-              </TableCell>
-              <TableCell className="text-right font-mono text-sm tabular-nums font-semibold text-green-500">
-                {row.filledOrders.toLocaleString()}
-              </TableCell>
-              <TableCell className="text-right font-mono text-sm tabular-nums font-semibold">
-                {row.volumeText}
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </Card>
-  );
-}
+/* PairActivityRow removed — stats moved into top bar */
 
 /* ---------- main component ---------- */
 
@@ -870,24 +762,16 @@ export function StatsPage() {
           refreshTick={refreshTick}
           sourceLabel="tongateway is data provider"
           realStats24h={realStats24h}
+          volMax30d={activityVolumeUsd?.max != null ? fmtUsd(activityVolumeUsd.max) : (pairStats ? fmtUsd(Number(String(pairStats.windows.all_time.volume_usd ?? '0').replaceAll(',', '').trim())) : '—')}
+          filled30d={(() => {
+            if (!tradingPeriods) return pairStats?.windows.all_time.completed_orders.toLocaleString() ?? '—';
+            const p30 = tradingPeriods.bid.find((p) => p.period === '30d') ?? tradingPeriods.bid[tradingPeriods.bid.length - 1];
+            if (!p30) return '—';
+            const f = (p30.by_status?.['filled']?.count ?? 0) + (p30.by_status?.['completed']?.count ?? 0) + (p30.by_status?.['closed']?.count ?? 0);
+            return f > 0 ? f.toLocaleString() : (pairStats?.windows.all_time.completed_orders.toLocaleString() ?? '0');
+          })()}
         />
       ) : null}
-
-      {pairStats ? (
-        <PairActivityRow
-          stats={pairStats}
-          fromSymbol={fromUpper}
-          toSymbol={toUpper}
-          volumeUsdByWindow={activityVolumeUsd}
-          tradingPeriods={tradingPeriods}
-        />
-      ) : (
-        <Card className="py-0">
-          <CardContent className="p-3">
-            <Skeleton className="h-32 w-full" />
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 }
