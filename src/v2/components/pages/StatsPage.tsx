@@ -11,15 +11,10 @@ import {
   type DexTradingStatsPeriod,
   type PublicApiConfig,
   type ScannerStatsResponse,
-  type ScannerStatsWindow,
 } from '@/lib/api';
 import { Card, CardContent } from '@/v2/components/ui/card';
-import { Badge } from '@/v2/components/ui/badge';
 import { Button } from '@/v2/components/ui/button';
 import { Skeleton } from '@/v2/components/ui/skeleton';
-import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from '@/v2/components/ui/table';
 
 const AUTO_REFRESH_MS = 10_000; // 10 seconds
 
