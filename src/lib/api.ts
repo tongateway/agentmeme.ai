@@ -1073,6 +1073,29 @@ export async function getDexOrders(
   }));
 }
 
+/** Fetch orders by the order's own raw_address (not owner). */
+export async function getDexOrderByAddress(rawAddress: string): Promise<DexOrder[]> {
+  const params = new URLSearchParams();
+  params.set('raw_address', rawAddress);
+  params.set('limit', '10');
+  const res = await fetch(`${OPEN4DEV_BASE}/orders?${params}`);
+  const data = await res.json();
+  const orders = (data as Record<string, unknown>).orders;
+  if (!Array.isArray(orders)) return [];
+  return orders.map((o: Record<string, unknown>) => ({
+    id: Number(o.id ?? 0),
+    raw_address: String(o.raw_address ?? ''),
+    created_at: String(o.created_at ?? ''),
+    status: String(o.status ?? ''),
+    amount: Number(o.amount ?? 0),
+    initial_amount: Number(o.initial_amount ?? 0),
+    price_rate: Number(o.price_rate ?? 0),
+    slippage: Number(o.slippage ?? 0),
+    from_coin_id: Number(o.from_coin_id ?? 0),
+    to_coin_id: Number(o.to_coin_id ?? 0),
+  }));
+}
+
 export type DexCoin = {
   id: number;
   name: string;

@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 import { Address } from '@ton/core';
 import { Search, Loader2 } from 'lucide-react';
-import { getDexOrders, getDexCoin, type DexOrder, type DexCoin } from '@/lib/api';
+import { getDexOrders, getDexOrderByAddress, getDexCoin, type DexOrder, type DexCoin } from '@/lib/api';
 import { Button } from '@/v2/components/ui/button';
 import { Input } from '@/v2/components/ui/input';
 import { Card, CardContent } from '@/v2/components/ui/card';
@@ -72,8 +72,15 @@ export function DebugPage() {
       }
       setRawAddress(raw);
 
-      // Fetch orders
-      const allOrders = await getDexOrders(raw, { limit: 350 });
+      // Try as owner/wallet address first, then as order contract address
+      let allOrders = await getDexOrders(raw, { limit: 350 });
+      let searchMode = 'wallet';
+      if (allOrders.length === 0) {
+        // Try as order's own address
+        allOrders = await getDexOrderByAddress(raw);
+        searchMode = 'order';
+      }
+      void searchMode; // used for display below
 
       // Collect unique coin IDs and resolve them
       const coinIds = new Set<number>();
@@ -140,7 +147,12 @@ export function DebugPage() {
       )}
 
       {!loading && orders.length > 0 && (
-        <div className="text-sm text-muted-foreground">{orders.length} orders found</div>
+        <div className="text-sm text-muted-foreground">
+          {orders.length} order{orders.length !== 1 ? 's' : ''} found
+          {orders.length === 1 && orders[0].raw_address.toLowerCase() === rawAddress.replace(/^0:/, '').toLowerCase() && (
+            <Badge variant="outline" className="ml-2 text-[10px]">matched by order address</Badge>
+          )}
+        </div>
       )}
 
       {orders.map((o) => {
