@@ -449,47 +449,33 @@ type ActivityWindowData = {
   completionPct: number;
 };
 
-/** Quote vault token decimals for converting scanner volume_usd from nano. */
-const QUOTE_DECIMALS: Record<string, number> = { USDT: 6, USDC: 6, TON: 9 };
-
 function computeWindowData(
   label: string,
   data: ScannerStatsWindow,
   volumeUsdOverride: number | null | undefined,
   tradingPeriod: DexTradingStatsPeriod | null | undefined,
-  quoteSymbol?: string,
-  quotePriceUsd?: number | null,
 ): ActivityWindowData {
   const openOrders = (data.open_orders > 0 ? data.open_orders : tradingPeriod?.by_status?.['open']?.count) ?? data.open_orders;
   const filledOrders = (data.completed_orders > 0 ? data.completed_orders : tradingPeriod?.by_status?.['completed']?.count) ?? data.completed_orders;
   const total = openOrders + filledOrders;
   const completionPct = total > 0 ? (filledOrders / total) * 100 : 0;
 
-  let rawVolume: number;
-  if (volumeUsdOverride != null && volumeUsdOverride > 0) {
-    rawVolume = volumeUsdOverride;
-  } else {
-    // Scanner volume_usd is in quote vault nano units — convert to human then to USD
-    const rawNano = Number(String(data.volume_usd ?? '0').replaceAll(',', '').trim());
-    const decimals = QUOTE_DECIMALS[(quoteSymbol ?? '').toUpperCase()] ?? 9;
-    const humanAmount = rawNano / (10 ** decimals);
-    const pricePerUnit = quotePriceUsd ?? 1; // default to $1 for USDT
-    rawVolume = humanAmount * pricePerUnit;
-  }
+  // Prefer trading-stats volume (already converted to USD), fall back to scanner's volume_usd
+  const rawVolume = (volumeUsdOverride != null && volumeUsdOverride > 0)
+    ? volumeUsdOverride
+    : Number(String(data.volume_usd ?? '0').replaceAll(',', '').trim());
 
   const volume = Number.isFinite(rawVolume) && rawVolume > 0 && rawVolume < 1_000_000_000 ? rawVolume : 0;
   const volumeText = volume > 0 ? fmtUsd(volume) : '$0.00';
   return { label, openOrders, filledOrders, volume, volumeText, completionPct };
 }
 
-function PairActivityRow({ stats, fromSymbol, toSymbol, volumeUsdByWindow, tradingPeriods, quoteSymbol, quotePriceUsd }: {
+function PairActivityRow({ stats, fromSymbol, toSymbol, volumeUsdByWindow, tradingPeriods }: {
   stats: ScannerStatsResponse;
   fromSymbol: string;
   toSymbol: string;
   volumeUsdByWindow?: ActivityVolumeUsdByWindow | null;
   tradingPeriods?: TradingPeriodsState | null;
-  quoteSymbol?: string;
-  quotePriceUsd?: number | null;
 }) {
   // Merge bid+ask trading periods into combined order counts per time window
   const mergePeriod = (period: string): DexTradingStatsPeriod | null => {
@@ -520,9 +506,9 @@ function PairActivityRow({ stats, fromSymbol, toSymbol, volumeUsdByWindow, tradi
   const tp30d = mergePeriod('30d') ?? mergePeriod('7d');
 
   const rows: ActivityWindowData[] = [
-    computeWindowData('1H', stats.windows['1h'], volumeUsdByWindow?.['1h'] ?? null, tp1h, quoteSymbol, quotePriceUsd),
-    computeWindowData('24H', stats.windows['24h'], volumeUsdByWindow?.['24h'] ?? null, tp24h, quoteSymbol, quotePriceUsd),
-    computeWindowData('30D', stats.windows.all_time, volumeUsdByWindow?.max ?? null, tp30d, quoteSymbol, quotePriceUsd),
+    computeWindowData('1H', stats.windows['1h'], volumeUsdByWindow?.['1h'] ?? null, tp1h),
+    computeWindowData('24H', stats.windows['24h'], volumeUsdByWindow?.['24h'] ?? null, tp24h),
+    computeWindowData('30D', stats.windows.all_time, volumeUsdByWindow?.max ?? null, tp30d),
   ];
 
   return (
@@ -755,9 +741,10 @@ export function StatsPage() {
   const amountPriceUsd = rawAmountPrice != null && rawAmountPrice <= 1000 ? rawAmountPrice : null;
   const fromUpper = effectivePair.fromSymbol;
   const toUpper = effectivePair.toSymbol;
-  // Trading stats volumes are already converted to human units of the quote token (e.g. USDT).
-  // Since the quote is a stablecoin (~$1), volume ≈ USD directly.
-  // We use a single direction (bid = ask = same periods), so no doubling needed.
+  // Trading stats: volumes are in from_token human units (divided by from_decimals in API).
+  // Multiply by from_token USD price to get volume in USD.
+  // For USDT/BUILD: from=USDT, volume in USDT human → × $1 = USD directly.
+  // For AGNT/USDT: from=AGNT, volume in AGNT human → × AGNT_price = USD.
   const activityVolumeUsd = useMemo<ActivityVolumeUsdByWindow | null>(() => {
     if (!tradingPeriods) return null;
 
@@ -765,35 +752,21 @@ export function StatsPage() {
     const getPeriod = (period: string) => periods.find((p) => p.period === period) ?? null;
     const getMaxPeriod = () => periods.find((p) => p.period === '30d') ?? periods[periods.length - 1] ?? null;
 
-    // Quote price (USDT ≈ $1, but use actual price if available)
-    const qPrice = amountPriceUsd ?? fromPriceUsd ?? 1;
+    // fromPriceUsd = USD price of the from_symbol token
+    const fPrice = fromPriceUsd ?? 1;
 
     const vol = (p: DexTradingStatsPeriod | null): number | null => {
       if (!p || p.total_volume <= 0) return null;
-      // total_volume is already in human quote-token units (divided by to_decimals in API layer)
-      const usd = p.total_volume * qPrice;
-      return usd < 1_000_000_000 ? usd : null;
+      const usd = p.total_volume * fPrice;
+      return usd > 0 && usd < 1_000_000_000 ? usd : null;
     };
 
     const vol1h = vol(getPeriod('1h'));
     const vol24h = vol(getPeriod('24h'));
     const volMax = vol(getMaxPeriod());
 
-    // Estimate smaller windows from max if they're missing
-    const scannerMax = pairStats?.windows?.all_time?.completed_orders ?? 0;
-    const estimate = (windowCompleted: number, maxVol: number | null): number | null => {
-      if (maxVol == null || maxVol <= 0 || scannerMax <= 0 || windowCompleted <= 0) return null;
-      return maxVol * (windowCompleted / scannerMax);
-    };
-    const scanner1h = pairStats?.windows?.['1h']?.completed_orders ?? 0;
-    const scanner24h = pairStats?.windows?.['24h']?.completed_orders ?? 0;
-
-    return {
-      '1h': vol1h ?? estimate(scanner1h, volMax),
-      '24h': vol24h ?? estimate(scanner24h, volMax),
-      max: volMax,
-    };
-  }, [tradingPeriods, fromPriceUsd, amountPriceUsd, pairStats]);
+    return { '1h': vol1h, '24h': vol24h, max: volMax };
+  }, [tradingPeriods, fromPriceUsd]);
 
   const selectPair = useCallback(
     (idx: number) => {
@@ -890,8 +863,6 @@ export function StatsPage() {
           toSymbol={toUpper}
           volumeUsdByWindow={activityVolumeUsd}
           tradingPeriods={tradingPeriods}
-          quoteSymbol="USDT"
-          quotePriceUsd={priceOf('USDT')}
         />
       ) : (
         <Card className="py-0">
