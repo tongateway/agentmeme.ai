@@ -330,7 +330,7 @@ function OrderBookTable({
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Bids panel */}
-        <Card className="overflow-hidden flex flex-col">
+        <Card className="overflow-hidden flex flex-col py-0">
           <CardContent className="p-0 flex-1">
             <div className="flex items-center justify-between px-3 py-2 border-b border-border">
               <div className="flex items-center gap-1.5">
@@ -393,7 +393,7 @@ function OrderBookTable({
         </Card>
 
         {/* Asks panel */}
-        <Card className="overflow-hidden flex flex-col">
+        <Card className="overflow-hidden flex flex-col py-0">
           <CardContent className="p-0 flex-1">
             <div className="flex items-center justify-between px-3 py-2 border-b border-border">
               <div className="flex items-center gap-1.5">
