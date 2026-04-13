@@ -106,11 +106,16 @@ function explorerLink(addr: string): string {
 
 const TRADABLE_TOKENS = ['AGNT', 'TON', 'NOT', 'BUILD', 'USDT'];
 
-const SUPPORTED_PAIRS: [string, string][] = [['AGNT', 'USDT'], ['USDT', 'AGNT'], ['USDT', 'NOT'], ['USDT', 'BUILD']];
-const BASE_TOKENS = [...new Set(SUPPORTED_PAIRS.map(([b]) => b))];
+const SUPPORTED_PAIRS: [string, string][] = [['AGNT', 'USDT'], ['USDT', 'AGNT'], ['USDT', 'NOT'], ['USDT', 'BUILD'], ['NOT', 'USDT'], ['BUILD', 'USDT']];
+const ALL_PAIR_TOKENS = [...new Set(SUPPORTED_PAIRS.flatMap(([a, b]) => [a, b]))];
 
-function quotesForBase(base: string): string[] {
-  return SUPPORTED_PAIRS.filter(([b]) => b === base).map(([, q]) => q);
+function counterpartsFor(token: string): string[] {
+  const set = new Set<string>();
+  for (const [a, b] of SUPPORTED_PAIRS) {
+    if (a === token) set.add(b);
+    if (b === token) set.add(a);
+  }
+  return [...set];
 }
 
 const TOKEN_COLORS: Record<string, string> = {
@@ -970,14 +975,14 @@ export function DeployPage() {
                   </button>
                   {pickingSide === 'base' && (
                     <div className="absolute top-full left-0 mt-1 z-20 rounded-lg bg-popover border border-border shadow-lg py-1 min-w-[110px]">
-                      {BASE_TOKENS.map((token) => {
+                      {ALL_PAIR_TOKENS.map((token) => {
                         const isSel = token === (persisted.baseToken ?? 'AGNT');
                         return (
                           <button key={token} type="button"
                             className={`flex items-center gap-2 w-full px-3 py-1.5 text-xs hover:bg-muted ${isSel ? 'font-bold' : ''}`}
                             onClick={() => {
                               const cq = persisted.quoteToken;
-                              const nq = quotesForBase(token);
+                              const nq = counterpartsFor(token);
                               setPersisted((p) => ({ ...p, baseToken: token, quoteToken: cq && nq.includes(cq) ? cq : nq[0] }));
                               setPickingSide(null);
                             }}
@@ -1002,7 +1007,7 @@ export function DeployPage() {
                   </button>
                   {pickingSide === 'quote' && (
                     <div className="absolute top-full left-0 mt-1 z-20 rounded-lg bg-popover border border-border shadow-lg py-1 min-w-[110px]">
-                      {quotesForBase(persisted.baseToken ?? 'AGNT').map((token) => {
+                      {counterpartsFor(persisted.baseToken ?? 'AGNT').map((token) => {
                         const isSel = token === persisted.quoteToken;
                         return (
                           <button key={token} type="button"
@@ -1178,8 +1183,8 @@ export function DeployPage() {
             </div>
           )}
 
-          {/* Top-up (shown after deploy) */}
-          {persisted.contractAddress && (
+          {/* Top-up removed — users fund agents from the agent detail page */}
+          {false && persisted.contractAddress && (
             <>
               <Separator className="my-0 opacity-30" />
               <div>
@@ -1226,7 +1231,7 @@ export function DeployPage() {
 
                     {/* Jetton top-up */}
                     <TopupJettonForm
-                      agentAddress={persisted.contractAddress}
+                      agentAddress={persisted.contractAddress!}
                       baseToken={persisted.baseToken ?? 'AGNT'}
                       quoteToken={persisted.quoteToken ?? null}
                       raceCfg={authedCfg}
