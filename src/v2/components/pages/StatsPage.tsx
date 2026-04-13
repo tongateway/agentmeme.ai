@@ -276,6 +276,12 @@ function OrderBookTable({
   realStats24h: _realStats24h,
 }: OrderBookTableProps) {
   const maxBidAmount = useMemo(() => Math.max(...normalized.bids.map((b) => b.amount), 0), [normalized]);
+  const totalBidAmount = useMemo(() => normalized.bids.reduce((s, b) => s + b.amount, 0), [normalized]);
+  const totalBidOrders = useMemo(() => normalized.bids.reduce((s, b) => s + b.orderCount, 0), [normalized]);
+  const totalBidUsd = useMemo(() => amountPriceUsd != null ? normalized.bids.reduce((s, b) => s + b.amount * amountPriceUsd, 0) : null, [normalized, amountPriceUsd]);
+  const totalAskAmount = useMemo(() => normalized.asks.reduce((s, a) => s + a.amount, 0), [normalized]);
+  const totalAskOrders = useMemo(() => normalized.asks.reduce((s, a) => s + a.orderCount, 0), [normalized]);
+  const totalAskUsd = useMemo(() => fromPriceUsd != null ? normalized.asks.reduce((s, a) => s + a.amount * fromPriceUsd, 0) : null, [normalized, fromPriceUsd]);
   const maxAskAmount = useMemo(() => Math.max(...normalized.asks.map((a) => a.amount), 0), [normalized]);
 
   // Column labels depend on whether price was inverted
@@ -364,6 +370,16 @@ function OrderBookTable({
                 })}
               </div>
             )}
+            {/* Totals row */}
+            {normalized.bids.length > 0 && (
+              <div className="flex items-center gap-2 px-3 py-1.5 text-xs font-mono border-t border-border bg-muted/30">
+                <span className="w-24 sm:w-32 text-right font-bold text-muted-foreground">Total</span>
+                <span className="flex-1 text-right font-bold">{fmtAmount(totalBidAmount)} {bidAmtLabel}</span>
+                <span className="w-24 text-right hidden sm:block" />
+                <span className="w-16 text-right hidden sm:block font-bold text-muted-foreground">{totalBidUsd != null ? fmtUsd(totalBidUsd) : ''}</span>
+                <span className="w-8 text-right font-bold text-muted-foreground">{totalBidOrders}</span>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -417,6 +433,16 @@ function OrderBookTable({
                 })}
               </div>
             )}
+            {/* Totals row */}
+            {asksReversed.length > 0 && (
+              <div className="flex items-center gap-2 px-3 py-1.5 text-xs font-mono border-t border-border bg-muted/30">
+                <span className="w-24 sm:w-32 text-right font-bold text-muted-foreground">Total</span>
+                <span className="flex-1 text-right font-bold">{fmtAmount(totalAskAmount)} {askAmtLabel}</span>
+                <span className="w-24 text-right hidden sm:block" />
+                <span className="w-16 text-right hidden sm:block font-bold text-muted-foreground">{totalAskUsd != null ? fmtUsd(totalAskUsd) : ''}</span>
+                <span className="w-8 text-right font-bold text-muted-foreground">{totalAskOrders}</span>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -455,8 +481,13 @@ function computeWindowData(
   volumeUsdOverride: number | null | undefined,
   tradingPeriod: DexTradingStatsPeriod | null | undefined,
 ): ActivityWindowData {
-  const openOrders = (data.open_orders > 0 ? data.open_orders : tradingPeriod?.by_status?.['open']?.count) ?? data.open_orders;
-  const filledOrders = (data.completed_orders > 0 ? data.completed_orders : tradingPeriod?.by_status?.['completed']?.count) ?? data.completed_orders;
+  // Scanner uses open_orders/completed_orders. Trading-stats uses by_status with keys: open, filled, closed.
+  const tsOpen = tradingPeriod?.by_status?.['open']?.count ?? 0;
+  const tsFilled = (tradingPeriod?.by_status?.['filled']?.count ?? 0)
+    + (tradingPeriod?.by_status?.['completed']?.count ?? 0)
+    + (tradingPeriod?.by_status?.['closed']?.count ?? 0);
+  const openOrders = data.open_orders > 0 ? data.open_orders : (tsOpen > 0 ? tsOpen : data.open_orders);
+  const filledOrders = data.completed_orders > 0 ? data.completed_orders : (tsFilled > 0 ? tsFilled : data.completed_orders);
   const total = openOrders + filledOrders;
   const completionPct = total > 0 ? (filledOrders / total) * 100 : 0;
 
