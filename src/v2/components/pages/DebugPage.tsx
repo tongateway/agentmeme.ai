@@ -16,6 +16,11 @@ const TOKEN_DECIMALS: Record<string, number> = {
   NOT: 9,
 };
 
+// Coin ID 0 is often native TON in the open4dev API
+const KNOWN_COINS: Record<number, DexCoin> = {
+  0: { id: 0, name: 'Toncoin', symbol: 'TON' },
+};
+
 function nanoToHuman(nano: number, symbol: string): string {
   const decimals = TOKEN_DECIMALS[symbol.toUpperCase()] ?? 9;
   const human = nano / 10 ** decimals;
@@ -42,6 +47,15 @@ type ResolvedOrder = DexOrder & {
   fromCoin: DexCoin | null;
   toCoin: DexCoin | null;
 };
+
+function Row({ label, value, bold }: { label: string; value: string; bold?: boolean }) {
+  return (
+    <div className="flex justify-between">
+      <span className="text-muted-foreground">{label}</span>
+      <span className={`font-mono ${bold ? 'font-bold' : ''}`}>{value}</span>
+    </div>
+  );
+}
 
 export function DebugPage() {
   const [addressInput, setAddressInput] = useState('');
@@ -92,6 +106,11 @@ export function DebugPage() {
       const coinMap = new Map<number, DexCoin | null>();
       await Promise.all(
         [...coinIds].map(async (id) => {
+          // Use known coins first (e.g., id=0 is TON)
+          if (KNOWN_COINS[id]) {
+            coinMap.set(id, KNOWN_COINS[id]);
+            return;
+          }
           const coin = await getDexCoin(id);
           coinMap.set(id, coin);
         }),
@@ -161,98 +180,75 @@ export function DebugPage() {
         const fromDecimals = TOKEN_DECIMALS[fromSymbol.toUpperCase()] ?? 9;
         const toDecimals = TOKEN_DECIMALS[toSymbol.toUpperCase()] ?? 9;
 
-        // Price rate: the raw rate from the API
-        // Display price depends on decimal adjustment
-        const decAdj = 10 ** (toDecimals - fromDecimals);
-        const displayPrice = o.price_rate > 0 ? o.price_rate * decAdj : 0;
-        const invertedPrice = displayPrice > 0 ? 1 / displayPrice : 0;
+        // Amounts in human-readable
+        const absAmount = Math.abs(o.amount);
+        const absInitial = Math.abs(o.initial_amount);
+        const humanAmount = nanoToHuman(absAmount, fromSymbol);
+        const humanInitialAmount = nanoToHuman(absInitial, fromSymbol);
+        const filled = absInitial > 0 ? absInitial - absAmount : 0;
+        const humanFilled = nanoToHuman(filled, fromSymbol);
 
-        // Amounts in human
-        const humanAmount = nanoToHuman(o.amount, fromSymbol);
-        const humanInitialAmount = nanoToHuman(o.initial_amount, fromSymbol);
+        // Price: raw price_rate is nano-to-nano. Convert to human price.
+        // human_price = price_rate * 10^(from_decimals - to_decimals)
+        const humanPriceRate = o.price_rate > 0 ? o.price_rate * (10 ** (fromDecimals - toDecimals)) : 0;
+        const invertedHumanPrice = humanPriceRate > 0 ? 1 / humanPriceRate : 0;
 
-        // Estimate "to" amount
-        const fromHuman = o.initial_amount / 10 ** fromDecimals;
-        const estimatedToHuman = displayPrice > 0 ? fromHuman / displayPrice : 0;
+        // Estimate "to" amount using human price
+        const fromHuman = absInitial / 10 ** fromDecimals;
+        const estimatedToHuman = humanPriceRate > 0 ? fromHuman * humanPriceRate : 0;
+
+        // Slippage: raw value is in basis points (divide by 100 for %)
+        const slippagePct = o.slippage > 1000 ? o.slippage / 1_000_000 : o.slippage;
 
         return (
-          <Card key={o.id} className="py-0 overflow-hidden">
+          <Card key={`${o.id}-${o.raw_address}`} className="py-0 overflow-hidden">
             <CardContent className="p-3 space-y-2">
-              {/* Header: ID + status + time */}
-              <div className="flex items-center justify-between gap-2">
+              {/* Header */}
+              <div className="flex items-center justify-between gap-2 flex-wrap">
                 <div className="flex items-center gap-2">
                   <span className="font-mono text-sm font-bold">#{o.id}</span>
                   <Badge className={statusColor(o.status)}>{o.status}</Badge>
-                  <span className="font-mono text-xs text-muted-foreground">
-                    {fromSymbol} → {toSymbol}
-                  </span>
+                  <Badge variant="outline" className="font-mono text-[10px]">{fromSymbol} → {toSymbol}</Badge>
                 </div>
                 <span className="text-xs text-muted-foreground">
                   {new Date(o.created_at).toLocaleString()}
                 </span>
               </div>
 
-              {/* Data grid */}
+              {/* Key values — large */}
+              <div className="grid grid-cols-3 gap-3 bg-muted/30 rounded-md p-2">
+                <div>
+                  <div className="text-[10px] text-muted-foreground uppercase">Initial</div>
+                  <div className="font-mono text-sm font-bold">{humanInitialAmount} {fromSymbol}</div>
+                  <div className="font-mono text-[10px] text-muted-foreground">{fmtNano(absInitial)} nano</div>
+                </div>
+                <div>
+                  <div className="text-[10px] text-muted-foreground uppercase">Remaining</div>
+                  <div className="font-mono text-sm font-bold">{humanAmount} {fromSymbol}</div>
+                  <div className="font-mono text-[10px] text-muted-foreground">{fmtNano(absAmount)} nano</div>
+                </div>
+                <div>
+                  <div className="text-[10px] text-muted-foreground uppercase">Filled</div>
+                  <div className="font-mono text-sm font-bold text-green-500">{humanFilled} {fromSymbol}</div>
+                  <div className="font-mono text-[10px] text-muted-foreground">{fmtNano(filled)} nano</div>
+                </div>
+              </div>
+
+              {/* Detail rows */}
               <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-xs">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Amount ({fromSymbol})</span>
-                  <span className="font-mono font-bold">{humanAmount}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Amount (nano)</span>
-                  <span className="font-mono text-muted-foreground">{fmtNano(o.amount)}</span>
-                </div>
-
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Initial ({fromSymbol})</span>
-                  <span className="font-mono font-bold">{humanInitialAmount}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Initial (nano)</span>
-                  <span className="font-mono text-muted-foreground">{fmtNano(o.initial_amount)}</span>
-                </div>
-
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Price rate (raw)</span>
-                  <span className="font-mono">{o.price_rate}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Price ({toSymbol}/{fromSymbol})</span>
-                  <span className="font-mono font-bold">{displayPrice > 0 ? displayPrice.toPrecision(6) : '—'}</span>
-                </div>
-
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Price ({fromSymbol}/{toSymbol})</span>
-                  <span className="font-mono">{invertedPrice > 0 ? invertedPrice.toPrecision(6) : '—'}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Est. total ({toSymbol})</span>
-                  <span className="font-mono">{estimatedToHuman > 0 ? nanoToHuman(estimatedToHuman * 10 ** toDecimals, toSymbol) : '—'}</span>
-                </div>
-
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Slippage</span>
-                  <span className="font-mono">{o.slippage}%</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Address</span>
-                  <a
-                    href={`https://tonviewer.com/${o.raw_address}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="font-mono text-primary hover:underline truncate max-w-[12rem]"
-                  >
-                    {o.raw_address.slice(0, 8)}…{o.raw_address.slice(-6)}
+                <Row label="Price rate (raw)" value={o.price_rate.toExponential(4)} />
+                <Row label={`Price (${toSymbol} per ${fromSymbol})`} value={humanPriceRate > 0 ? humanPriceRate.toPrecision(6) : '—'} bold />
+                <Row label={`Price (${fromSymbol} per ${toSymbol})`} value={invertedHumanPrice > 0 ? invertedHumanPrice.toPrecision(6) : '—'} />
+                <Row label={`Est. total (${toSymbol})`} value={estimatedToHuman > 0 ? `${estimatedToHuman.toFixed(6)} ${toSymbol}` : '—'} bold />
+                <Row label="Slippage" value={`${slippagePct}%`} />
+                <Row label="From" value={`${fromSymbol} (id:${o.from_coin_id}, ${fromDecimals} decimals)`} />
+                <Row label="To" value={`${toSymbol} (id:${o.to_coin_id}, ${toDecimals} decimals)`} />
+                <div className="flex justify-between col-span-2">
+                  <span className="text-muted-foreground">Order address</span>
+                  <a href={`https://tonviewer.com/${o.raw_address}`} target="_blank" rel="noreferrer"
+                    className="font-mono text-primary hover:underline">
+                    {o.raw_address}
                   </a>
-                </div>
-
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">From coin</span>
-                  <span className="font-mono">{fromSymbol} (id:{o.from_coin_id}, {fromDecimals}d)</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">To coin</span>
-                  <span className="font-mono">{toSymbol} (id:{o.to_coin_id}, {toDecimals}d)</span>
                 </div>
               </div>
             </CardContent>
