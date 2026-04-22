@@ -16,6 +16,7 @@ import {
   withdrawJetton,
   withdrawTon,
   closeAllOrders,
+  createOrGetTelegramBot,
   deleteRaceContract,
   getDexOrderStats,
   hexBocToBase64,
@@ -28,6 +29,7 @@ import {
   type ContractDetail,
   type PublicApiConfig,
   type RaceToken,
+  type TelegramBotResponse,
   type WithdrawJettonResult,
   type DexOrder,
   type DexOrderStats,
@@ -44,7 +46,7 @@ import {
   Share2, Check, Pause, Play, Wallet, AlertTriangle, RefreshCw,
   FileText, Copy, Pencil, Save, Loader2,
   Bot, Zap, Activity, ArrowUpRight, Clock, ShieldOff, TrendingUp, TrendingDown,
-  ArrowRightLeft, ExternalLink,
+  ArrowRightLeft, ExternalLink, Send,
 } from 'lucide-react';
 
 import { ContractTabBar } from '@/v2/components/layout/ContractTabBar';
@@ -727,11 +729,21 @@ function ContractDetailInner({ contract, detail, raceCfg, tonConnectUI, tonAddre
   const [revokeBusy, setRevokeBusy] = useState(false);
   const [revokeSuccess, setRevokeSuccess] = useState(false);
 
+  // Telegram bot connect
+  const [tgDialogOpen, setTgDialogOpen] = useState(false);
+  const [tgBusy, setTgBusy] = useState(false);
+  const [tgError, setTgError] = useState<string | null>(null);
+  const [tgResponse, setTgResponse] = useState<TelegramBotResponse | null>(null);
+  const [tgConnected, setTgConnected] = useState<boolean>(Boolean(detail?.telegram_bot_connected));
+  const [tgUsername, setTgUsername] = useState<string | null>(detail?.telegram_bot_username ?? null);
+
   // Fetch ai_model from detail if not already set
   useEffect(() => {
     if (detail) {
       setAiModel(detail.ai_model || null);
       setIsActive(detail.is_active);
+      setTgConnected(Boolean(detail.telegram_bot_connected));
+      setTgUsername(detail.telegram_bot_username ?? null);
     }
   }, [detail]);
 
@@ -1106,6 +1118,55 @@ function ContractDetailInner({ contract, detail, raceCfg, tonConnectUI, tonAddre
       setRevokeBusy(false);
     }
   }, [contract.address, tonConnectUI]);
+
+  const refreshTelegramState = useCallback(async () => {
+    try {
+      const fresh = await getRaceContractDetail(raceCfg, contract.id);
+      setTgConnected(Boolean(fresh.telegram_bot_connected));
+      setTgUsername(fresh.telegram_bot_username ?? null);
+    } catch {
+      // Swallow: page-level error path handles hard failures.
+    }
+  }, [raceCfg, contract.id]);
+
+  const handleConnectTelegram = useCallback(async () => {
+    if (tgConnected && tgUsername) {
+      window.open(`https://t.me/${tgUsername}`, '_blank', 'noopener,noreferrer');
+      return;
+    }
+    if (tgResponse) {
+      setTgDialogOpen(true);
+      return;
+    }
+    setTgBusy(true);
+    setTgError(null);
+    try {
+      const resp = await createOrGetTelegramBot(raceCfg, contract.id);
+      setTgResponse(resp);
+      if (resp.connected) {
+        setTgConnected(true);
+        setTgUsername(resp.bot_username || null);
+        return;
+      }
+      if (resp.deeplink) {
+        window.open(resp.deeplink, '_blank', 'noopener,noreferrer');
+      }
+      setTgDialogOpen(true);
+    } catch (e) {
+      setTgError(e instanceof Error ? e.message : String(e));
+      setTgDialogOpen(true);
+    } finally {
+      setTgBusy(false);
+    }
+  }, [raceCfg, contract.id, tgConnected, tgUsername, tgResponse]);
+
+  // Re-fetch telegram state whenever the tab regains focus while the dialog is open.
+  useEffect(() => {
+    if (!tgDialogOpen) return;
+    const onFocus = () => { void refreshTelegramState(); };
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  }, [tgDialogOpen, refreshTelegramState]);
 
   const canDelete = withdrawDone.has('jetton') && withdrawDone.has('ton');
 
@@ -1632,6 +1693,27 @@ function ContractDetailInner({ contract, detail, raceCfg, tonConnectUI, tonAddre
                       <ShieldOff className="h-4 w-4 mr-1" />
                       {revokeBusy ? 'Revoking...' : revokeSuccess ? 'Access revoked' : 'Revoke access'}
                     </Button>
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className={tgConnected ? 'text-green-500 border-green-500/30' : ''}
+                      onClick={() => void handleConnectTelegram()}
+                      disabled={tgBusy}
+                    >
+                      {tgConnected
+                        ? <ExternalLink className="h-4 w-4 mr-1" />
+                        : tgBusy
+                          ? <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                          : <Send className="h-4 w-4 mr-1" />}
+                      {tgConnected
+                        ? (tgUsername ? `@${tgUsername}` : 'Telegram connected')
+                        : tgBusy
+                          ? 'Connecting...'
+                          : tgResponse
+                            ? 'Waiting for /start...'
+                            : 'Connect Telegram'}
+                    </Button>
                   </div>
 
                   {/* Jetton info */}
@@ -1811,6 +1893,60 @@ function ContractDetailInner({ contract, detail, raceCfg, tonConnectUI, tonAddre
             ) : (
               <Button variant="outline" size="sm" onClick={() => setPromptOpen(false)}>Close</Button>
             )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Telegram Connect Dialog */}
+      <Dialog
+        open={tgDialogOpen}
+        onOpenChange={(open) => {
+          setTgDialogOpen(open);
+          if (!open) void refreshTelegramState();
+        }}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Connect Telegram Notifications</DialogTitle>
+          </DialogHeader>
+
+          {tgError && (
+            <div className="text-sm text-red-500 bg-red-500/10 border border-red-500/20 rounded-md p-2">
+              {tgError}
+            </div>
+          )}
+
+          <ol className="flex flex-col gap-2 text-sm text-muted-foreground list-decimal list-inside">
+            <li>Open the link below to create your bot in Telegram.</li>
+            <li>Follow BotFather's prompts to finish creating the bot.</li>
+            <li>
+              Open <span className="font-mono">@{tgResponse?.bot_username || 'your-bot'}</span> and send{' '}
+              <span className="font-mono">/start</span>.
+            </li>
+          </ol>
+
+          {tgResponse?.deeplink && (
+            <Button
+              className="w-full"
+              onClick={() => {
+                window.open(tgResponse.deeplink, '_blank', 'noopener,noreferrer');
+              }}
+            >
+              <ExternalLink className="h-4 w-4 mr-1" />
+              Open Telegram
+            </Button>
+          )}
+
+          {tgResponse?.bot_username && (
+            <div className="text-xs text-muted-foreground text-center">
+              Bot: <span className="font-mono">@{tgResponse.bot_username}</span>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => setTgDialogOpen(false)}>
+              {tgConnected ? 'Done' : 'Close'}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
