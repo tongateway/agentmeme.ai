@@ -80,6 +80,9 @@ export type ContractDetail = {
   owner_address: string;
   created_at: string;
   updated_at: string;
+  telegram_bot_username?: string | null;
+  telegram_bot_status?: string | null;
+  telegram_bot_connected?: boolean;
 };
 
 export type RegisterContractRequest = {
@@ -266,6 +269,9 @@ function normalizeContractDetail(item: Record<string, unknown>): ContractDetail 
     owner_address: String(item.owner_address ?? ''),
     created_at: String(item.created_at ?? ''),
     updated_at: String(item.updated_at ?? ''),
+    telegram_bot_username: typeof item.telegram_bot_username === 'string' ? item.telegram_bot_username : null,
+    telegram_bot_status: typeof item.telegram_bot_status === 'string' ? item.telegram_bot_status : null,
+    telegram_bot_connected: Boolean(item.telegram_bot_connected),
   };
 }
 
@@ -544,6 +550,27 @@ export async function closeAllOrders(cfg: PublicApiConfig, contractId: string): 
     headers: publicPostHeaders(cfg),
   });
   return jsonOrThrow(res);
+}
+
+export type TelegramBotResponse = {
+  deeplink: string;
+  bot_username: string;
+  status: string;
+  connected: boolean;
+};
+
+export async function createOrGetTelegramBot(cfg: PublicApiConfig, contractId: string): Promise<TelegramBotResponse> {
+  const res = await fetch(raceUrl(cfg, `/api/contracts/${contractId}/telegram-bot`), {
+    method: 'POST',
+    headers: publicPostHeaders(cfg),
+  });
+  const data = await jsonOrThrow(res) as Record<string, unknown>;
+  return {
+    deeplink: String(data.deeplink ?? ''),
+    bot_username: String(data.bot_username ?? ''),
+    status: String(data.status ?? ''),
+    connected: Boolean(data.connected),
+  };
 }
 
 /** Convert a hex-encoded BOC to base64 for TonConnect payload. */
