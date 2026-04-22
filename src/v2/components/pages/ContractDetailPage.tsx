@@ -1248,8 +1248,29 @@ function ContractDetailInner({ contract, detail, raceCfg, tonConnectUI, tonAddre
             {/* Spacer */}
             <div className="flex-1" />
 
-            {/* Pause + Delete buttons */}
+            {/* Telegram + Pause + Delete buttons */}
             <div className="flex items-center gap-2 flex-wrap">
+              <Button
+                variant="outline"
+                size="sm"
+                className={tgConnected ? 'text-green-500 border-green-500/30' : ''}
+                onClick={() => void handleConnectTelegram()}
+                disabled={tgBusy}
+              >
+                {tgConnected
+                  ? <ExternalLink className="h-4 w-4 mr-1" />
+                  : tgBusy
+                    ? <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                    : <Send className="h-4 w-4 mr-1" />}
+                {tgConnected
+                  ? (tgUsername ? `@${tgUsername}` : 'Telegram connected')
+                  : tgBusy
+                    ? 'Connecting...'
+                    : tgResponse
+                      ? 'Waiting for /start...'
+                      : 'Connect Telegram'}
+              </Button>
+
               <Button
                 variant="outline"
                 size="sm"
@@ -1692,27 +1713,6 @@ function ContractDetailInner({ contract, detail, raceCfg, tonConnectUI, tonAddre
                     >
                       <ShieldOff className="h-4 w-4 mr-1" />
                       {revokeBusy ? 'Revoking...' : revokeSuccess ? 'Access revoked' : 'Revoke access'}
-                    </Button>
-
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className={tgConnected ? 'text-green-500 border-green-500/30' : ''}
-                      onClick={() => void handleConnectTelegram()}
-                      disabled={tgBusy}
-                    >
-                      {tgConnected
-                        ? <ExternalLink className="h-4 w-4 mr-1" />
-                        : tgBusy
-                          ? <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                          : <Send className="h-4 w-4 mr-1" />}
-                      {tgConnected
-                        ? (tgUsername ? `@${tgUsername}` : 'Telegram connected')
-                        : tgBusy
-                          ? 'Connecting...'
-                          : tgResponse
-                            ? 'Waiting for /start...'
-                            : 'Connect Telegram'}
                     </Button>
                   </div>
 
