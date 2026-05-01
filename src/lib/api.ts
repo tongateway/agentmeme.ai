@@ -270,7 +270,6 @@ function normalizeContractDetail(item: Record<string, unknown>): ContractDetail 
     owner_address: String(item.owner_address ?? ''),
     created_at: String(item.created_at ?? ''),
     updated_at: String(item.updated_at ?? ''),
-<<<<<<< Updated upstream
     telegram_bot_username: typeof item.telegram_bot_username === 'string' ? item.telegram_bot_username : null,
     telegram_bot_status: typeof item.telegram_bot_status === 'string' ? item.telegram_bot_status : null,
     telegram_bot_connected: Boolean(item.telegram_bot_connected),
