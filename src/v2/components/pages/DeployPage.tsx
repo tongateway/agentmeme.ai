@@ -584,7 +584,7 @@ export function DeployPage() {
     try {
       setBusy('register');
       const base = persisted.baseToken ?? 'AGNT';
-      const quote = persisted.quoteToken ?? 'NOT';
+      const quote = persisted.quoteToken ?? 'USDT';
       const tradingPairs = `${base}/${quote}`;
       const pricingId = selectedModelOption.pricing?.[0]?.id;
       if (!pricingId) throw new Error('No pricing tier available for this model');

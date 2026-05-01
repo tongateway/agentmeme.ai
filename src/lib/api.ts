@@ -83,6 +83,7 @@ export type ContractDetail = {
   telegram_bot_username?: string | null;
   telegram_bot_status?: string | null;
   telegram_bot_connected?: boolean;
+  trading_pairs?: string | null;
 };
 
 export type RegisterContractRequest = {
@@ -269,9 +270,11 @@ function normalizeContractDetail(item: Record<string, unknown>): ContractDetail 
     owner_address: String(item.owner_address ?? ''),
     created_at: String(item.created_at ?? ''),
     updated_at: String(item.updated_at ?? ''),
+<<<<<<< Updated upstream
     telegram_bot_username: typeof item.telegram_bot_username === 'string' ? item.telegram_bot_username : null,
     telegram_bot_status: typeof item.telegram_bot_status === 'string' ? item.telegram_bot_status : null,
     telegram_bot_connected: Boolean(item.telegram_bot_connected),
+    trading_pairs: typeof item.trading_pairs === 'string' ? item.trading_pairs : null,
   };
 }
 

@@ -306,16 +306,27 @@ function BalanceChart({ points }: { points: ChartPoint[] }) {
 /*  Sub-component: TradingPairsRow                                    */
 /* ------------------------------------------------------------------ */
 
-function TradingPairsRow({ tradingPairs }: { tradingPairs: string | null | undefined }) {
-  const pairs = (tradingPairs ?? '').split(',').map((p) => p.trim()).filter(Boolean);
+function TradingPairsRow({ tradingPairs, prompt }: { tradingPairs: string | null | undefined; prompt?: string }) {
+  let pairs = (tradingPairs ?? '').split(',').map((p) => p.trim()).filter(Boolean);
+
+  // Fallback: extract pair from prompt if trading_pairs is empty
+  if (pairs.length === 0 && prompt) {
+    const knownTokens = ['AGNT', 'USDT', 'BUILD', 'NOT', 'TON'];
+    const pairMatch = prompt.match(new RegExp(`(${knownTokens.join('|')})\\s*/\\s*(${knownTokens.join('|')})`, 'i'));
+    if (pairMatch) {
+      pairs = [`${pairMatch[1].toUpperCase()}/${pairMatch[2].toUpperCase()}`];
+    }
+  }
 
   return (
     <div className="flex items-center justify-between gap-4">
       <div className="text-sm text-muted-foreground shrink-0">Trading Pairs</div>
       <div className="flex items-center gap-1 flex-wrap justify-end">
-        {pairs.map((p) => (
+        {pairs.length > 0 ? pairs.map((p) => (
           <Badge key={p} variant="secondary" className="text-xs">{p}</Badge>
-        ))}
+        )) : (
+          <span className="text-xs text-muted-foreground">—</span>
+        )}
       </div>
     </div>
   );
@@ -583,7 +594,10 @@ export function ContractDetailPage() {
         // Find the ContractListItem from the list
         const listItem = list.find((c) => c.id === id);
         if (listItem) {
-          setContract(listItem);
+          setContract({
+            ...listItem,
+            trading_pairs: listItem.trading_pairs ?? det.trading_pairs ?? null,
+          });
         } else {
           // Construct a ContractListItem from ContractDetail
           setContract({
@@ -600,7 +614,7 @@ export function ContractDetailPage() {
             total_decisions: null,
             max_decisions: null,
             used_decisions: null,
-            trading_pairs: null,
+            trading_pairs: det.trading_pairs ?? null,
             profit_usd: null,
           });
         }
@@ -1527,7 +1541,7 @@ function ContractDetailInner({ contract, detail, raceCfg, tonConnectUI, tonAddre
                 </div>
                 <Separator />
 
-                <TradingPairsRow tradingPairs={contract.trading_pairs} />
+                <TradingPairsRow tradingPairs={contract.trading_pairs} prompt={detail?.prompt} />
                 <Separator />
 
                 <div className="flex items-center justify-between gap-4">
